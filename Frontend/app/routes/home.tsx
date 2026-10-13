@@ -1,13 +1,3 @@
-import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
-
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
-  ];
-}
-
-export default function Home() {
-  return <Welcome />;
-}
+import { Link } from "react-router";
+export function meta() { return [{ title: "Gestión de residencia" }]; }
+export default function Home() { return <main className="landing"><p className="eyebrow">RESIDENCIA UNIVERSITARIA</p><h1>Tu residencia, en un solo lugar.</h1><p>Organizá la vida en comunidad desde tu portal.</p><div className="cards"><Link className="panel" to="/estudiante"><h2>Estudiantes</h2><p>Mi habitación, limpieza, facturas y avisos.</p><strong>Entrar →</strong></Link><Link className="panel" to="/admin"><h2>Administración</h2><p>Ocupación y gestión de la residencia.</p><strong>Entrar →</strong></Link></div><p>Demostración con datos ficticios. Sin autenticación.</p></main>; }

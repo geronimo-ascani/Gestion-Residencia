@@ -1,0 +1,4 @@
+import { Link } from "react-router";
+import { StatCard } from "../../components/StatCard";
+import { student } from "../../mocks/residence";
+export function StudentDashboard() { return <><p className="eyebrow">MI RESIDENCIA</p><h1>Hola, {student.name}</h1><p>Tu información de la semana · Datos de ejemplo</p><div className="cards"><StatCard label="Mi habitación" value={`N.º ${student.room}`} /><StatCard label="Grupo de limpieza" value={student.group} /><StatCard label="Tarea semanal" value={student.task} /></div><div className="cards"><section className="panel"><h2>Tu tarea de limpieza</h2><p>Consultá la asignación de tu grupo y el calendario semanal.</p><Link to="/estudiante/limpieza">Ver limpieza →</Link></section><section className="panel"><h2>¿Algo necesita reparación?</h2><p>La sección de mantenimiento reunirá tus avisos y su seguimiento.</p><Link to="/estudiante/mantenimiento">Ver mantenimiento →</Link></section></div></>; }

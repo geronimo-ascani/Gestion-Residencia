@@ -1,0 +1,4 @@
+import { Link, NavLink, Outlet } from "react-router";
+import { sections } from "../config/navigation";
+import type { Role } from "../types/residence";
+export function PortalLayout({ role }: { role: Role }) { return <div className="shell"><aside><Link className="brand" to="/">Residencia</Link><p>{role === "admin" ? "Administración" : "Portal del estudiante"}</p><nav aria-label="Navegación principal"><NavLink end to={`/${role}`}>Inicio</NavLink>{role === "admin" && <NavLink to="/admin/alumnos">Alumnos</NavLink>}{sections.map(item => <NavLink key={item.slug} to={`/${role}/${item.slug}`}>{item.label}</NavLink>)}</nav><Link to="/">Cambiar vista →</Link></aside><div className="workspace"><header>Residencia universitaria <span>Modo demostración</span></header><main className="content"><Outlet /></main></div></div>; }
