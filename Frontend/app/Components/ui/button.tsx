@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import { cn } from "../../lib/cn";
 
-export type ButtonVariant = "solid" | "outline" | "ghost";
+export type ButtonVariant = "solid" | "outline" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 export interface ButtonProps extends ComponentProps<"button"> {
@@ -24,6 +24,7 @@ const variants: Record<ButtonVariant, string> = {
   ghost:
     "text-slate-600 hover:bg-slate-100 hover:text-slate-900 " +
     "dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
+  danger: "bg-red-600 text-white hover:bg-red-700 active:bg-red-800",
 };
 
 const sizes: Record<ButtonSize, string> = {
