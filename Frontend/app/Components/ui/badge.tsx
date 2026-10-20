@@ -11,24 +11,26 @@ export type BadgeVariant =
 
 const variants: Record<BadgeVariant, string> = {
   neutral:
-    "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
+    "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300",
   brand:
-    "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200",
+    "border-brand-200 bg-white text-brand-700 dark:border-brand-800 dark:bg-slate-900 dark:text-brand-200",
   success:
-    "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+    "border-emerald-200 bg-white text-emerald-800 dark:border-emerald-900 dark:bg-slate-900 dark:text-emerald-300",
   warning:
-    "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-  danger: "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-  info: "bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+    "border-amber-200 bg-white text-amber-800 dark:border-amber-900 dark:bg-slate-900 dark:text-amber-300",
+  danger:
+    "border-red-200 bg-white text-red-700 dark:border-red-900 dark:bg-slate-900 dark:text-red-300",
+  info:
+    "border-sky-200 bg-white text-sky-800 dark:border-sky-900 dark:bg-slate-900 dark:text-sky-300",
 };
 
 const dots: Record<BadgeVariant, string> = {
   neutral: "bg-slate-400",
-  brand: "bg-brand-500",
-  success: "bg-emerald-500",
-  warning: "bg-amber-500",
-  danger: "bg-red-500",
-  info: "bg-sky-500",
+  brand: "bg-brand-600",
+  success: "bg-emerald-600",
+  warning: "bg-amber-600",
+  danger: "bg-red-600",
+  info: "bg-sky-600",
 };
 
 export function Badge({
@@ -40,7 +42,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap",
+        "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap",
         variants[variant],
         className,
       )}
@@ -53,7 +55,6 @@ export function Badge({
 
 export type EstadoBadge =
   | "pagada"
-  | "parcial"
   | "pendiente"
   | "vencida"
   | "anulada"
@@ -69,7 +70,6 @@ export type EstadoBadge =
 
 const estados: Record<EstadoBadge, { label: string; variant: BadgeVariant }> = {
   pagada: { label: "Pagada", variant: "success" },
-  parcial: { label: "Parcial", variant: "warning" },
   pendiente: { label: "Pendiente", variant: "info" },
   vencida: { label: "Vencida", variant: "danger" },
   anulada: { label: "Anulada", variant: "neutral" },

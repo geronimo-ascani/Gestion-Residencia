@@ -1,5 +1,5 @@
 import { useData } from "../../lib/store";
-import { formatARS, formatFecha, formatMes } from "../../lib/format";
+import { formatARS, formatFecha } from "../../lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Icon, type IconName } from "../ui/icons";
 
@@ -13,20 +13,19 @@ interface Evento {
 }
 
 export function ActivityFeed() {
-  const { cuotas, multas, alumnoPorId } = useData();
+  const { pagos, multas, alumnoPorId } = useData();
   const eventos: Evento[] = [];
 
-  for (const cuota of cuotas) {
-    if (!cuota.fechaPago) continue;
-    const alumno = alumnoPorId.get(cuota.idAlumno);
+  for (const pago of pagos) {
+    const alumno = alumnoPorId.get(pago.idAlumno);
     if (!alumno) continue;
     eventos.push({
-      id: `cuota-${cuota.idCuota}`,
-      fecha: cuota.fechaPago,
+      id: `pago-${pago.idPago}`,
+      fecha: pago.fecha,
       titulo: "Pago registrado",
-      detalle: `${alumno.nombre} ${alumno.apellido} · ${formatMes(cuota.mesAsociado)} · ${formatARS(cuota.montoPagado)}`,
+      detalle: `${alumno.nombre} ${alumno.apellido} · ${pago.concepto} · ${formatARS(pago.monto)}`,
       icon: "payments",
-      tono: "text-emerald-600 dark:text-emerald-400",
+      tono: "text-emerald-700 dark:text-emerald-400",
     });
   }
 
@@ -44,7 +43,7 @@ export function ActivityFeed() {
             : "Multa emitida",
       detalle: `${alumno.nombre} ${alumno.apellido} · ${formatARS(multa.monto)}`,
       icon: "fines",
-      tono: "text-amber-600 dark:text-amber-400",
+      tono: "text-amber-700 dark:text-amber-400",
     });
   }
 
@@ -64,7 +63,7 @@ export function ActivityFeed() {
         <ol className="space-y-4">
           {recientes.map((evento) => (
             <li key={evento.id} className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+              <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-100 dark:bg-slate-800">
                 <Icon
                   name={evento.icon}
                   className={`h-4 w-4 ${evento.tono}`}

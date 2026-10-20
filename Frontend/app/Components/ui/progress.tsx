@@ -9,10 +9,10 @@ export type ProgressTone =
 
 const tones: Record<ProgressTone, string> = {
   brand: "bg-brand-600",
-  success: "bg-emerald-500",
-  warning: "bg-amber-500",
-  danger: "bg-red-500",
-  neutral: "bg-slate-400",
+  success: "bg-emerald-700",
+  warning: "bg-amber-600",
+  danger: "bg-red-700",
+  neutral: "bg-slate-500",
 };
 
 export function Progress({
@@ -33,7 +33,7 @@ export function Progress({
       aria-valuemin={0}
       aria-valuemax={100}
       className={cn(
-        "h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800",
+        "h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800",
         className,
       )}
     >

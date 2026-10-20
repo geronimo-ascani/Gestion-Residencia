@@ -59,7 +59,7 @@ export function Dialog({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
       <div
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-950/60"
         onClick={() => onCloseRef.current()}
         aria-hidden="true"
       />
@@ -70,7 +70,7 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={titleId}
         className={cn(
-          "relative max-h-[90dvh] w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl outline-none",
+          "relative max-h-[90dvh] w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-xl outline-none",
           "dark:border-slate-800 dark:bg-slate-900",
           sizes[size],
         )}
@@ -93,7 +93,7 @@ export function Dialog({
             type="button"
             onClick={() => onCloseRef.current()}
             aria-label="Cerrar"
-            className="-m-1.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
+            className="-m-1.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
           >
             <Icon name="close" className="h-5 w-5" />
           </button>

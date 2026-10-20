@@ -11,13 +11,13 @@ const estados = {
   },
   parcial: {
     texto: "Con cupo",
-    punto: "bg-brand-500",
-    barra: "bg-brand-500",
+    punto: "bg-brand-600",
+    barra: "bg-brand-600",
   },
   llena: {
     texto: "Llena",
-    punto: "bg-amber-500",
-    barra: "bg-amber-500",
+    punto: "bg-amber-600",
+    barra: "bg-amber-600",
   },
 } as const;
 
@@ -68,10 +68,10 @@ export function RoomMap({ compact = false }: { compact?: boolean }) {
                 : `Habitación ${habitacion.numeroHabitacion} vacía`
             }
             className={cn(
-              "rounded-lg border border-slate-200 bg-white p-3 transition",
-              "hover:border-brand-300 hover:shadow-sm",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
-              "dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700",
+              "rounded-md border border-slate-200 bg-white p-3 transition",
+              "hover:border-brand-400 hover:bg-slate-50",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600",
+              "dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700 dark:hover:bg-slate-800/60",
             )}
           >
             <div className="flex items-center justify-between gap-2">

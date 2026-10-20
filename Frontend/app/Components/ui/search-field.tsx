@@ -27,9 +27,9 @@ export function SearchField({
         placeholder={placeholder}
         aria-label={label}
         className={cn(
-          "h-10 w-full rounded-lg border border-slate-300 bg-white pr-3 pl-9 text-sm text-slate-900 shadow-sm outline-none transition",
+          "h-10 w-full rounded-md border border-slate-300 bg-white pr-3 pl-9 text-sm text-slate-900 outline-none transition",
           "placeholder:text-slate-400",
-          "focus:border-brand-500 focus:ring-2 focus:ring-brand-500/40",
+          "focus:border-brand-600 focus:ring-2 focus:ring-brand-600/25",
           "dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500",
         )}
       />

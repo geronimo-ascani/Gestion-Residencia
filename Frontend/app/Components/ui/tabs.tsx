@@ -24,7 +24,7 @@ export function Tabs({
       role="group"
       aria-label={label}
       className={cn(
-        "inline-flex rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900",
+        "inline-flex rounded-md border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900",
         className,
       )}
     >
@@ -38,10 +38,10 @@ export function Tabs({
             onClick={() => onChange(item.id)}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40",
               activo
                 ? "bg-brand-600 text-white"
-                : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+                : "text-slate-600 hover:bg-brand-50 hover:text-brand-700 dark:text-slate-300 dark:hover:bg-brand-900/30 dark:hover:text-brand-200",
             )}
           >
             {item.label}

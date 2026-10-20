@@ -49,8 +49,8 @@ export function SelectField({
           aria-invalid={Boolean(error) || undefined}
           aria-describedby={describedBy}
           className={cn(
-            "h-11 w-full cursor-pointer appearance-none rounded-lg border bg-white px-3 pr-9 text-sm text-slate-900 shadow-sm outline-none transition",
-            "focus:border-brand-500 focus:ring-2 focus:ring-brand-500/40",
+            "h-11 w-full cursor-pointer appearance-none rounded-md border bg-white px-3 pr-9 text-sm text-slate-900 outline-none transition",
+            "focus:border-brand-600 focus:ring-2 focus:ring-brand-600/25",
             "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500",
             "dark:bg-slate-900 dark:text-slate-100",
             error

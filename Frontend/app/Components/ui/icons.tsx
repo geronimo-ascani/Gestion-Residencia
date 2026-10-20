@@ -12,6 +12,7 @@ export type IconName =
   | "search"
   | "bell"
   | "menu"
+  | "panel"
   | "close"
   | "chevron"
   | "logout"
@@ -109,6 +110,12 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M4 6h16" />
       <path d="M4 12h16" />
       <path d="M4 18h16" />
+    </>
+  ),
+  panel: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
     </>
   ),
   close: (

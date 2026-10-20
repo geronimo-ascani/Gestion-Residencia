@@ -1,17 +1,15 @@
-import { MONTO_CUOTA_MENSUAL } from "../config";
 import type {
   Alumno,
   Ambiente,
   Contrato,
-  CuotaMensual,
   DataState,
-  EstadoCuota,
   GrupoDeLimpieza,
   GrupoLimpiezaAlumno,
   GrupoLimpiezaAmbiente,
   Habitacion,
   HabitacionAlumno,
   Multa,
+  Pago,
   Usuario,
 } from "../types";
 
@@ -61,15 +59,7 @@ const APELLIDOS = [
   "Rojas",
 ] as const;
 
-/** Generador lineal determinista: el mismo resultado en servidor y cliente. */
-function crearRng(seed: number) {
-  let estado = seed >>> 0;
-  return () => {
-    estado = (estado * 1664525 + 1013904223) >>> 0;
-    return estado / 4294967296;
-  };
-}
-
+/** Rellena con cero a la izquierda para los identificadores y fechas mock. */
 function pad(valor: number): string {
   return String(valor).padStart(2, "0");
 }
@@ -116,8 +106,6 @@ const AMBIENTES_BASE: Array<[string, string]> = [
 ];
 
 export function createInitialData(): DataState {
-  const rng = crearRng(20261020);
-
   const alumnos: Alumno[] = Array.from({ length: 40 }, (_, indice) => {
     const nombre = NOMBRES[indice % NOMBRES.length];
     const apellido = APELLIDOS[(indice * 3 + 1) % APELLIDOS.length];
@@ -186,59 +174,13 @@ export function createInitialData(): DataState {
     };
   });
 
-  const meses = [
-    "2026-05",
-    "2026-06",
-    "2026-07",
-    "2026-08",
-    "2026-09",
-    "2026-10",
-  ];
-
-  const cuotas: CuotaMensual[] = [];
-  let numeroCuota = 0;
-
-  alumnos.forEach((alumno, indice) => {
-    const ultimoMes = indice >= 37 ? "2026-08" : "2026-10";
-
-    for (const mes of meses) {
-      if (mes > ultimoMes) continue;
-
-      const esMesActual = mes === "2026-10";
-      const sorteo = rng();
-      let montoPagado = 0;
-
-      if (esMesActual) {
-        if (sorteo < 0.45) montoPagado = MONTO_CUOTA_MENSUAL;
-        else if (sorteo < 0.65) montoPagado = sorteo < 0.55 ? 20_000 : 30_000;
-      } else if (sorteo < 0.85) {
-        montoPagado = MONTO_CUOTA_MENSUAL;
-      } else if (sorteo < 0.95) {
-        montoPagado = sorteo < 0.9 ? 20_000 : 30_000;
-      }
-
-      const estado: EstadoCuota =
-        montoPagado >= MONTO_CUOTA_MENSUAL
-          ? "pagada"
-          : montoPagado > 0
-            ? "parcial"
-            : "pendiente";
-
-      numeroCuota += 1;
-      cuotas.push({
-        idCuota: `Q${pad(numeroCuota)}`,
-        idAlumno: alumno.idAlumno,
-        fechaEmision: `${mes}-01`,
-        mesAsociado: mes,
-        montoPagado,
-        estado,
-        fechaPago:
-          estado === "pendiente"
-            ? null
-            : `${mes}-${pad(10 + (numeroCuota % 10))}`,
-      });
-    }
-  });
+  const pagos: Pago[] = alumnos.slice(0, 37).map((alumno, indice) => ({
+    idPago: `P${pad(indice + 1)}`,
+    idAlumno: alumno.idAlumno,
+    monto: 45_000,
+    fecha: `2026-10-${pad(1 + (indice % 18))}`,
+    concepto: "Residencia",
+  }));
 
   const multasBase: Array<{
     alumno: number;
@@ -334,7 +276,7 @@ export function createInitialData(): DataState {
     habitaciones,
     asignaciones,
     contratos,
-    cuotas,
+    pagos,
     multas,
     grupos,
     grupoAlumnos,

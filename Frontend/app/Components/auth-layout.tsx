@@ -9,7 +9,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       <main className="flex items-center justify-center px-6 py-10 sm:px-10">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <BrandMark className="h-8 w-8 text-brand-600 dark:text-brand-400" />
+            <BrandMark className="h-8 w-8 text-brand-700 dark:text-brand-300" />
             <span className="text-lg font-semibold text-slate-900 dark:text-white">
               Gestión de Residencia
             </span>
@@ -24,27 +24,22 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 function BrandPanel() {
   return (
     <aside className="relative hidden overflow-hidden bg-brand-900 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand-700/40 blur-3xl"
-      />
-
       <div className="relative flex items-center gap-2.5">
-        <BrandMark className="h-9 w-9 text-brand-300" />
+        <BrandMark className="h-9 w-9 text-slate-200" />
         <span className="text-lg font-semibold">Gestión de Residencia</span>
       </div>
 
-      <div className="relative max-w-md">
+      <div className="relative max-w-md border-l-2 border-slate-500/60 pl-6">
         <h2 className="text-3xl leading-tight font-semibold">
           Todo el edificio, organizado en un solo lugar.
         </h2>
-        <p className="mt-4 text-brand-100/80">
+        <p className="mt-4 text-slate-300">
           Administra residentes, habitaciones y pagos desde un panel simple y
           seguro.
         </p>
       </div>
 
-      <p className="relative text-sm text-brand-200">
+      <p className="relative text-sm text-slate-400">
         © {new Date().getFullYear()} Gestión de Residencia
       </p>
     </aside>

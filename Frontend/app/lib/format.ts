@@ -1,33 +1,3 @@
-const MESES = [
-  "enero",
-  "febrero",
-  "marzo",
-  "abril",
-  "mayo",
-  "junio",
-  "julio",
-  "agosto",
-  "septiembre",
-  "octubre",
-  "noviembre",
-  "diciembre",
-] as const;
-
-const MESES_CORTOS = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "ago",
-  "sep",
-  "oct",
-  "nov",
-  "dic",
-] as const;
-
 /**
  * Formateo manual (sin `Intl`) para que el HTML del servidor y el del cliente
  * coincidan exactamente y no haya errores de hidratación.
@@ -51,17 +21,6 @@ export function formatFecha(iso: string | null | undefined): string {
   const [anio, mes, dia] = iso.slice(0, 10).split("-");
   if (!anio || !mes || !dia) return iso;
   return `${dia}/${mes}/${anio}`;
-}
-
-export function formatMes(mesAsociado: string): string {
-  const [anio, mes] = mesAsociado.split("-");
-  const nombre = MESES[Number(mes) - 1];
-  return nombre ? `${nombre} ${anio}` : mesAsociado;
-}
-
-export function formatMesCorto(mesAsociado: string): string {
-  const mes = Number(mesAsociado.split("-")[1]);
-  return MESES_CORTOS[mes - 1] ?? mesAsociado;
 }
 
 export function formatPorcentaje(valor: number): string {

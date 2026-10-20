@@ -1,13 +1,11 @@
-import { FECHA_REFERENCIA, MONTO_CUOTA_MENSUAL } from "./config";
+import { FECHA_REFERENCIA } from "./config";
 import type {
   Contrato,
-  CuotaMensual,
   Habitacion,
   HabitacionAlumno,
   Multa,
+  Pago,
 } from "./types";
-
-export type EstadoCuotaVisual = "pagada" | "parcial" | "vencida" | "pendiente";
 
 export type EstadoMultaVisual = "pagada" | "anulada" | "vencida" | "pendiente";
 
@@ -83,35 +81,6 @@ export function calcularOcupacion(
   };
 }
 
-export function estadoCuotaVisual(
-  cuota: CuotaMensual,
-  hoy: string = FECHA_REFERENCIA,
-): EstadoCuotaVisual {
-  if (cuota.estado === "pagada") return "pagada";
-  if (cuota.estado === "parcial") return "parcial";
-  if (cuota.mesAsociado < hoy.slice(0, 7)) return "vencida";
-  return "pendiente";
-}
-
-export function esCuotaVencida(
-  cuota: CuotaMensual,
-  hoy: string = FECHA_REFERENCIA,
-): boolean {
-  return cuota.estado !== "pagada" && cuota.mesAsociado < hoy.slice(0, 7);
-}
-
-export function saldoCuota(cuota: CuotaMensual): number {
-  return Math.max(0, MONTO_CUOTA_MENSUAL - cuota.montoPagado);
-}
-
-export function recaudadoDe(cuotas: CuotaMensual[]): number {
-  return cuotas.reduce((total, cuota) => total + cuota.montoPagado, 0);
-}
-
-export function esperadoDe(cuotas: CuotaMensual[]): number {
-  return cuotas.length * MONTO_CUOTA_MENSUAL;
-}
-
 export function estadoMultaVisual(
   multa: Multa,
   hoy: string = FECHA_REFERENCIA,
@@ -159,19 +128,6 @@ export function contratoVigente(
   );
 }
 
-/** Devuelve los últimos `cantidad` meses terminando en `mes` (`YYYY-MM`). */
-export function ultimosMeses(mes: string, cantidad: number): string[] {
-  const [anio, numeroMes] = mes.split("-").map(Number);
-  const resultado: string[] = [];
-  for (let i = cantidad - 1; i >= 0; i -= 1) {
-    const fecha = new Date(Date.UTC(anio, numeroMes - 1 - i, 1));
-    resultado.push(
-      `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, "0")}`,
-    );
-  }
-  return resultado;
-}
-
-export function mesesConCuotas(cuotas: CuotaMensual[]): string[] {
-  return [...new Set(cuotas.map((c) => c.mesAsociado))].sort();
+export function totalRecaudado(pagos: Pago[]): number {
+  return pagos.reduce((total, pago) => total + pago.monto, 0);
 }

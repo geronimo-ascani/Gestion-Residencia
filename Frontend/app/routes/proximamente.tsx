@@ -7,7 +7,6 @@ const SECCIONES: Record<string, string> = {
   alumnos: "Alumnos",
   habitaciones: "Habitaciones",
   contratos: "Contratos",
-  cuotas: "Cuotas",
   multas: "Multas",
   limpieza: "Limpieza",
   configuracion: "Configuración",
@@ -36,7 +35,7 @@ export default function Proximamente() {
           action={
             <Link
               to="/"
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
             >
               Volver al panel
             </Link>

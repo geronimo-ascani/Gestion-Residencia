@@ -34,15 +34,15 @@ const estilos: Record<ToastVariant, { icon: "check" | "alert" | "bell"; clase: s
   success: {
     icon: "check",
     clase:
-      "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+      "bg-slate-100 text-emerald-700 dark:bg-slate-800 dark:text-emerald-400",
   },
   error: {
     icon: "alert",
-    clase: "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+    clase: "bg-slate-100 text-red-700 dark:bg-slate-800 dark:text-red-400",
   },
   info: {
     icon: "bell",
-    clase: "bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+    clase: "bg-slate-100 text-sky-700 dark:bg-slate-800 dark:text-sky-400",
   },
 };
 
@@ -93,12 +93,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={item.id}
               role="status"
-              className="pointer-events-auto w-full max-w-sm rounded-xl border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-800 dark:bg-slate-900"
+              className="pointer-events-auto w-full max-w-sm rounded-lg border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-800 dark:bg-slate-900"
             >
               <div className="flex items-start gap-3">
                 <span
                   className={cn(
-                    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
                     estilo.clase,
                   )}
                 >

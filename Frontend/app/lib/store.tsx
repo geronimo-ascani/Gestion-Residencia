@@ -1,12 +1,11 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { FECHA_REFERENCIA, MONTO_CUOTA_MENSUAL } from "./config";
+import { FECHA_REFERENCIA } from "./config";
 import { createInitialData } from "./mock/data";
 import type {
   Alumno,
   Ambiente,
   DataState,
-  EstadoCuota,
   GrupoDeLimpieza,
   Habitacion,
 } from "./types";
@@ -43,7 +42,6 @@ export interface DataContextValue extends DataState {
   habitacionPorId: Map<string, Habitacion>;
   grupoPorId: Map<string, GrupoDeLimpieza>;
   ambientePorId: Map<string, Ambiente>;
-  registrarPagoCuota: (idCuota: string, monto: number) => void;
   registrarPagoMulta: (idMulta: string) => void;
   anularMulta: (idMulta: string) => void;
   emitirMulta: (input: NuevaMultaInput) => void;
@@ -85,32 +83,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       habitacionPorId,
       grupoPorId,
       ambientePorId,
-
-      registrarPagoCuota(idCuota, monto) {
-        const importe = Math.max(0, Math.round(monto));
-        setState((previo) => ({
-          ...previo,
-          cuotas: previo.cuotas.map((cuota) => {
-            if (cuota.idCuota !== idCuota) return cuota;
-            const montoPagado = Math.min(
-              MONTO_CUOTA_MENSUAL,
-              cuota.montoPagado + importe,
-            );
-            const estado: EstadoCuota =
-              montoPagado >= MONTO_CUOTA_MENSUAL
-                ? "pagada"
-                : montoPagado > 0
-                  ? "parcial"
-                  : "pendiente";
-            return {
-              ...cuota,
-              montoPagado,
-              estado,
-              fechaPago: montoPagado > 0 ? FECHA_REFERENCIA : null,
-            };
-          }),
-        }));
-      },
 
       registrarPagoMulta(idMulta) {
         setState((previo) => ({

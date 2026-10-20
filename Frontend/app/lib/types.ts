@@ -2,8 +2,6 @@ export type Rol = "administrador" | "alumno";
 
 export type EstadoUsuario = "activo" | "inactivo";
 
-export type EstadoCuota = "pendiente" | "parcial" | "pagada";
-
 export type EstadoMulta = "pendiente" | "pagada" | "anulada";
 
 export interface Usuario {
@@ -51,15 +49,12 @@ export interface Contrato {
   fechaHasta: string;
 }
 
-export interface CuotaMensual {
-  idCuota: string;
+export interface Pago {
+  idPago: string;
   idAlumno: string;
-  fechaEmision: string;
-  /** Formato `YYYY-MM`. */
-  mesAsociado: string;
-  montoPagado: number;
-  estado: EstadoCuota;
-  fechaPago: string | null;
+  monto: number;
+  fecha: string;
+  concepto: string;
 }
 
 export interface Multa {
@@ -100,7 +95,7 @@ export interface DataState {
   habitaciones: Habitacion[];
   asignaciones: HabitacionAlumno[];
   contratos: Contrato[];
-  cuotas: CuotaMensual[];
+  pagos: Pago[];
   multas: Multa[];
   grupos: GrupoDeLimpieza[];
   grupoAlumnos: GrupoLimpiezaAlumno[];

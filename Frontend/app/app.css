@@ -18,7 +18,7 @@
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
+  @apply bg-slate-50 dark:bg-slate-950;
 
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;

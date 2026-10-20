@@ -74,7 +74,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       )}
       <a
         href="/"
-        className="mt-6 inline-flex h-10 items-center rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+        className="mt-6 inline-flex h-10 items-center rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
       >
         Volver al panel
       </a>
