@@ -1,0 +1,173 @@
+// prisma/schema.prisma
+// Configuración del generador de cliente Prisma y datasource para PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==========================================
+// MODELOS DEL SISTEMA DE RESIDENCIA
+// ==========================================
+
+model Rol {
+  idRol    Int       @id @default(autoincrement())
+  rol      String    @unique
+  usuarios Usuario[]
+
+  @@map("roles")
+}
+
+model Usuario {
+  idUsuario      Int      @id @default(autoincrement())
+  correo         String   @unique
+  contrasenaHash String   @map("contrasenaHash")
+  idRol          Int
+
+  // Relaciones
+  rol            Rol      @relation(fields: [idRol], references: [idRol])
+  alumno         Alumno?
+
+  @@map("usuarios")
+}
+
+model Alumno {
+  idAlumno  Int     @id @default(autoincrement())
+  idUsuario Int     @unique
+  nombre    String
+  apellido  String
+  telefono  String?
+  documento String  @unique
+  estado    String  @default("ACTIVO") // Ejemplos: "ACTIVO", "INACTIVO"
+
+  // Relaciones
+  usuario                Usuario              @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  contratos              Contrato[]
+  cuotasMensuales        CuotaMensual[]
+  multas                 Multa[]
+  habitacionesAlumnos    HabitacionAlumno[]
+  gruposLimpiezaAlumnos  GrupoLimpiezaAlumno[]
+
+  @@map("alumnos")
+}
+
+model Habitacion {
+  idHabitacion     Int     @id @default(autoincrement())
+  numeroHabitacion String
+  capacidadMaxima  Int
+  pisoHabitacion   Int?
+  descripcion      String?
+
+  // Relaciones
+  habitacionesAlumnos HabitacionAlumno[]
+
+  @@map("habitaciones")
+}
+
+// Tabla intermedia con rango de fechas para asignación histórica de habitaciones
+model HabitacionAlumno {
+  idHabitacion Int
+  idAlumno     Int
+  fechaDesde   DateTime
+  fechaHasta   DateTime?
+
+  // Relaciones con eliminación en cascada
+  habitacion   Habitacion @relation(fields: [idHabitacion], references: [idHabitacion], onDelete: Cascade)
+  alumno       Alumno     @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
+
+  @@id([idHabitacion, idAlumno, fechaDesde])
+  @@map("habitaciones_alumnos")
+}
+
+model Contrato {
+  idContrato Int      @id @default(autoincrement())
+  idAlumno   Int
+  fechaDesde DateTime
+  fechaHasta DateTime
+
+  // Relación con Alumno
+  alumno     Alumno   @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
+
+  @@map("contratos")
+}
+
+model CuotaMensual {
+  idCuota      Int      @id @default(autoincrement())
+  idAlumno     Int
+  fechaEmision DateTime @default(now())
+  mesAsociado  String
+  montoPagado  Decimal  @db.Decimal(10, 2)
+  estadoCuota  String   // Ejemplos: "PENDIENTE", "PAGADA", "VENCIDA"
+
+  // Relación con Alumno
+  alumno       Alumno   @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
+
+  @@map("cuotas_mensuales")
+}
+
+model Multa {
+  idMulta      Int      @id @default(autoincrement())
+  idAlumno     Int
+  monto        Decimal  @db.Decimal(10, 2)
+  fechaEmision DateTime @default(now())
+  fechaVence   DateTime
+  estadoMulta  String   // Ejemplos: "PENDIENTE", "PAGADA", "ANULADA"
+
+  // Relación con Alumno
+  alumno       Alumno   @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
+
+  @@map("multas")
+}
+
+model GrupoDeLimpieza {
+  idGrupoLimpieza Int    @id @default(autoincrement())
+  nombreDelGrupo  String
+
+  // Relaciones
+  gruposLimpiezaAlumnos   GrupoLimpiezaAlumno[]
+  gruposLimpiezaAmbientes GrupoLimpiezaAmbiente[]
+
+  @@map("grupos_de_limpieza")
+}
+
+// Tabla intermedia para pertenencia de alumnos a grupos de limpieza
+model GrupoLimpiezaAlumno {
+  idGrupoLimpieza Int
+  idAlumno        Int
+
+  grupoLimpieza   GrupoDeLimpieza @relation(fields: [idGrupoLimpieza], references: [idGrupoLimpieza], onDelete: Cascade)
+  alumno          Alumno          @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
+
+  @@id([idGrupoLimpieza, idAlumno])
+  @@map("grupos_limpieza_alumnos")
+}
+
+model Ambiente {
+  idAmbiente Int    @id @default(autoincrement())
+  ambiente   String
+  tareas     String
+
+  // Relaciones
+  gruposLimpiezaAmbientes GrupoLimpiezaAmbiente[]
+
+  @@map("ambientes")
+}
+
+// Tabla intermedia con rango de fechas para asignación periódica de ambientes a grupos
+model GrupoLimpiezaAmbiente {
+  idGrupoLimpieza Int
+  idAmbiente      Int
+  fechaDesde      DateTime
+  fechaHasta      DateTime?
+
+  grupoLimpieza   GrupoDeLimpieza @relation(fields: [idGrupoLimpieza], references: [idGrupoLimpieza], onDelete: Cascade)
+  ambiente        Ambiente        @relation(fields: [idAmbiente], references: [idAmbiente], onDelete: Cascade)
+
+  @@id([idGrupoLimpieza, idAmbiente, fechaDesde])
+  @@map("grupos_limpieza_ambientes")
+}
