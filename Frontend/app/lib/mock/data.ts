@@ -116,6 +116,7 @@ export function createInitialData(): DataState {
       telefono: `11 ${5000 + indice * 13} ${3000 + indice * 7}`,
       correo: `${slug(nombre)}.${slug(apellido)}${indice + 1}@correo.com`,
       documento: `${30 + (indice % 5)}.${100 + indice}.${200 + indice}`,
+      estado: indice >= 37 ? "inactivo" : "activo",
     };
   });
 

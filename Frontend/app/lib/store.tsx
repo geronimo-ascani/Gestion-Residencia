@@ -163,7 +163,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const idAlumno = nuevoId("A");
         setState((previo) => ({
           ...previo,
-          alumnos: [...previo.alumnos, { ...input, idAlumno }],
+          alumnos: [...previo.alumnos, { ...input, idAlumno, estado: "activo" }],
         }));
         return idAlumno;
       },

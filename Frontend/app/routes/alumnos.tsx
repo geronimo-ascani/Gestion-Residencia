@@ -7,11 +7,11 @@ import { InputField } from "../Components/ui/input";
 import { PageHeader } from "../Components/ui/page-header";
 import { Badge } from "../Components/ui/badge";
 import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/table";
-import { asignacionActiva, contratoVigente, diasHasta, estadoContrato } from "../lib/domain";
+import { asignacionActiva, contratoVigente, diasHasta } from "../lib/domain";
 import { formatFecha } from "../lib/format";
 import { useData } from "../lib/store";
 
-type EstadoFiltro = "todos" | "con-habitacion" | "sin-habitacion" | "vence-30";
+type EstadoFiltro = "todos" | "activo" | "inactivo" | "con-habitacion" | "sin-habitacion" | "vence-30";
 
 export function meta() {
   return [{ title: "Alumnos · Gestión de Residencia" }];
@@ -40,7 +40,6 @@ export default function Alumnos() {
         const asignacion = asignacionActiva(asignaciones, alumno.idAlumno);
         const tieneContrato = Boolean(contrato);
         const tieneHabitacion = Boolean(asignacion);
-        const estContrato = contrato ? estadoContrato(contrato) : null;
         const dias = contrato ? diasHasta(contrato.fechaHasta) : null;
         return {
           alumno,
@@ -48,7 +47,6 @@ export default function Alumnos() {
           asignacion,
           tieneContrato,
           tieneHabitacion,
-          estContrato,
           dias,
           habitacion: habitacionPorAlumno.get(alumno.idAlumno) ?? null,
         };
@@ -64,9 +62,11 @@ export default function Alumnos() {
       })
       .filter((fila) => {
         if (estadoFiltro === "todos") return true;
+        if (estadoFiltro === "activo") return fila.alumno.estado === "activo";
+        if (estadoFiltro === "inactivo") return fila.alumno.estado === "inactivo";
         if (estadoFiltro === "con-habitacion") return fila.tieneHabitacion;
-        if (estadoFiltro === "sin-habitacion") return fila.tieneContrato && !fila.tieneHabitacion;
-        if (estadoFiltro === "vence-30") return fila.contrato ? fila.dias !== null && fila.dias >= 0 && fila.dias <= 30 : false;
+        if (estadoFiltro === "sin-habitacion") return !fila.tieneHabitacion;
+        if (estadoFiltro === "vence-30") return fila.contrato ? fila.dias !== null && fila.dias >= 0 && fila.dias < 30 : false;
         return true;
       })
       .sort((a, b) => a.alumno.apellido.localeCompare(b.alumno.apellido));
@@ -78,6 +78,14 @@ export default function Alumnos() {
         eyebrow="Alumnos"
         title="Listado de alumnos"
         description={`${alumnos.length} alumnos registrados · ${filas.length} mostrados`}
+        actions={
+          <Link to="/alumnos/nuevo">
+            <Button>
+              <Icon name="plus" className="h-4 w-4" />
+              Crear alumno
+            </Button>
+          </Link>
+        }
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -98,9 +106,11 @@ export default function Alumnos() {
             className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/25 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           >
             <option value="todos">Todos</option>
+            <option value="activo">Activos</option>
+            <option value="inactivo">Inactivos</option>
             <option value="con-habitacion">Con habitación</option>
             <option value="sin-habitacion">Sin habitación</option>
-            <option value="vence-30">Vence  en menos de 30 días</option>
+            <option value="vence-30">Contratos que vencen en menos de 30 días</option>
           </select>
         </div>
       </div>
@@ -130,15 +140,15 @@ export default function Alumnos() {
               </TR>
             ) : (
               filas.map((fila) => {
-                let estadoLabel = "Sin contrato";
-                let estadoVariant: "neutral" | "brand" | "success" | "warning" = "neutral";
-                if (fila.tieneContrato && !fila.tieneHabitacion) {
+                let estadoLabel = fila.alumno.estado === "activo" ? "Activo" : "Inactivo";
+                let estadoVariant: "neutral" | "brand" | "success" | "warning" = fila.alumno.estado === "activo" ? "success" : "neutral";
+                if (fila.alumno.estado === "activo" && fila.tieneContrato && !fila.tieneHabitacion) {
                   estadoLabel = "Sin habitación";
                   estadoVariant = "warning";
-                } else if (!fila.tieneContrato && fila.tieneHabitacion) {
+                } else if (fila.alumno.estado === "activo" && !fila.tieneContrato && fila.tieneHabitacion) {
                   estadoLabel = "Con habitación";
                   estadoVariant = "brand";
-                } else if (fila.tieneContrato && fila.tieneHabitacion) {
+                } else if (fila.alumno.estado === "activo" && fila.tieneContrato && fila.tieneHabitacion) {
                   estadoLabel = "Vigente";
                   estadoVariant = "success";
                 }

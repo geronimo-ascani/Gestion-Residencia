@@ -1,6 +1,6 @@
 export type Rol = "administrador" | "alumno";
 
-export type EstadoUsuario = "activo" | "inactivo";
+export type EstadoAlumno = "activo" | "inactivo";
 
 export type EstadoMulta = "pendiente" | "pagada" | "anulada";
 
@@ -11,7 +11,7 @@ export interface Usuario {
   rol: Rol;
   /** Presente solo cuando el rol es `alumno`. */
   idAlumno?: string;
-  estado: EstadoUsuario;
+  estado: EstadoAlumno;
 }
 
 export interface Alumno {
@@ -21,6 +21,7 @@ export interface Alumno {
   telefono: string;
   correo: string;
   documento: string;
+  estado: EstadoAlumno;
 }
 
 export interface Habitacion {

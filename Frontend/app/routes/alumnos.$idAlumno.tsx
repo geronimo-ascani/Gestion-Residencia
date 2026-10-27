@@ -120,9 +120,12 @@ export default function AlumnoDetalle() {
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        {contrato ? <Badge variant="success">Contrato vigente</Badge> : <Badge variant="neutral">Sin contrato</Badge>}
-        {asignacion ? <Badge variant="brand">Con habitación</Badge> : <Badge variant="warning">Sin habitación</Badge>}
-        {multasPendientes > 0 ? <Badge variant="warning">{multasPendientes} multas pendientes</Badge> : null}
+        {alumno.estado === "activo" && contrato ? <Badge variant="success">Contrato vigente</Badge> : null}
+        {alumno.estado === "activo" && !contrato ? <Badge variant="neutral">Sin contrato</Badge> : null}
+        {alumno.estado === "activo" && asignacion ? <Badge variant="brand">Con habitación</Badge> : null}
+        {alumno.estado === "activo" && contrato && !asignacion ? <Badge variant="warning">Sin habitación</Badge> : null}
+        {alumno.estado === "inactivo" ? <Badge variant="neutral">Inactivo</Badge> : null}
+        {alumno.estado === "activo" && multasPendientes > 0 ? <Badge variant="warning">{multasPendientes} multas pendientes</Badge> : null}
       </div>
 
       <Tabs items={tabs} value={tab} onChange={setTab} label="Secciones del alumno" />

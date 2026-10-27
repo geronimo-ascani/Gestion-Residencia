@@ -13,6 +13,7 @@ export default [
   layout("routes/app-shell.tsx", [
     index("routes/dashboard.tsx"),
     route("alumnos", "routes/alumnos.tsx"),
+    route("alumnos/nuevo", "routes/alumnos.nuevo.tsx"),
     route("alumnos/:idAlumno", "routes/alumnos.$idAlumno.tsx"),
     route("*", "routes/proximamente.tsx"),
   ]),
