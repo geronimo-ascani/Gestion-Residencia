@@ -389,7 +389,7 @@ function Topbar({
               onChange={(event) => setBusqueda(event.target.value)}
               placeholder="Buscar alumno…"
               aria-label="Buscar alumno"
-              className="h-9 w-full rounded-md border border-slate-200 bg-slate-50 pr-3 pl-9 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-600 focus:bg-white focus:ring-2 focus:ring-brand-600/25 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+              className="h-9 w-full rounded-md border border-slate-200 bg-slate-50 pr-3 pl-9 text-sm text-slate-900 caret-brand-600 [-webkit-text-fill-color:theme(colors.slate.900)] outline-none transition placeholder:text-slate-400 focus:border-brand-600 focus:bg-white focus:text-slate-900 focus:ring-2 focus:ring-brand-600/25 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:caret-slate-100 dark:[-webkit-text-fill-color:theme(colors.slate.100)] dark:placeholder:text-slate-500 dark:focus:bg-slate-900 dark:focus:text-slate-100"
             />
           </div>
         </form>
