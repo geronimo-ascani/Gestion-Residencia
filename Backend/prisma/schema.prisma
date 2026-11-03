@@ -89,6 +89,7 @@ model Contrato {
   idAlumno   Int
   fechaDesde DateTime
   fechaHasta DateTime
+  estado     String   @default("VIGENTE") // Ejemplos: "VIGENTE", "FINALIZADO", "RESCINDIDO", "CANCELADO"
 
   // Relación con Alumno
   alumno     Alumno   @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)

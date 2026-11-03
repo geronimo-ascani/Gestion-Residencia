@@ -7,7 +7,14 @@ const server = app.listen(env.PORT, () => {
   console.log(`🚀 Servidor ejecutándose en el puerto: ${env.PORT}`);
   console.log(`🌍 Entorno: ${env.NODE_ENV}`);
   console.log(`🩺 Health check: http://localhost:${env.PORT}/api/health`);
-  console.log(`📚 Endpoint Alumnos: http://localhost:${env.PORT}/api/alumnos`);
+  console.log(`🔐 Auth:          http://localhost:${env.PORT}/api/auth`);
+  console.log(`👤 Alumnos:       http://localhost:${env.PORT}/api/alumnos`);
+  console.log(`🛏️  Habitaciones:  http://localhost:${env.PORT}/api/habitaciones`);
+  console.log(`📄 Contratos:     http://localhost:${env.PORT}/api/contratos`);
+  console.log(`💳 Cuotas:        http://localhost:${env.PORT}/api/cuotas`);
+  console.log(`⚠️  Multas:        http://localhost:${env.PORT}/api/multas`);
+  console.log(`🧹 Limpieza:      http://localhost:${env.PORT}/api/grupos-limpieza`);
+  console.log(`🏡 Ambientes:     http://localhost:${env.PORT}/api/ambientes`);
   console.log(`===============================================`);
 });
 

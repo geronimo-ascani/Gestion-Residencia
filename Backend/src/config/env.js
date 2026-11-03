@@ -11,6 +11,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "La variable DATABASE_URL es obligatoria"),
   DIRECT_URL: z.string().optional(),
   CORS_ORIGIN: z.string().default("*"),
+  JWT_SECRET: z.string().default("super_secret_jwt_key_residencia_2026_default"),
+  JWT_EXPIRES_IN: z.string().default("7d"),
 });
 
 const _env = envSchema.safeParse(process.env);
