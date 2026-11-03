@@ -15,6 +15,10 @@ export default [
     route("alumnos", "routes/alumnos.tsx"),
     route("alumnos/nuevo", "routes/alumnos.nuevo.tsx"),
     route("alumnos/:idAlumno", "routes/alumnos.$idAlumno.tsx"),
+    route("habitaciones", "routes/habitaciones.tsx"),
+    route("habitaciones/:idHabitacion", "routes/habitaciones.$idHabitacion.tsx"),
+    route("contratos", "routes/contratos.tsx"),
+    route("contratos/:idContrato", "routes/contratos.$idContrato.tsx"),
     route("*", "routes/proximamente.tsx"),
   ]),
 ] satisfies RouteConfig;

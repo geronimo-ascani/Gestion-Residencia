@@ -20,7 +20,7 @@ export function estaActiva(
   hasta: string | null,
   hoy: string = FECHA_REFERENCIA,
 ): boolean {
-  return desde <= hoy && (hasta === null || hasta >= hoy);
+  return desde <= hoy && (hasta === null || hasta > hoy);
 }
 
 export function asignacionesActivas(

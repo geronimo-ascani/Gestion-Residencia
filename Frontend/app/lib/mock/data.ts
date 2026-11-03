@@ -72,22 +72,22 @@ function slug(texto: string): string {
     .replace(/[^a-z0-9]+/g, ".");
 }
 
-const HABITACIONES_BASE: Array<[string, number, string]> = [
-  ["101", 2, "Doble con baño privado"],
-  ["102", 3, "Triple con baño compartido"],
-  ["103", 4, "Cuádruple con baño privado"],
-  ["104", 2, "Doble con balcón"],
-  ["105", 3, "Triple con baño compartido"],
-  ["201", 4, "Cuádruple con baño privado"],
-  ["202", 2, "Doble con baño privado"],
-  ["203", 3, "Triple con escritorio"],
-  ["204", 2, "Doble con baño compartido"],
-  ["205", 4, "Cuádruple con vestidor"],
-  ["301", 3, "Triple con baño privado"],
-  ["302", 2, "Doble con balcón"],
-  ["303", 4, "Cuádruple con baño compartido"],
-  ["304", 3, "Triple con escritorio"],
-  ["305", 2, "Doble con baño privado"],
+const HABITACIONES_BASE: Array<[string, number, number, string]> = [
+  ["101", 1, 2, "Doble con baño privado"],
+  ["102", 1, 3, "Triple con baño compartido"],
+  ["103", 1, 4, "Cuádruple con baño privado"],
+  ["104", 1, 2, "Doble con balcón"],
+  ["105", 1, 3, "Triple con baño compartido"],
+  ["201", 2, 4, "Cuádruple con baño privado"],
+  ["202", 2, 2, "Doble con baño privado"],
+  ["203", 2, 3, "Triple con escritorio"],
+  ["204", 2, 2, "Doble con baño compartido"],
+  ["205", 2, 4, "Cuádruple con vestidor"],
+  ["301", 3, 3, "Triple con baño privado"],
+  ["302", 3, 2, "Doble con balcón"],
+  ["303", 3, 4, "Cuádruple con baño compartido"],
+  ["304", 3, 3, "Triple con escritorio"],
+  ["305", 3, 2, "Doble con baño privado"],
 ];
 
 const OCUPACION_INICIAL = [2, 3, 4, 2, 3, 4, 2, 3, 1, 0, 3, 2, 0, 3, 2];
@@ -121,9 +121,10 @@ export function createInitialData(): DataState {
   });
 
   const habitaciones: Habitacion[] = HABITACIONES_BASE.map(
-    ([numero, capacidad, descripcion]) => ({
+    ([numero, piso, capacidad, descripcion]) => ({
       idHabitacion: `H${numero}`,
       numeroHabitacion: numero,
+      pisoHabitacion: piso,
       capacidadMaxima: capacidad,
       descripcion,
     }),
@@ -152,7 +153,7 @@ export function createInitialData(): DataState {
       idAlumno,
       idHabitacion: habitaciones[9 + indice].idHabitacion,
       fechaDesde: "2025-08-01",
-      fechaHasta: "2026-02-28",
+      fechaHasta: "2026-03-01",
     });
   });
 

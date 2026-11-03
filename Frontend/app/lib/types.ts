@@ -27,14 +27,14 @@ export interface Alumno {
 export interface Habitacion {
   idHabitacion: string;
   numeroHabitacion: string;
+  pisoHabitacion: number;
   capacidadMaxima: number;
   descripcion: string;
 }
 
 /**
- * Asignación física de una habitación. Las filas con `fechaHasta` null son las
- * vigentes; las anteriores quedan como historial y permiten cambios de
- * habitación durante el mismo contrato.
+ * Asignación física de una habitación. `fechaHasta` es un límite exclusivo;
+ * null indica una asignación vigente. Las anteriores quedan como historial.
  */
 export interface HabitacionAlumno {
   idHabitacion: string;
