@@ -10,6 +10,7 @@ import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/tab
 import { diasHasta, estadoContrato } from "../lib/domain";
 import { formatFecha } from "../lib/format";
 import { useData } from "../lib/store";
+import { useDebouncedValue } from "../lib/use-debounced-value";
 import type { EstadoContrato as EstadoContratoTipo } from "../lib/domain";
 
 type FiltroContrato = "todos" | EstadoContratoTipo;
@@ -35,11 +36,12 @@ export function meta() {
 export default function Contratos() {
   const { contratos, alumnos, alumnoPorId } = useData();
   const [busqueda, setBusqueda] = useState("");
+  const busquedaDebounceada = useDebouncedValue(busqueda);
   const [filtroContrato, setFiltroContrato] = useState<FiltroContrato>("todos");
   const [filtroAlumno, setFiltroAlumno] = useState<FiltroAlumno>("todos");
 
   const filas = useMemo(() => {
-    const termino = busqueda.trim().toLowerCase();
+    const termino = busquedaDebounceada.trim().toLowerCase();
     return contratos
       .map((contrato) => {
         const alumno = alumnoPorId.get(contrato.idAlumno) ?? alumnos.find((a) => a.idAlumno === contrato.idAlumno);
@@ -75,7 +77,7 @@ export default function Contratos() {
         }
         return diasA - diasB;
       });
-  }, [alumnoPorId, alumnos, busqueda, contratos, filtroAlumno, filtroContrato]);
+  }, [alumnoPorId, alumnos, busquedaDebounceada, contratos, filtroAlumno, filtroContrato]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -84,14 +86,20 @@ export default function Contratos() {
         title="Listado de contratos"
         description={`${contratos.length} contratos registrados · ${filas.length} mostrados`}
         actions={
-          <Button variant="ghost">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/contratos/nuevo">
+              <Button>
+                <Icon name="plus" className="h-4 w-4" />
+                Nuevo contrato
+              </Button>
+            </Link>
             <Link to="/alumnos">
-              <span className="inline-flex items-center gap-2">
+              <Button variant="ghost">
                 <Icon name="users" className="h-4 w-4" />
                 Ver alumnos
-              </span>
+              </Button>
             </Link>
-          </Button>
+          </div>
         }
       />
 

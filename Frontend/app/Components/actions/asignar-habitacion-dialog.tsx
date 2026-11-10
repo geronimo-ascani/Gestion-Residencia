@@ -59,13 +59,13 @@ export function AsignarHabitacionDialog({
   const alumnosOrdenados = [...alumnos].sort((a, b) =>
     a.apellido.localeCompare(b.apellido),
   );
+  const alumnosConHabitacion = new Set(
+    activas.map((asignacion) => asignacion.idAlumno),
+  );
 
   const alumnosDisponibles = alumnosOrdenados.filter((alumno) => {
     if (!idHabitacion) return true;
-    return (
-      asignacionActiva(asignaciones, alumno.idAlumno)?.idHabitacion !==
-      idHabitacion
-    );
+    return !alumnosConHabitacion.has(alumno.idAlumno);
   });
 
   const disponibles = habitacionesConCupo(alumnoSeleccionado);
@@ -122,45 +122,46 @@ export function AsignarHabitacionDialog({
       open={open}
       onClose={onClose}
       title="Asignar habitación"
-      description="Si el alumno ya tenía una habitación, la asignación anterior se cierra con la fecha de hoy."
+      description={
+        idHabitacion
+          ? "Seleccioná un alumno que todavía no tenga habitación asignada."
+          : "Si el alumno ya tenía una habitación, la asignación anterior se cierra con la fecha de hoy."
+      }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {!idAlumno ? (
-          <SelectField
-            id={`${idBase}-alumno`}
-            label="Alumno"
-            value={alumnoSeleccionado}
-            required
-            onChange={(event) => {
-              const nuevoAlumno = event.target.value;
-              setAlumnoSeleccionado(nuevoAlumno);
-              const opciones = habitacionesConCupo(nuevoAlumno);
-              setHabitacionSeleccionada((previa) =>
-                opciones.some(
-                  (opcion) =>
-                    opcion.habitacion.idHabitacion === previa,
-                )
-                  ? previa
-                  : (opciones[0]?.habitacion.idHabitacion ?? ""),
-              );
-              setError(null);
-            }}
-          >
-            {alumnosDisponibles.map((alumno) => {
-              const actual = asignacionActiva(asignaciones, alumno.idAlumno);
-              const habitacionActual = actual
-                ? habitacionPorId.get(actual.idHabitacion)
-                : undefined;
-              return (
+          alumnosDisponibles.length > 0 ? (
+            <SelectField
+              id={`${idBase}-alumno`}
+              label="Alumno sin habitación"
+              value={alumnoSeleccionado}
+              required
+              onChange={(event) => {
+                const nuevoAlumno = event.target.value;
+                setAlumnoSeleccionado(nuevoAlumno);
+                const opciones = habitacionesConCupo(nuevoAlumno);
+                setHabitacionSeleccionada((previa) =>
+                  opciones.some(
+                    (opcion) =>
+                      opcion.habitacion.idHabitacion === previa,
+                  )
+                    ? previa
+                    : (opciones[0]?.habitacion.idHabitacion ?? ""),
+                );
+                setError(null);
+              }}
+            >
+              {alumnosDisponibles.map((alumno) => (
                 <option key={alumno.idAlumno} value={alumno.idAlumno}>
-                  {alumno.apellido}, {alumno.nombre}
-                  {habitacionActual
-                    ? ` · Hab. ${habitacionActual.numeroHabitacion}`
-                    : " · Sin habitación"}
+                  {alumno.apellido}, {alumno.nombre} · Sin habitación
                 </option>
-              );
-            })}
-          </SelectField>
+              ))}
+            </SelectField>
+          ) : (
+            <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+              No hay alumnos sin habitación asignada.
+            </p>
+          )
         ) : (
           <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             Alumno:{" "}

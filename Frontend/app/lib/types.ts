@@ -52,7 +52,7 @@ export interface Alumno extends DatosIngresoAlumno {
 export interface Habitacion {
   idHabitacion: string;
   numeroHabitacion: string;
-  pisoHabitacion: number;
+  pisoHabitacion: number | null;
   capacidadMaxima: number;
   descripcion: string;
 }

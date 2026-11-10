@@ -33,6 +33,13 @@ export interface NuevoAlumnoInput extends DatosIngresoAlumno {
   documento: string;
 }
 
+export interface NuevaHabitacionInput {
+  numeroHabitacion: string;
+  pisoHabitacion: number | null;
+  capacidadMaxima: number;
+  descripcion: string;
+}
+
 export interface NuevoContratoInput {
   idAlumno: string;
   fechaDesde: string;
@@ -50,6 +57,7 @@ export interface DataContextValue extends DataState {
   asignarHabitacion: (idAlumno: string, idHabitacion: string) => void;
   liberarHabitacion: (idAlumno: string) => void;
   crearAlumno: (input: NuevoAlumnoInput) => string;
+  crearHabitacion: (input: NuevaHabitacionInput) => string;
   crearContrato: (input: NuevoContratoInput) => void;
   cancelarContrato: (idContrato: string, fecha: string, motivo: string) => void;
 }
@@ -169,6 +177,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
           alumnos: [...previo.alumnos, { ...input, idAlumno, estado: "activo" }],
         }));
         return idAlumno;
+      },
+
+      crearHabitacion(input) {
+        const idHabitacion = nuevoId("H");
+        setState((previo) => ({ ...previo, habitaciones: [...previo.habitaciones, { ...input, idHabitacion }] }));
+        return idHabitacion;
       },
 
       cancelarContrato(idContrato, fecha, motivo) {
