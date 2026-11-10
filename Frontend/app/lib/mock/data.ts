@@ -176,6 +176,12 @@ export function createInitialData(): DataState {
     };
   });
 
+  contratos.push(
+    { idContrato: "C41", idAlumno: "A01", fechaDesde: "2025-03-01", fechaHasta: "2026-02-28" },
+    { idContrato: "C42", idAlumno: "A02", fechaDesde: "2024-03-01", fechaHasta: "2025-02-28", fechaCancelacion: "2024-10-15", motivoCancelacion: "Baja voluntaria por motivos personales." },
+    { idContrato: "C43", idAlumno: "A38", fechaDesde: "2023-03-01", fechaHasta: "2024-02-29" },
+  );
+
   const pagos: Pago[] = alumnos.slice(0, 37).map((alumno, indice) => ({
     idPago: `P${pad(indice + 1)}`,
     idAlumno: alumno.idAlumno,

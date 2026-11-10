@@ -17,14 +17,14 @@ const base =
   "disabled:pointer-events-none disabled:opacity-60";
 
 const variants: Record<ButtonVariant, string> = {
-  solid: "bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800",
+  solid: "border border-brand-700 shadow-sm bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800",
   outline:
-    "border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 active:bg-brand-200/70 " +
+    "border border-brand-400 bg-brand-100 shadow-sm text-brand-700 hover:bg-brand-100 active:bg-brand-200/70 " +
     "dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-200 dark:hover:bg-brand-900/50",
   ghost:
     "text-brand-700 hover:bg-brand-50 hover:text-brand-800 " +
     "dark:text-brand-300 dark:hover:bg-brand-900/30 dark:hover:text-brand-200",
-  danger: "bg-red-700 text-white hover:bg-red-800 active:bg-red-900",
+  danger: "border border-red-800 shadow-sm bg-red-700 text-white hover:bg-red-800 active:bg-red-900",
 };
 
 const sizes: Record<ButtonSize, string> = {

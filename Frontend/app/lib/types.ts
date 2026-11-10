@@ -14,7 +14,32 @@ export interface Usuario {
   estado: EstadoAlumno;
 }
 
-export interface Alumno {
+export interface ContactoEmergencia {
+  nombre: string;
+  vinculo: string;
+  telefono: string;
+}
+
+export interface DatosIngresoAlumno {
+  contactosEmergencia?: ContactoEmergencia[];
+  cantidadMateriasCursadas?: number;
+  fechaNacimiento?: string;
+  nacionalidad?: string;
+  domicilio?: string;
+  localidad?: string;
+  provincia?: string;
+  codigoPostal?: string;
+  institucion?: string;
+  carrera?: string;
+  anioCursado?: string;
+  legajo?: string;
+  emergenciaNombre?: string;
+  emergenciaVinculo?: string;
+  emergenciaTelefono?: string;
+  observaciones?: string;
+}
+
+export interface Alumno extends DatosIngresoAlumno {
   idAlumno: string;
   nombre: string;
   apellido: string;
@@ -48,6 +73,9 @@ export interface Contrato {
   idAlumno: string;
   fechaDesde: string;
   fechaHasta: string;
+  /** Baja efectiva: desde esta fecha ya no reside. Se conserva el fin pactado. */
+  fechaCancelacion?: string;
+  motivoCancelacion?: string;
 }
 
 export interface Pago {

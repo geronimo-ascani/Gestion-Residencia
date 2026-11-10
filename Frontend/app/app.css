@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* El tema claro es el predeterminado, independiente del tema del sistema. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
@@ -18,9 +21,6 @@
 
 html,
 body {
-  @apply bg-slate-50 dark:bg-slate-950;
-
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
-  }
+  @apply bg-slate-50 text-slate-900;
+  color-scheme: light;
 }

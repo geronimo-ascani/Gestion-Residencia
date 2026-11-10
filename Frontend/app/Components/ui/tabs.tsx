@@ -24,7 +24,7 @@ export function Tabs({
       role="group"
       aria-label={label}
       className={cn(
-        "inline-flex rounded-md border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900",
+        "inline-flex rounded-md border border-slate-300 bg-white shadow-sm p-1 dark:border-slate-800 dark:bg-slate-900",
         className,
       )}
     >

@@ -49,13 +49,13 @@ export function SelectField({
           aria-invalid={Boolean(error) || undefined}
           aria-describedby={describedBy}
           className={cn(
-            "h-11 w-full cursor-pointer appearance-none rounded-md border bg-white px-3 pr-9 text-sm text-slate-900 outline-none transition",
-            "focus:border-brand-600 focus:ring-2 focus:ring-brand-600/25",
+            "h-11 w-full cursor-pointer appearance-none rounded-md border bg-slate-100/80 px-3 pr-9 text-sm text-slate-900 outline-none transition",
+            "focus:bg-white focus:border-brand-600 focus:ring-2 focus:ring-brand-600/25",
             "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500",
             "dark:bg-slate-900 dark:text-slate-100",
             error
               ? "border-red-400 focus:border-red-500 focus:ring-red-500/40"
-              : "border-slate-300 dark:border-slate-700",
+              : "border-slate-400 dark:border-slate-700",
             className,
           )}
           {...props}

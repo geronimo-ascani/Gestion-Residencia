@@ -13,7 +13,8 @@ export type EstadoContrato =
   | "vigente"
   | "por-vencer"
   | "finalizado"
-  | "programado";
+  | "programado"
+  | "cancelado";
 
 export function estaActiva(
   desde: string,
@@ -111,6 +112,7 @@ export function estadoContrato(
   contrato: Contrato,
   hoy: string = FECHA_REFERENCIA,
 ): EstadoContrato {
+  if (contrato.fechaCancelacion && contrato.fechaCancelacion <= hoy) return "cancelado";
   if (contrato.fechaDesde > hoy) return "programado";
   if (contrato.fechaHasta < hoy) return "finalizado";
   if (diasHasta(contrato.fechaHasta, hoy) <= 30) return "por-vencer";
@@ -122,12 +124,36 @@ export function contratoVigente(
   idAlumno: string,
   hoy: string = FECHA_REFERENCIA,
 ): Contrato | undefined {
-  return contratos.find(
-    (c) =>
-      c.idAlumno === idAlumno && c.fechaDesde <= hoy && c.fechaHasta >= hoy,
+  return [...contratos].sort((a, b) => b.fechaDesde.localeCompare(a.fechaDesde)).find(
+    (c) => c.idAlumno === idAlumno && c.fechaDesde <= hoy && c.fechaHasta >= hoy &&
+      (!c.fechaCancelacion || c.fechaCancelacion > hoy),
   );
 }
 
 export function totalRecaudado(pagos: Pago[]): number {
   return pagos.reduce((total, pago) => total + pago.monto, 0);
+}
+
+/** Último día de estadía; una baja es efectiva al comienzo de su fecha. */
+export function finEstadia(contrato: Contrato): string {
+  if (!contrato.fechaCancelacion) return contrato.fechaHasta;
+  return sumarDia(contrato.fechaCancelacion, -1);
+}
+
+export function sumarDia(fecha: string, cantidad = 1): string {
+  const date = new Date(`${fecha}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + cantidad);
+  return date.toISOString().slice(0, 10);
+}
+
+export function contratosSuperpuestos(contratos: Contrato[], nuevo: Pick<Contrato, "idAlumno" | "fechaDesde" | "fechaHasta">): boolean {
+  return contratos.some((c) => c.idAlumno === nuevo.idAlumno &&
+    c.fechaDesde <= finEstadia(c) && nuevo.fechaDesde <= finEstadia(c) && nuevo.fechaHasta >= c.fechaDesde);
+}
+
+export function tipoIngreso(contrato: Contrato, contratos: Contrato[]): string {
+  const anterior = contratos.filter((c) => c.idAlumno === contrato.idAlumno && c.idContrato !== contrato.idContrato &&
+    c.fechaDesde < contrato.fechaDesde).sort((a, b) => finEstadia(b).localeCompare(finEstadia(a)))[0];
+  if (!anterior) return "Primer ingreso";
+  return !anterior.fechaCancelacion && sumarDia(anterior.fechaHasta) === contrato.fechaDesde ? "Renovación" : "Reingreso";
 }

@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
 import { FECHA_REFERENCIA } from "../../lib/config";
+import { contratosSuperpuestos, sumarDia } from "../../lib/domain";
 import { formatFecha } from "../../lib/format";
 import { useData } from "../../lib/store";
 import { Button } from "../ui/button";
@@ -13,12 +14,14 @@ export function NuevoContratoDialog({
   open,
   onClose,
   idAlumnoInicial,
+  fechaDesdeInicial,
 }: {
   open: boolean;
   onClose: () => void;
   idAlumnoInicial?: string;
+  fechaDesdeInicial?: string;
 }) {
-  const { alumnos, alumnoPorId, crearContrato } = useData();
+  const { alumnos, alumnoPorId, contratos, crearContrato } = useData();
   const { toast } = useToast();
   const idBase = useId();
   const [idAlumno, setIdAlumno] = useState("");
@@ -33,11 +36,12 @@ export function NuevoContratoDialog({
   useEffect(() => {
     if (!open) return;
     setIdAlumno(idAlumnoInicial ?? alumnosOrdenados[0]?.idAlumno ?? "");
-    setFechaDesde(FECHA_REFERENCIA);
-    setFechaHasta("2027-03-31");
+    const inicio = fechaDesdeInicial ?? FECHA_REFERENCIA;
+    setFechaDesde(inicio);
+    setFechaHasta(sumarDia(inicio, 365));
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, idAlumnoInicial]);
+  }, [open, idAlumnoInicial, fechaDesdeInicial]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,6 +59,10 @@ export function NuevoContratoDialog({
       return;
     }
 
+    if (contratosSuperpuestos(contratos, { idAlumno, fechaDesde, fechaHasta })) {
+      setError("Las fechas se superponen con otro contrato del alumno. La renovación debe comenzar después del contrato anterior.");
+      return;
+    }
     crearContrato({ idAlumno, fechaDesde, fechaHasta });
     const alumno = alumnoPorId.get(idAlumno);
     toast({
