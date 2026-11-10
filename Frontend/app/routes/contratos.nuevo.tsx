@@ -1,25 +1,24 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { FECHA_REFERENCIA } from "../../lib/config";
-import { formatFecha } from "../../lib/format";
-import { useData } from "../../lib/store";
-import { useDebouncedValue } from "../../lib/use-debounced-value";
-import { Button } from "../ui/button";
-import { Dialog } from "../ui/dialog";
-import { TextField } from "../ui/text-field";
-import { useToast } from "../ui/toast";
+import { Link, useNavigate } from "react-router";
+import { Button } from "../Components/ui/button";
+import { Icon } from "../Components/ui/icons";
+import { PageHeader } from "../Components/ui/page-header";
+import { TextField } from "../Components/ui/text-field";
+import { useToast } from "../Components/ui/toast";
+import { FECHA_REFERENCIA } from "../lib/config";
+import { formatFecha } from "../lib/format";
+import { useData } from "../lib/store";
+import { useDebouncedValue } from "../lib/use-debounced-value";
 
-export function NuevoContratoDialog({
-  open,
-  onClose,
-  idAlumnoInicial,
-}: {
-  open: boolean;
-  onClose: () => void;
-  idAlumnoInicial?: string;
-}) {
+export function meta() {
+  return [{ title: "Nuevo contrato · Gestión de Residencia" }];
+}
+
+export default function NuevoContrato() {
   const { alumnos, alumnoPorId, crearContrato } = useData();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const idBase = useId();
   const [idAlumno, setIdAlumno] = useState("");
   const [busquedaAlumno, setBusquedaAlumno] = useState("");
@@ -46,24 +45,6 @@ export function NuevoContratoDialog({
     );
   }, [alumnosOrdenados, busquedaAlumnoDebounceada]);
   const alumnoSeleccionado = alumnos.find((alumno) => alumno.idAlumno === idAlumno);
-
-  useEffect(() => {
-    if (!open) return;
-    const alumnoInicial = alumnos.find(
-      (alumno) => alumno.idAlumno === idAlumnoInicial,
-    );
-    setIdAlumno(alumnoInicial?.idAlumno ?? "");
-    setBusquedaAlumno(
-      alumnoInicial ? `${alumnoInicial.apellido}, ${alumnoInicial.nombre}` : "",
-    );
-    setOpcionesAbiertas(false);
-    setOpcionActiva(0);
-    setFechaDesde(FECHA_REFERENCIA);
-    setFechaHasta("2027-03-31");
-    setErrorAlumno(null);
-    setErrorFechas(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, idAlumnoInicial]);
 
   function seleccionarAlumno(alumnoId: string) {
     const alumno = alumnos.find((item) => item.idAlumno === alumnoId);
@@ -96,19 +77,28 @@ export function NuevoContratoDialog({
       title: "Contrato creado",
       description: `${alumno ? `${alumno.nombre} ${alumno.apellido}` : "Alumno"} · ${formatFecha(fechaDesde)} al ${formatFecha(fechaHasta)}`,
     });
-    onClose();
+    navigate("/contratos");
   }
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Nuevo contrato"
-      description="Un alumno puede tener varios contratos a lo largo del tiempo."
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="Contratos"
+        title="Nuevo contrato"
+        description="Definí el titular y el período de vigencia."
+        actions={
+          <Link to="/contratos">
+            <Button variant="outline">
+              <Icon name="arrow" className="h-4 w-4 rotate-180" />
+              Volver al listado
+            </Button>
+          </Link>
+        }
+      />
+
+      <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
         <div
-          className="relative"
+          className="relative max-w-xl"
           onBlur={(event) => {
             if (
               !(event.relatedTarget instanceof Node) ||
@@ -123,7 +113,6 @@ export function NuevoContratoDialog({
             label="Buscar alumno"
             type="search"
             value={busquedaAlumno}
-            disabled={Boolean(idAlumnoInicial)}
             autoComplete="off"
             role="combobox"
             aria-autocomplete="list"
@@ -175,7 +164,7 @@ export function NuevoContratoDialog({
                 : "Buscá por nombre, apellido o documento."
             }
           />
-          {opcionesAbiertas && !idAlumnoInicial ? (
+          {opcionesAbiertas ? (
             <div
               id={`${idBase}-alumnos`}
               role="listbox"
@@ -219,13 +208,14 @@ export function NuevoContratoDialog({
           ) : null}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid max-w-xl gap-5 sm:grid-cols-2">
           <TextField
             id={`${idBase}-desde`}
             label="Fecha de inicio"
             type="date"
             value={fechaDesde}
             required
+            error={errorFechas ?? undefined}
             onChange={(event) => {
               setFechaDesde(event.target.value);
               setErrorFechas(null);
@@ -237,7 +227,6 @@ export function NuevoContratoDialog({
             type="date"
             value={fechaHasta}
             required
-            error={errorFechas ?? undefined}
             onChange={(event) => {
               setFechaHasta(event.target.value);
               setErrorFechas(null);
@@ -245,13 +234,18 @@ export function NuevoContratoDialog({
           />
         </div>
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancelar
+        <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
+          <Link to="/contratos">
+            <Button type="button" variant="outline">
+              Cancelar
+            </Button>
+          </Link>
+          <Button type="submit">
+            <Icon name="plus" className="h-4 w-4" />
+            Crear contrato
           </Button>
-          <Button type="submit">Crear contrato</Button>
         </div>
       </form>
-    </Dialog>
+    </div>
   );
 }

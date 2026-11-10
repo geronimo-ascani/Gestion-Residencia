@@ -1,10 +1,12 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { useData } from "../../lib/store";
-import { Button } from "../ui/button";
-import { Dialog } from "../ui/dialog";
-import { TextField } from "../ui/text-field";
-import { useToast } from "../ui/toast";
+import { Link, useNavigate } from "react-router";
+import { Button } from "../Components/ui/button";
+import { Icon } from "../Components/ui/icons";
+import { PageHeader } from "../Components/ui/page-header";
+import { TextField } from "../Components/ui/text-field";
+import { useToast } from "../Components/ui/toast";
+import { useData } from "../lib/store";
 
 interface Errores {
   numeroHabitacion?: string;
@@ -13,30 +15,20 @@ interface Errores {
   descripcion?: string;
 }
 
-export function NuevaHabitacionDialog({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+export function meta() {
+  return [{ title: "Agregar habitación · Gestión de Residencia" }];
+}
+
+export default function NuevaHabitacion() {
   const { habitaciones, crearHabitacion } = useData();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const idBase = useId();
   const [numeroHabitacion, setNumeroHabitacion] = useState("");
   const [pisoHabitacion, setPisoHabitacion] = useState("");
   const [capacidadMaxima, setCapacidadMaxima] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [errores, setErrores] = useState<Errores>({});
-
-  useEffect(() => {
-    if (!open) return;
-    setNumeroHabitacion("");
-    setPisoHabitacion("");
-    setCapacidadMaxima("");
-    setDescripcion("");
-    setErrores({});
-  }, [open]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,7 +64,7 @@ export function NuevaHabitacionDialog({
       return;
     }
 
-    crearHabitacion({
+    const idHabitacion = crearHabitacion({
       numeroHabitacion: numeroNormalizado,
       pisoHabitacion: piso,
       capacidadMaxima: capacidad,
@@ -85,18 +77,27 @@ export function NuevaHabitacionDialog({
           ? `Habitación ${numeroNormalizado}`
           : `Habitación ${numeroNormalizado} · Piso ${piso}`,
     });
-    onClose();
+    navigate(`/habitaciones/${idHabitacion}`);
   }
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Agregar habitación"
-      description="Completá los datos para incorporarla al inventario."
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="Habitaciones"
+        title="Agregar habitación"
+        description="Ingresá los datos para incorporarla al inventario."
+        actions={
+          <Link to="/habitaciones">
+            <Button variant="outline">
+              <Icon name="arrow" className="h-4 w-4 rotate-180" />
+              Volver al listado
+            </Button>
+          </Link>
+        }
+      />
+
+      <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField
             id={`${idBase}-numero`}
             label="Número de habitación"
@@ -148,13 +149,19 @@ export function NuevaHabitacionDialog({
             }}
           />
         </div>
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancelar
+
+        <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
+          <Link to="/habitaciones">
+            <Button type="button" variant="outline">
+              Cancelar
+            </Button>
+          </Link>
+          <Button type="submit">
+            <Icon name="plus" className="h-4 w-4" />
+            Agregar habitación
           </Button>
-          <Button type="submit">Agregar habitación</Button>
         </div>
       </form>
-    </Dialog>
+    </div>
   );
 }

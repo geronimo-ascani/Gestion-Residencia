@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { NuevoContratoDialog } from "../Components/actions/nuevo-contrato-dialog";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
@@ -39,7 +38,6 @@ export default function Contratos() {
   const busquedaDebounceada = useDebouncedValue(busqueda);
   const [filtroContrato, setFiltroContrato] = useState<FiltroContrato>("todos");
   const [filtroAlumno, setFiltroAlumno] = useState<FiltroAlumno>("todos");
-  const [dialogoAbierto, setDialogoAbierto] = useState(false);
 
   const filas = useMemo(() => {
     const termino = busquedaDebounceada.trim().toLowerCase();
@@ -88,10 +86,12 @@ export default function Contratos() {
         description={`${contratos.length} contratos registrados · ${filas.length} mostrados`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => setDialogoAbierto(true)}>
-              <Icon name="plus" className="h-4 w-4" />
-              Nuevo contrato
-            </Button>
+            <Link to="/contratos/nuevo">
+              <Button>
+                <Icon name="plus" className="h-4 w-4" />
+                Nuevo contrato
+              </Button>
+            </Link>
             <Link to="/alumnos">
               <Button variant="ghost">
                 <Icon name="users" className="h-4 w-4" />
@@ -233,10 +233,6 @@ export default function Contratos() {
           </TBody>
         </Table>
       </TableWrap>
-      <NuevoContratoDialog
-        open={dialogoAbierto}
-        onClose={() => setDialogoAbierto(false)}
-      />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { NuevaHabitacionDialog } from "../Components/actions/nueva-habitacion-dialog";
 import { Badge, StatusBadge } from "../Components/ui/badge";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
@@ -21,7 +20,6 @@ export default function Habitaciones() {
   const { habitaciones, asignaciones } = useData();
   const [busqueda, setBusqueda] = useState("");
   const busquedaDebounceada = useDebouncedValue(busqueda);
-  const [dialogoAbierto, setDialogoAbierto] = useState(false);
 
   const filas = useMemo(() => {
     const ocupacionPorHabitacion = new Map<string, number>();
@@ -71,10 +69,12 @@ export default function Habitaciones() {
         title="Habitaciones"
         description={`${habitaciones.length} habitaciones · ${filas.length} mostradas`}
         actions={
-          <Button onClick={() => setDialogoAbierto(true)}>
-            <Icon name="plus" className="h-4 w-4" />
-            Agregar habitación
-          </Button>
+          <Link to="/habitaciones/nueva">
+            <Button>
+              <Icon name="plus" className="h-4 w-4" />
+              Agregar habitación
+            </Button>
+          </Link>
         }
       />
 
@@ -169,10 +169,6 @@ export default function Habitaciones() {
           </TBody>
         </Table>
       </TableWrap>
-      <NuevaHabitacionDialog
-        open={dialogoAbierto}
-        onClose={() => setDialogoAbierto(false)}
-      />
     </div>
   );
 }
