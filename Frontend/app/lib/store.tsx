@@ -8,6 +8,7 @@ import type {
   DataState,
   GrupoDeLimpieza,
   Habitacion,
+  Multa,
 } from "./types";
 
 let secuencia = 1000;
@@ -19,6 +20,12 @@ function nuevoId(prefijo: string): string {
 
 export interface NuevaMultaInput {
   idAlumno: string;
+  monto: number;
+  fechaVence: string;
+}
+
+export interface EditarMultaInput {
+  idMulta: string;
   monto: number;
   fechaVence: string;
 }
@@ -51,7 +58,8 @@ export interface DataContextValue extends DataState {
   ambientePorId: Map<string, Ambiente>;
   registrarPagoMulta: (idMulta: string) => void;
   anularMulta: (idMulta: string) => void;
-  emitirMulta: (input: NuevaMultaInput) => void;
+  emitirMulta: (input: NuevaMultaInput) => string;
+  actualizarMulta: (input: EditarMultaInput) => void;
   asignarHabitacion: (idAlumno: string, idHabitacion: string) => void;
   liberarHabitacion: (idAlumno: string) => void;
   crearAlumno: (input: NuevoAlumnoInput) => string;
@@ -130,6 +138,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
             },
             ...previo.multas,
           ],
+        }));
+        return idMulta;
+      },
+
+      actualizarMulta({ idMulta, monto, fechaVence }) {
+        setState((previo) => ({
+          ...previo,
+          multas: previo.multas.map((multa: Multa) =>
+            multa.idMulta === idMulta && multa.estado === "pendiente"
+              ? { ...multa, monto: Math.max(0, Math.round(monto)), fechaVence }
+              : multa,
+          ),
         }));
       },
 

@@ -21,6 +21,10 @@ export default [
     route("contratos", "routes/contratos.tsx"),
     route("contratos/nuevo", "routes/contratos.nuevo.tsx"),
     route("contratos/:idContrato", "routes/contratos.$idContrato.tsx"),
+    route("multas", "routes/multas.tsx"),
+    route("multas/nueva", "routes/multas.nueva.tsx"),
+    route("multas/:idMulta/editar", "routes/multas.$idMulta.editar.tsx"),
+    route("multas/:idMulta", "routes/multas.$idMulta.tsx"),
     route("*", "routes/proximamente.tsx"),
   ]),
 ] satisfies RouteConfig;

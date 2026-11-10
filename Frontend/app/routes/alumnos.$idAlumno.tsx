@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
-import { EmitirMultaDialog } from "../Components/actions/emitir-multa-dialog";
 import { Button } from "../Components/ui/button";
 import { ConfirmDialog } from "../Components/ui/confirm-dialog";
 import { EmptyState } from "../Components/ui/empty-state";
@@ -25,7 +24,6 @@ export default function AlumnoDetalle() {
   const { toast } = useToast();
 
   const [tab, setTab] = useState("resumen");
-  const [multaAbierta, setMultaAbierta] = useState(false);
   const [multaAAnular, setMultaAAnular] = useState<Multa | null>(null);
 
   const alumno = useMemo(() => alumnos.find((a) => a.idAlumno === idAlumno), [alumnos, idAlumno]);
@@ -111,10 +109,12 @@ export default function AlumnoDetalle() {
                 Volver a alumnos
               </Button>
             </Link>
-            <Button onClick={() => setMultaAbierta(true)}>
-              <Icon name="fines" className="h-4 w-4" />
-              Emitir multa
-            </Button>
+            <Link to={`/multas/nueva?alumno=${encodeURIComponent(alumno.idAlumno)}`}>
+              <Button>
+                <Icon name="fines" className="h-4 w-4" />
+                Emitir multa
+              </Button>
+            </Link>
           </div>
         }
       />
@@ -277,7 +277,15 @@ export default function AlumnoDetalle() {
                   const ev = estadoMultaVisual(multa);
                   return (
                     <TR key={multa.idMulta}>
-                      <TD>{formatFecha(multa.fechaEmision)}</TD>
+                      <TD>
+                        <Link
+                          to={`/multas/${multa.idMulta}`}
+                          className="text-brand-700 hover:underline dark:text-brand-300"
+                        >
+                          {formatFecha(multa.fechaEmision)}
+                        </Link>
+                        <p className="text-xs text-slate-500">{multa.idMulta}</p>
+                      </TD>
                       <TD>{formatFecha(multa.fechaVence)}</TD>
                       <TD>
                         <StatusBadge estado={ev} />
@@ -305,8 +313,6 @@ export default function AlumnoDetalle() {
           </TableWrap>
         )
       ) : null}
-
-      <EmitirMultaDialog open={multaAbierta} onClose={() => setMultaAbierta(false)} />
 
       <ConfirmDialog
         open={Boolean(multaAAnular)}
