@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
@@ -10,6 +10,7 @@ import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/tab
 import { asignacionActiva, contratoVigente, diasHasta } from "../lib/domain";
 import { formatFecha } from "../lib/format";
 import { useData } from "../lib/store";
+import { useDebouncedValue } from "../lib/use-debounced-value";
 
 type EstadoFiltro = "todos" | "activo" | "inactivo" | "con-habitacion" | "sin-habitacion" | "vence-30";
 
@@ -19,8 +20,15 @@ export function meta() {
 
 export default function Alumnos() {
   const { alumnos, contratos, asignaciones, habitaciones } = useData();
-  const [busqueda, setBusqueda] = useState("");
+  const [searchParams] = useSearchParams();
+  const busquedaUrl = searchParams.get("q") ?? "";
+  const [busqueda, setBusqueda] = useState(busquedaUrl);
+  const busquedaDebounceada = useDebouncedValue(busqueda);
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("todos");
+
+  useEffect(() => {
+    setBusqueda(busquedaUrl);
+  }, [busquedaUrl]);
 
   const habitacionPorAlumno = useMemo(() => {
     const mapa = new Map<string, string>();
@@ -33,7 +41,7 @@ export default function Alumnos() {
   }, [asignaciones, habitaciones]);
 
   const filas = useMemo(() => {
-    const termino = busqueda.trim().toLowerCase();
+    const termino = busquedaDebounceada.trim().toLowerCase();
     return alumnos
       .map((alumno) => {
         const contrato = contratoVigente(contratos, alumno.idAlumno);
@@ -70,7 +78,7 @@ export default function Alumnos() {
         return true;
       })
       .sort((a, b) => a.alumno.apellido.localeCompare(b.alumno.apellido));
-  }, [alumnos, asignaciones, busqueda, contratos, estadoFiltro, habitacionPorAlumno]);
+  }, [alumnos, asignaciones, busquedaDebounceada, contratos, estadoFiltro, habitacionPorAlumno]);
 
   return (
     <div className="flex flex-col gap-6">

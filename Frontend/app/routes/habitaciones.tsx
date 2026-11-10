@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
+import { NuevaHabitacionDialog } from "../Components/actions/nueva-habitacion-dialog";
 import { Badge, StatusBadge } from "../Components/ui/badge";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
@@ -10,6 +11,7 @@ import { Progress } from "../Components/ui/progress";
 import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/table";
 import { asignacionesActivas } from "../lib/domain";
 import { useData } from "../lib/store";
+import { useDebouncedValue } from "../lib/use-debounced-value";
 
 export function meta() {
   return [{ title: "Habitaciones · Gestión de Residencia" }];
@@ -18,6 +20,8 @@ export function meta() {
 export default function Habitaciones() {
   const { habitaciones, asignaciones } = useData();
   const [busqueda, setBusqueda] = useState("");
+  const busquedaDebounceada = useDebouncedValue(busqueda);
+  const [dialogoAbierto, setDialogoAbierto] = useState(false);
 
   const filas = useMemo(() => {
     const ocupacionPorHabitacion = new Map<string, number>();
@@ -28,7 +32,7 @@ export default function Habitaciones() {
       );
     }
 
-    const termino = busqueda.trim().toLowerCase();
+    const termino = busquedaDebounceada.trim().toLowerCase();
     return habitaciones
       .map((habitacion) => {
         const ocupadas = ocupacionPorHabitacion.get(habitacion.idHabitacion) ?? 0;
@@ -41,15 +45,24 @@ export default function Habitaciones() {
         };
       })
       .filter(({ habitacion }) =>
-        [habitacion.numeroHabitacion, habitacion.pisoHabitacion]
+        [habitacion.numeroHabitacion, habitacion.pisoHabitacion ?? ""]
           .some((dato) => String(dato).toLowerCase().includes(termino)),
       )
       .sort(
-        (a, b) =>
-          a.habitacion.pisoHabitacion - b.habitacion.pisoHabitacion ||
-          a.habitacion.numeroHabitacion.localeCompare(b.habitacion.numeroHabitacion),
+        (a, b) => {
+          const pisoA = a.habitacion.pisoHabitacion;
+          const pisoB = b.habitacion.pisoHabitacion;
+          if (pisoA === null && pisoB !== null) return 1;
+          if (pisoA !== null && pisoB === null) return -1;
+          return (
+            (pisoA ?? 0) - (pisoB ?? 0) ||
+            a.habitacion.numeroHabitacion.localeCompare(
+              b.habitacion.numeroHabitacion,
+            )
+          );
+        },
       );
-  }, [asignaciones, busqueda, habitaciones]);
+  }, [asignaciones, busquedaDebounceada, habitaciones]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,6 +70,12 @@ export default function Habitaciones() {
         eyebrow="Residencia"
         title="Habitaciones"
         description={`${habitaciones.length} habitaciones · ${filas.length} mostradas`}
+        actions={
+          <Button onClick={() => setDialogoAbierto(true)}>
+            <Icon name="plus" className="h-4 w-4" />
+            Agregar habitación
+          </Button>
+        }
       />
 
       <div className="relative w-full sm:max-w-sm">
@@ -113,7 +132,9 @@ export default function Habitaciones() {
                           Hab. {habitacion.numeroHabitacion}
                         </p>
                         <p className="text-xs text-slate-500">
-                          Piso {habitacion.pisoHabitacion}
+                          {habitacion.pisoHabitacion === null
+                            ? "Piso no especificado"
+                            : `Piso ${habitacion.pisoHabitacion}`}
                         </p>
                       </div>
                     </TD>
@@ -148,6 +169,10 @@ export default function Habitaciones() {
           </TBody>
         </Table>
       </TableWrap>
+      <NuevaHabitacionDialog
+        open={dialogoAbierto}
+        onClose={() => setDialogoAbierto(false)}
+      />
     </div>
   );
 }

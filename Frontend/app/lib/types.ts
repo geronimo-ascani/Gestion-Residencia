@@ -27,7 +27,7 @@ export interface Alumno {
 export interface Habitacion {
   idHabitacion: string;
   numeroHabitacion: string;
-  pisoHabitacion: number;
+  pisoHabitacion: number | null;
   capacidadMaxima: number;
   descripcion: string;
 }

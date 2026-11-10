@@ -95,7 +95,11 @@ export default function HabitacionDetalle() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow={`Piso ${habitacion.pisoHabitacion}`}
+        eyebrow={
+          habitacion.pisoHabitacion === null
+            ? "Piso no especificado"
+            : `Piso ${habitacion.pisoHabitacion}`
+        }
         title={`Habitación ${habitacion.numeroHabitacion}`}
         description={habitacion.descripcion}
         actions={
