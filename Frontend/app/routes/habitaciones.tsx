@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Badge, StatusBadge } from "../Components/ui/badge";
+import { StatusBadge } from "../Components/ui/badge";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
@@ -8,7 +8,7 @@ import { InputField } from "../Components/ui/input";
 import { PageHeader } from "../Components/ui/page-header";
 import { Progress } from "../Components/ui/progress";
 import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/table";
-import { asignacionesActivas } from "../lib/domain";
+import { asignacionesActivas, calcularOcupacion } from "../lib/domain";
 import { useData } from "../lib/store";
 import { useDebouncedValue } from "../lib/use-debounced-value";
 
@@ -20,6 +20,7 @@ export default function Habitaciones() {
   const { habitaciones, asignaciones } = useData();
   const [busqueda, setBusqueda] = useState("");
   const busquedaDebounceada = useDebouncedValue(busqueda);
+  const resumen = calcularOcupacion(habitaciones, asignaciones);
 
   const filas = useMemo(() => {
     const ocupacionPorHabitacion = new Map<string, number>();
@@ -56,6 +57,8 @@ export default function Habitaciones() {
             (pisoA ?? 0) - (pisoB ?? 0) ||
             a.habitacion.numeroHabitacion.localeCompare(
               b.habitacion.numeroHabitacion,
+              "es",
+              { numeric: true },
             )
           );
         },
@@ -67,7 +70,7 @@ export default function Habitaciones() {
       <PageHeader
         eyebrow="Residencia"
         title="Habitaciones"
-        description={`${habitaciones.length} habitaciones · ${filas.length} mostradas`}
+        description="Consultá la capacidad y los lugares disponibles de cada habitación."
         actions={
           <Link to="/habitaciones/nueva">
             <Button>
@@ -78,97 +81,143 @@ export default function Habitaciones() {
         }
       />
 
-      <div className="relative w-full sm:max-w-sm">
-        <Icon name="search" className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <InputField
-          value={busqueda}
-          onChange={(event) => setBusqueda(event.target.value)}
-          placeholder="Buscar por habitación o piso..."
-          aria-label="Buscar habitaciones"
-          className="pl-9"
-        />
-      </div>
+      <section aria-label="Resumen de habitaciones" className="overflow-hidden rounded-xl border border-brand-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex items-center gap-3 border-b border-brand-200 bg-brand-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800">
+          <Icon name="building" className="h-5 w-5 text-brand-700 dark:text-brand-300" />
+          <div>
+            <h2 className="font-semibold text-slate-900 dark:text-white">Distribución de la residencia</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Un único piso · Planta baja</p>
+          </div>
+        </div>
+        <dl className="grid grid-cols-2 gap-y-5 px-5 py-5 sm:grid-cols-4">
+          {[
+            { label: "Habitaciones", valor: habitaciones.length },
+            { label: "Plazas totales", valor: resumen.capacidadTotal },
+            { label: "Plazas ocupadas", valor: resumen.camasOcupadas },
+            { label: "Plazas libres", valor: Math.max(0, resumen.capacidadTotal - resumen.camasOcupadas) },
+          ].map(({ label, valor }) => (
+            <div key={label}>
+              <dt className="text-sm text-slate-500 dark:text-slate-400">{label}</dt>
+              <dd className="mt-1 text-3xl font-semibold tabular-nums text-brand-900 dark:text-brand-200">{valor}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
-      <TableWrap>
-        <Table>
-          <THead>
-            <TR>
-              <TH>Habitación</TH>
-              <TH>Ocupación</TH>
-              <TH>Disponibilidad</TH>
-              <TH className="text-right">Detalle</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {filas.length === 0 ? (
+      <section aria-labelledby="listado-habitaciones" className="flex flex-col gap-4">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <h2 id="listado-habitaciones" className="text-lg font-semibold text-slate-900 dark:text-white">Listado de habitaciones</h2>
+            <p aria-live="polite" className="text-sm text-slate-500 dark:text-slate-400">{habitaciones.length} registradas · {filas.length} mostradas</p>
+          </div>
+          <div className="relative w-full sm:max-w-xs">
+            <Icon name="search" className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <InputField
+              value={busqueda}
+              onChange={(event) => setBusqueda(event.target.value)}
+              placeholder="Buscar por habitación o piso..."
+              aria-label="Buscar habitaciones"
+              className="pl-9"
+            />
+          </div>
+        </div>
+
+        <TableWrap className="dark:border-slate-700 dark:bg-slate-900">
+          <Table>
+            <caption className="sr-only">Capacidad, ocupación y disponibilidad por habitación, ordenadas por número.</caption>
+            <THead>
               <TR>
-                <TD colSpan={4}>
-                  <EmptyState
-                    icon="rooms"
-                    title={habitaciones.length ? "Sin resultados" : "Sin habitaciones"}
-                    description={
-                      habitaciones.length
-                        ? "No hay habitaciones que coincidan con la búsqueda."
-                        : "No hay habitaciones registradas en la residencia."
-                    }
-                  />
-                </TD>
+                <TH>Habitación</TH>
+                <TH className="text-center">Capacidad</TH>
+                <TH>Ocupación</TH>
+                <TH className="text-center">Plazas libres</TH>
+                <TH>Estado</TH>
+                <TH className="text-right">Detalle</TH>
               </TR>
-            ) : (
-              filas.map(({ habitacion, ocupadas, disponibles, porcentaje }) => {
-                const estado =
-                  ocupadas === 0
-                    ? "vacia"
-                    : disponibles === 0
-                      ? "llena"
-                      : "disponible";
-                const tono = estado === "llena" ? "warning" : "brand";
+            </THead>
+            <TBody>
+              {filas.length === 0 ? (
+                <TR>
+                  <TD colSpan={6}>
+                    <EmptyState
+                      icon="rooms"
+                      title={habitaciones.length ? "Sin resultados" : "Sin habitaciones"}
+                      description={
+                        habitaciones.length
+                          ? "No hay habitaciones que coincidan con la búsqueda."
+                          : "No hay habitaciones registradas en la residencia."
+                      }
+                      action={habitaciones.length > 0 ? <Button variant="outline" onClick={() => setBusqueda("")}>Limpiar búsqueda</Button> : undefined}
+                    />
+                  </TD>
+                </TR>
+              ) : (
+                filas.map(({ habitacion, ocupadas, disponibles, porcentaje }) => {
+                  const estado =
+                    ocupadas === 0
+                      ? "vacia"
+                      : disponibles === 0
+                        ? "llena"
+                        : "disponible";
+                  const tono = estado === "llena" ? "warning" : "brand";
 
-                return (
-                  <TR key={habitacion.idHabitacion}>
-                    <TD>
-                      <div>
-                        <p className="font-medium text-slate-900 dark:text-white">
-                          Hab. {habitacion.numeroHabitacion}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {habitacion.pisoHabitacion === null
-                            ? "Piso no especificado"
-                            : `Piso ${habitacion.pisoHabitacion}`}
-                        </p>
-                      </div>
-                    </TD>
-                    <TD className="min-w-36">
-                      <div className="flex items-center gap-2">
-                        <span className="w-12 shrink-0 text-sm tabular-nums text-slate-700 dark:text-slate-200">
-                          {ocupadas}/{habitacion.capacidadMaxima}
-                        </span>
-                        <Progress value={porcentaje} tone={tono} />
-                      </div>
-                    </TD>
-                    <TD>
-                      <div className="flex flex-col items-start gap-1.5">
+                  return (
+                    <TR key={habitacion.idHabitacion}>
+                      <TD>
+                        <div className="flex items-center gap-3 py-2">
+                          <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-lg font-semibold tabular-nums text-brand-800 dark:border-brand-800 dark:bg-slate-800 dark:text-brand-200">{habitacion.numeroHabitacion}</span>
+                          <div>
+                            <p className="font-medium text-slate-900 dark:text-white">
+                              Habitación {habitacion.numeroHabitacion}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {habitacion.pisoHabitacion === null
+                                ? "Piso no especificado"
+                                : habitacion.pisoHabitacion === 0 ? "Planta baja" : `Piso ${habitacion.pisoHabitacion}`}
+                            </p>
+                          </div>
+                        </div>
+                      </TD>
+                      <TD className="text-center">
+                        <span className="font-semibold tabular-nums">{habitacion.capacidadMaxima}</span>
+                        <span className="ml-1 text-slate-500 dark:text-slate-400">personas</span>
+                      </TD>
+                      <TD className="min-w-40">
+                        <div className="flex max-w-44 flex-col gap-2">
+                          <span className="text-xs tabular-nums text-slate-600 dark:text-slate-300">
+                            {ocupadas} de {habitacion.capacidadMaxima} ocupadas
+                          </span>
+                          <Progress value={porcentaje} tone={tono} />
+                        </div>
+                      </TD>
+                      <TD className="text-center">
+                        <span className={disponibles > 0 ? "font-semibold tabular-nums text-emerald-800 dark:text-emerald-300" : "font-semibold tabular-nums text-slate-500"}>{disponibles}</span>
+                      </TD>
+                      <TD>
                         <StatusBadge estado={estado} />
-                        <Badge variant="neutral">
-                          {disponibles} {disponibles === 1 ? "cupo" : "cupos"}
-                        </Badge>
-                      </div>
-                    </TD>
-                    <TD className="text-right">
-                      <Link to={`/habitaciones/${habitacion.idHabitacion}`}>
-                        <Button size="sm" variant="outline">
-                          Ver habitación
-                          <Icon name="arrow" className="h-3.5 w-3.5" />
-                        </Button>
-                      </Link>
-                    </TD>
-                  </TR>
-                );
-              })
-            )}
-          </TBody>
-        </Table>
-      </TableWrap>
+                      </TD>
+                      <TD className="text-right">
+                        <Link to={`/habitaciones/${habitacion.idHabitacion}`} aria-label={`Ver habitación ${habitacion.numeroHabitacion}`}>
+                          <Button size="sm" variant="outline">
+                            Ver detalle
+                            <Icon name="arrow" className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
+                      </TD>
+                    </TR>
+                  );
+                })
+              )}
+            </TBody>
+          </Table>
+        </TableWrap>
+        {resumen.camasOcupadas === 0 && (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
+            No hay alumnos asignados. Registrá a los residentes y asignalos desde el detalle de cada habitación.
+            <Link to="/alumnos/nuevo" className="font-medium text-brand-700 underline underline-offset-4 dark:text-brand-300">Registrar alumno</Link>
+          </p>
+        )}
+      </section>
     </div>
   );
 }

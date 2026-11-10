@@ -1,295 +1,160 @@
-import type {
-  Alumno,
-  Ambiente,
-  Contrato,
-  DataState,
-  GrupoDeLimpieza,
-  GrupoLimpiezaAlumno,
-  GrupoLimpiezaAmbiente,
-  Habitacion,
-  HabitacionAlumno,
-  Multa,
-  Pago,
-  Usuario,
-} from "../types";
+import type { Alumno, Contrato, DataState, Habitacion, HabitacionAlumno } from "../types";
+import { usuarioActual } from "../session";
 
-const NOMBRES = [
-  "Ana",
-  "Bruno",
-  "Carla",
-  "Diego",
-  "Elena",
-  "Facundo",
-  "Gabriela",
-  "Hernán",
-  "Inés",
-  "Joaquín",
-  "Karen",
-  "Lucas",
-  "María",
-  "Nicolás",
-  "Olivia",
-  "Pablo",
-  "Quimey",
-  "Rocío",
-  "Santiago",
-  "Valentina",
+const CAPACIDADES = [2, 2, 4, 4, 5] as const;
+
+const CARRERAS = [
+  "Ingeniería en Sistemas de Información",
+  "Ingeniería Industrial",
+  "Licenciado en Administración Rural",
 ] as const;
 
-const APELLIDOS = [
-  "Pérez",
-  "Gómez",
-  "Rodríguez",
-  "Fernández",
-  "López",
-  "Martínez",
-  "Sosa",
-  "Romero",
-  "Díaz",
-  "Torres",
-  "Ruiz",
-  "Álvarez",
-  "Benítez",
-  "Acosta",
-  "Medina",
-  "Herrera",
-  "Aguirre",
-  "Castro",
-  "Silva",
-  "Rojas",
+// Nombre, apellido, habitación, carrera, localidad y código postal de origen.
+const RESIDENTES = [
+  ["Lucía", "Fernández", 1, 0, "Pehuajó", "6450"],
+  ["Martina", "López", 1, 1, "Carlos Casares", "6530"],
+  ["Tomás", "Gómez", 2, 0, "General Villegas", "6230"],
+  ["Mateo", "Rodríguez", 2, 2, "Rivadavia", "6237"],
+  ["Valentina", "Martínez", 3, 1, "Daireaux", "6555"],
+  ["Camila", "Pérez", 3, 0, "Bolívar", "6550"],
+  ["Sofía", "Romero", 3, 2, "Pellegrini", "6346"],
+  ["Joaquín", "Díaz", 4, 0, "Salliqueló", "6339"],
+  ["Nicolás", "Álvarez", 4, 1, "Tres Lomas", "6409"],
+  ["Santiago", "Torres", 4, 2, "Guaminí", "6435"],
+  ["Benjamín", "Ruiz", 4, 0, "Pehuajó", "6450"],
+  ["Emilia", "Sosa", 5, 1, "Carlos Tejedor", "6455"],
+  ["Julieta", "Acosta", 5, 2, "Daireaux", "6555"],
+  ["Catalina", "Medina", 5, 0, "General Villegas", "6230"],
 ] as const;
 
-/** Rellena con cero a la izquierda para los identificadores y fechas mock. */
-function pad(valor: number): string {
-  return String(valor).padStart(2, "0");
+function pad(numero: number): string {
+  return String(numero).padStart(2, "0");
 }
 
-function slug(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ".");
-}
-
-const HABITACIONES_BASE: Array<[string, number, number, string]> = [
-  ["101", 1, 2, "Doble con baño privado"],
-  ["102", 1, 3, "Triple con baño compartido"],
-  ["103", 1, 4, "Cuádruple con baño privado"],
-  ["104", 1, 2, "Doble con balcón"],
-  ["105", 1, 3, "Triple con baño compartido"],
-  ["201", 2, 4, "Cuádruple con baño privado"],
-  ["202", 2, 2, "Doble con baño privado"],
-  ["203", 2, 3, "Triple con escritorio"],
-  ["204", 2, 2, "Doble con baño compartido"],
-  ["205", 2, 4, "Cuádruple con vestidor"],
-  ["301", 3, 3, "Triple con baño privado"],
-  ["302", 3, 2, "Doble con balcón"],
-  ["303", 3, 4, "Cuádruple con baño compartido"],
-  ["304", 3, 3, "Triple con escritorio"],
-  ["305", 3, 2, "Doble con baño privado"],
-];
-
-const OCUPACION_INICIAL = [2, 3, 4, 2, 3, 4, 2, 3, 1, 0, 3, 2, 0, 3, 2];
-
-const AMBIENTES_BASE: Array<[string, string]> = [
-  ["Cocina", "Limpiar mesadas, heladera, microondas y piso"],
-  ["Baño planta baja", "Desinfectar inodoro, lavatorio, ducha y espejos"],
-  ["Baño planta alta", "Desinfectar inodoro, lavatorio, ducha y espejos"],
-  ["Pasillo planta baja", "Barrer, trapear y retirar residuos"],
-  ["Pasillo planta alta", "Barrer, trapear y retirar residuos"],
-  ["Comedor", "Limpiar mesas, sillas y piso"],
-  ["Lavadero", "Limpiar pileta, ordenar y tender"],
-  ["Patio", "Barrer hojas y ordenar el mobiliario"],
-  ["Sala de estudio", "Ordenar mesas, sillas y estantes"],
-  ["Escaleras", "Barrer y trapear escalones y pasamanos"],
-];
-
+/** Inventario real con personas y movimientos ficticios para probar el prototipo. */
 export function createInitialData(): DataState {
-  const alumnos: Alumno[] = Array.from({ length: 40 }, (_, indice) => {
-    const nombre = NOMBRES[indice % NOMBRES.length];
-    const apellido = APELLIDOS[(indice * 3 + 1) % APELLIDOS.length];
-    return {
+  const habitaciones: Habitacion[] = CAPACIDADES.map((capacidad, indice) => ({
+    idHabitacion: `H${indice + 1}`,
+    numeroHabitacion: String(indice + 1),
+    pisoHabitacion: 0,
+    capacidadMaxima: capacidad,
+    descripcion: `Habitación para ${capacidad} personas en planta baja.`,
+  }));
+
+  const alumnos: Alumno[] = RESIDENTES.map(
+    ([nombre, apellido, , carrera, localidad, codigoPostal], indice) => ({
       idAlumno: `A${pad(indice + 1)}`,
       nombre,
       apellido,
-      telefono: `11 ${5000 + indice * 13} ${3000 + indice * 7}`,
-      correo: `${slug(nombre)}.${slug(apellido)}${indice + 1}@correo.com`,
-      documento: `${30 + (indice % 5)}.${100 + indice}.${200 + indice}`,
-      estado: indice >= 37 ? "inactivo" : "activo",
-    };
-  });
-
-  const habitaciones: Habitacion[] = HABITACIONES_BASE.map(
-    ([numero, piso, capacidad, descripcion]) => ({
-      idHabitacion: `H${numero}`,
-      numeroHabitacion: numero,
-      pisoHabitacion: piso,
-      capacidadMaxima: capacidad,
-      descripcion,
+      telefono: `2392 5551${pad(indice + 1)}`,
+      correo: `alumno${pad(indice + 1)}@example.com`,
+      documento: String(46_000_001 + indice),
+      estado: "activo",
+      fechaNacimiento: `${2003 + (indice % 4)}-${pad(1 + (indice % 12))}-${pad(5 + indice)}`,
+      nacionalidad: "Argentina",
+      domicilio: `Calle de ejemplo ${100 + indice * 25}`,
+      localidad,
+      provincia: "Buenos Aires",
+      codigoPostal,
+      institucion: "UTN · Facultad Regional Trenque Lauquen",
+      carrera: CARRERAS[carrera],
+      anioCursado: `${1 + (indice % 4)}° año`,
+      cantidadMateriasCursadas: 6 + (indice % 4) * 6,
+      legajo: `2026-${pad(indice + 1)}`,
+      contactosEmergencia: [
+        { nombre: `Laura ${apellido}`, vinculo: "Madre", telefono: `2392 5552${pad(indice + 1)}` },
+        { nombre: `Sergio ${apellido}`, vinculo: "Padre", telefono: `2392 5553${pad(indice + 1)}` },
+      ],
+      observaciones: "Ficha ficticia para pruebas del sistema. No corresponde a una persona real.",
     }),
   );
 
-  const asignaciones: HabitacionAlumno[] = [];
-  let indiceAlumno = 0;
+  const contratos: Contrato[] = alumnos.map((alumno, indice) => ({
+    idContrato: `C${pad(indice + 1)}`,
+    idAlumno: alumno.idAlumno,
+    fechaDesde: "2026-03-01",
+    fechaHasta: indice < 3 ? "2026-11-10" : "2027-02-28",
+  }));
 
-  OCUPACION_INICIAL.forEach((cantidad, indiceHabitacion) => {
-    const habitacion = habitaciones[indiceHabitacion];
-    for (let cupo = 0; cupo < cantidad; cupo += 1) {
-      const alumno = alumnos[indiceAlumno];
-      indiceAlumno += 1;
-      asignaciones.push({
-        idAlumno: alumno.idAlumno,
-        idHabitacion: habitacion.idHabitacion,
-        fechaDesde: "2026-03-01",
-        fechaHasta: null,
-      });
-    }
-  });
-
-  // Historial: tres alumnos cambiaron de habitación al inicio del ciclo.
-  ["A01", "A02", "A03"].forEach((idAlumno, indice) => {
-    asignaciones.push({
-      idAlumno,
-      idHabitacion: habitaciones[9 + indice].idHabitacion,
-      fechaDesde: "2025-08-01",
-      fechaHasta: "2026-03-01",
-    });
-  });
-
-  const contratos: Contrato[] = alumnos.map((alumno, indice) => {
-    let fechaHasta = "2027-03-31";
-
-    if (indice < 34) {
-      if (indice % 7 === 0)
-        fechaHasta = `2026-11-${pad(5 + (indice % 5) * 3)}`;
-      else if (indice % 5 === 0) fechaHasta = "2026-12-20";
-    } else if (indice >= 37) {
-      fechaHasta = "2026-08-31";
-    }
-
-    return {
-      idContrato: `C${pad(indice + 1)}`,
-      idAlumno: alumno.idAlumno,
-      fechaDesde: indice >= 37 ? "2025-03-01" : "2026-03-01",
-      fechaHasta,
-    };
-  });
-
+  // Un caso de renovación y otro de reingreso, sin superponer contratos.
   contratos.push(
-    { idContrato: "C41", idAlumno: "A01", fechaDesde: "2025-03-01", fechaHasta: "2026-02-28" },
-    { idContrato: "C42", idAlumno: "A02", fechaDesde: "2024-03-01", fechaHasta: "2025-02-28", fechaCancelacion: "2024-10-15", motivoCancelacion: "Baja voluntaria por motivos personales." },
-    { idContrato: "C43", idAlumno: "A38", fechaDesde: "2023-03-01", fechaHasta: "2024-02-29" },
+    { idContrato: "C15", idAlumno: "A01", fechaDesde: "2025-03-01", fechaHasta: "2026-02-28" },
+    {
+      idContrato: "C16",
+      idAlumno: "A02",
+      fechaDesde: "2025-03-01",
+      fechaHasta: "2026-02-28",
+      fechaCancelacion: "2025-10-01",
+      motivoCancelacion: "Interrupción de la estadía por motivos personales (ejemplo).",
+    },
   );
 
-  const pagos: Pago[] = alumnos.slice(0, 37).map((alumno, indice) => ({
-    idPago: `P${pad(indice + 1)}`,
-    idAlumno: alumno.idAlumno,
-    monto: 45_000,
-    fecha: `2026-10-${pad(1 + (indice % 18))}`,
-    concepto: "Residencia",
+  const asignaciones: HabitacionAlumno[] = RESIDENTES.map(([, , habitacion], indice) => ({
+    idAlumno: alumnos[indice].idAlumno,
+    idHabitacion: `H${habitacion}`,
+    fechaDesde: "2026-03-01",
+    fechaHasta: null,
   }));
-
-  const multasBase: Array<{
-    alumno: number;
-    monto: number;
-    emision: string;
-    vence: string;
-    estado: Multa["estado"];
-  }> = [
-    { alumno: 2, monto: 8_000, emision: "2026-09-15", vence: "2026-10-05", estado: "pendiente" },
-    { alumno: 5, monto: 12_000, emision: "2026-09-20", vence: "2026-10-10", estado: "pendiente" },
-    { alumno: 9, monto: 6_000, emision: "2026-10-01", vence: "2026-10-25", estado: "pendiente" },
-    { alumno: 12, monto: 15_000, emision: "2026-10-05", vence: "2026-11-05", estado: "pendiente" },
-    { alumno: 18, monto: 9_000, emision: "2026-08-10", vence: "2026-09-10", estado: "pagada" },
-    { alumno: 21, monto: 5_000, emision: "2026-09-01", vence: "2026-09-30", estado: "pagada" },
-    { alumno: 24, monto: 20_000, emision: "2026-07-15", vence: "2026-08-15", estado: "pagada" },
-    { alumno: 27, monto: 7_000, emision: "2026-09-28", vence: "2026-10-28", estado: "pendiente" },
-    { alumno: 30, monto: 11_000, emision: "2026-08-20", vence: "2026-09-20", estado: "pagada" },
-    { alumno: 33, monto: 4_500, emision: "2026-10-10", vence: "2026-11-10", estado: "pendiente" },
-    { alumno: 36, monto: 13_000, emision: "2026-06-10", vence: "2026-07-10", estado: "anulada" },
-    { alumno: 38, monto: 9_500, emision: "2026-09-05", vence: "2026-10-05", estado: "pagada" },
-  ];
-
-  const multas: Multa[] = multasBase.map((definicion, indice) => ({
-    idMulta: `M${pad(indice + 1)}`,
-    idAlumno: alumnos[definicion.alumno].idAlumno,
-    monto: definicion.monto,
-    fechaEmision: definicion.emision,
-    fechaVence: definicion.vence,
-    estado: definicion.estado,
-    fechaPago: definicion.estado === "pagada" ? "2026-10-01" : null,
-  }));
-
-  const grupos: GrupoDeLimpieza[] = ["A", "B", "C", "D", "E", "F"].map(
-    (letra, indice) => ({
-      idGrupoLimpieza: `G${indice + 1}`,
-      nombreDelGrupo: `Grupo ${letra}`,
-    }),
+  asignaciones.push(
+    { idAlumno: "A01", idHabitacion: "H3", fechaDesde: "2025-03-01", fechaHasta: "2026-03-01" },
+    { idAlumno: "A02", idHabitacion: "H1", fechaDesde: "2025-03-01", fechaHasta: "2025-10-01" },
   );
-
-  const grupoAlumnos: GrupoLimpiezaAlumno[] = alumnos.map((alumno, indice) => ({
-    idGrupoLimpieza: `G${(indice % grupos.length) + 1}`,
-    idAlumno: alumno.idAlumno,
-  }));
-
-  const ambientes: Ambiente[] = AMBIENTES_BASE.map(([ambiente, tareas], indice) => ({
-    idAmbiente: `AM${pad(indice + 1)}`,
-    ambiente,
-    tareas,
-  }));
-
-  const grupoAmbientes: GrupoLimpiezaAmbiente[] = [];
-  grupos.forEach((grupo, indice) => {
-    [indice, indice + 6]
-      .filter((indiceAmbiente) => indiceAmbiente < ambientes.length)
-      .forEach((indiceAmbiente) => {
-        grupoAmbientes.push({
-          idGrupoLimpieza: grupo.idGrupoLimpieza,
-          idAmbiente: ambientes[indiceAmbiente].idAmbiente,
-          fechaDesde: "2026-08-01",
-          fechaHasta: null,
-        });
-      });
-  });
-
-  const usuarios: Usuario[] = [
-    {
-      idUsuario: "U1",
-      nombre: "Ana Pérez",
-      correo: "ana@residencia.ar",
-      rol: "administrador",
-      estado: "activo",
-    },
-    {
-      idUsuario: "U2",
-      nombre: `${alumnos[0].nombre} ${alumnos[0].apellido}`,
-      correo: alumnos[0].correo,
-      rol: "alumno",
-      idAlumno: alumnos[0].idAlumno,
-      estado: "activo",
-    },
-    {
-      idUsuario: "U3",
-      nombre: `${alumnos[1].nombre} ${alumnos[1].apellido}`,
-      correo: alumnos[1].correo,
-      rol: "alumno",
-      idAlumno: alumnos[1].idAlumno,
-      estado: "activo",
-    },
-  ];
 
   return {
-    alumnos,
     habitaciones,
+    alumnos,
     asignaciones,
     contratos,
-    pagos,
-    multas,
-    grupos,
-    grupoAlumnos,
-    ambientes,
-    grupoAmbientes,
-    usuarios,
+    pagos: alumnos.flatMap((alumno, indice) => [
+      {
+        idPago: `P${pad(indice * 2 + 1)}`,
+        idAlumno: alumno.idAlumno,
+        monto: 45_000,
+        fecha: "2026-09-05",
+        concepto: "Residencia · Septiembre 2026",
+      },
+      {
+        idPago: `P${pad(indice * 2 + 2)}`,
+        idAlumno: alumno.idAlumno,
+        monto: 45_000,
+        fecha: `2026-10-${pad(1 + indice)}`,
+        concepto: "Residencia · Octubre 2026",
+      },
+    ]),
+    multas: [
+      { idMulta: "M01", idAlumno: "A03", monto: 5_000, fechaEmision: "2026-10-01", fechaVence: "2026-10-15", estado: "pendiente", fechaPago: null },
+      { idMulta: "M02", idAlumno: "A08", monto: 4_000, fechaEmision: "2026-10-15", fechaVence: "2026-10-30", estado: "pendiente", fechaPago: null },
+      { idMulta: "M03", idAlumno: "A12", monto: 3_000, fechaEmision: "2026-09-10", fechaVence: "2026-09-25", estado: "pagada", fechaPago: "2026-09-20" },
+    ],
+    grupos: habitaciones.map((habitacion) => ({
+      idGrupoLimpieza: `G${habitacion.numeroHabitacion}`,
+      nombreDelGrupo: `Habitación ${habitacion.numeroHabitacion}`,
+    })),
+    grupoAlumnos: RESIDENTES.map(([, , habitacion], indice) => ({
+      idGrupoLimpieza: `G${habitacion}`,
+      idAlumno: alumnos[indice].idAlumno,
+    })),
+    ambientes: habitaciones.map((habitacion) => ({
+      idAmbiente: `AM${habitacion.numeroHabitacion}`,
+      ambiente: `Habitación ${habitacion.numeroHabitacion}`,
+      tareas: "Barrer, limpiar el piso, ordenar los espacios compartidos y retirar los residuos.",
+    })),
+    grupoAmbientes: habitaciones.map((habitacion) => ({
+      idGrupoLimpieza: `G${habitacion.numeroHabitacion}`,
+      idAmbiente: `AM${habitacion.numeroHabitacion}`,
+      fechaDesde: "2026-03-01",
+      fechaHasta: null,
+    })),
+    usuarios: [
+      { ...usuarioActual },
+      ...alumnos.map((alumno, indice) => ({
+        idUsuario: `U${indice + 2}`,
+        idAlumno: alumno.idAlumno,
+        nombre: `${alumno.nombre} ${alumno.apellido}`,
+        correo: alumno.correo,
+        rol: "alumno" as const,
+        estado: alumno.estado,
+      })),
+    ],
   };
 }

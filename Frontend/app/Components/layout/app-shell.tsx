@@ -281,7 +281,6 @@ function Topbar({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [busqueda, setBusqueda] = useState("");
   const segmentos = location.pathname.split("/").filter(Boolean);
 
   return (
@@ -364,47 +363,6 @@ function Topbar({
           )}
         </nav>
 
-        <form
-          role="search"
-          className="ml-auto hidden w-56 md:block lg:w-64"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const termino = busqueda.trim();
-            navigate(
-              termino
-                ? `/alumnos?q=${encodeURIComponent(termino)}`
-                : "/alumnos",
-            );
-            setBusqueda("");
-          }}
-        >
-          <div className="relative">
-            <Icon
-              name="search"
-              className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="search"
-              value={busqueda}
-              onChange={(event) => setBusqueda(event.target.value)}
-              placeholder="Buscar alumno…"
-              aria-label="Buscar alumno"
-              className="h-9 w-full rounded-md border border-slate-200 bg-slate-50 pr-3 pl-9 text-sm text-slate-900 caret-brand-600 [-webkit-text-fill-color:theme(colors.slate.900)] outline-none transition placeholder:text-slate-400 focus:border-brand-600 focus:bg-white focus:text-slate-900 focus:ring-2 focus:ring-brand-600/25 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:caret-slate-100 dark:[-webkit-text-fill-color:theme(colors.slate.100)] dark:placeholder:text-slate-500 dark:focus:bg-slate-900 dark:focus:text-slate-100"
-            />
-          </div>
-        </form>
-
-        <button
-          type="button"
-          aria-label="Notificaciones"
-          className="relative ml-auto inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 md:ml-0 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
-          <Icon name="bell" className="h-5 w-5" />
-          <span
-            aria-hidden="true"
-            className="absolute top-2 right-2 h-2 w-2 rounded-full bg-amber-600 ring-2 ring-white dark:ring-slate-900"
-          />
-        </button>
       </div>
     </header>
   );
