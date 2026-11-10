@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 import { cn } from "../../lib/cn";
 
 export function TableWrap({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("overflow-x-auto", className)} {...props} />;
+  return <div className={cn("overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm", className)} {...props} />;
 }
 
 export function Table({ className, ...props }: ComponentProps<"table">) {
@@ -18,7 +18,7 @@ export function THead({ className, ...props }: ComponentProps<"thead">) {
   return (
     <thead
       className={cn(
-        "text-xs font-medium text-slate-500 dark:text-slate-400",
+        "border-b border-brand-200 bg-brand-100 text-xs font-semibold text-brand-900 dark:text-slate-400",
         className,
       )}
       {...props}
@@ -30,7 +30,7 @@ export function TBody({ className, ...props }: ComponentProps<"tbody">) {
   return (
     <tbody
       className={cn(
-        "divide-y divide-slate-100 dark:divide-slate-800",
+        "divide-y divide-slate-200 [&>tr:nth-child(even)]:bg-slate-50 [&>tr:hover]:bg-brand-50 dark:divide-slate-800",
         className,
       )}
       {...props}
@@ -55,7 +55,7 @@ export function TH({ className, ...props }: ComponentProps<"th">) {
     <th
       scope="col"
       className={cn(
-        "px-3 py-2.5 font-medium whitespace-nowrap first:pl-0 last:pr-0",
+        "px-3 py-2.5 font-medium whitespace-nowrap first:pl-4 last:pr-4",
         className,
       )}
       {...props}
@@ -67,7 +67,7 @@ export function TD({ className, ...props }: ComponentProps<"td">) {
   return (
     <td
       className={cn(
-        "px-3 py-3 align-middle first:pl-0 last:pr-0",
+        "px-3 py-3 align-middle first:pl-4 last:pr-4",
         className,
       )}
       {...props}

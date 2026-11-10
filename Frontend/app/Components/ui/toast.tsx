@@ -93,7 +93,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={item.id}
               role="status"
-              className="pointer-events-auto w-full max-w-sm rounded-lg border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-800 dark:bg-slate-900"
+              className="pointer-events-auto w-full max-w-sm rounded-lg border border-slate-300 bg-white shadow-sm p-4 shadow-lg dark:border-slate-800 dark:bg-slate-900"
             >
               <div className="flex items-start gap-3">
                 <span

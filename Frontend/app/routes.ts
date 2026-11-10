@@ -20,6 +20,7 @@ export default [
     route("habitaciones/:idHabitacion", "routes/habitaciones.$idHabitacion.tsx"),
     route("contratos", "routes/contratos.tsx"),
     route("contratos/nuevo", "routes/contratos.nuevo.tsx"),
+    route("contratos/:idContrato/baja", "routes/contratos.$idContrato.baja.tsx"),
     route("contratos/:idContrato", "routes/contratos.$idContrato.tsx"),
     route("multas", "routes/multas.tsx"),
     route("multas/nueva", "routes/multas.nueva.tsx"),

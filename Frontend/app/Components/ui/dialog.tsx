@@ -70,7 +70,7 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={titleId}
         className={cn(
-          "relative max-h-[90dvh] w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-xl outline-none",
+          "relative max-h-[90dvh] w-full overflow-y-auto rounded-lg border border-slate-300 bg-white shadow-sm p-5 shadow-xl outline-none",
           "dark:border-slate-800 dark:bg-slate-900",
           sizes[size],
         )}

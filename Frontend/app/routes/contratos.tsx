@@ -18,6 +18,7 @@ type FiltroAlumno = "todos" | "activo" | "inactivo";
 
 function textoVencimiento(contrato: { fechaHasta: string }, estado: EstadoContratoTipo) {
   const dias = diasHasta(contrato.fechaHasta);
+  if (estado === "cancelado") return "Contrato cancelado";
   if (estado === "programado") return "Aún no iniciado";
   if (estado === "finalizado") {
     if (dias < 0) return `Venció hace ${Math.abs(dias)} día${Math.abs(dias) === 1 ? "" : "s"}`;
@@ -127,6 +128,7 @@ export default function Contratos() {
             <option value="por-vencer">Por vencer</option>
             <option value="programado">Programado</option>
             <option value="finalizado">Finalizado</option>
+            <option value="cancelado">Cancelado</option>
           </select>
           <select
             value={filtroAlumno}

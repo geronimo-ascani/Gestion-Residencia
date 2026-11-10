@@ -1,11 +1,12 @@
 import { useId, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { Button } from "../Components/ui/button";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
 import { TextField } from "../Components/ui/text-field";
 import { useToast } from "../Components/ui/toast";
+import { contratosSuperpuestos, sumarDia } from "../lib/domain";
 import { FECHA_REFERENCIA } from "../lib/config";
 import { formatFecha } from "../lib/format";
 import { useData } from "../lib/store";
@@ -16,21 +17,27 @@ export function meta() {
 }
 
 export default function NuevoContrato() {
-  const { alumnos, alumnoPorId, crearContrato } = useData();
+  const { alumnos, alumnoPorId, contratos, crearContrato } = useData();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const idBase = useId();
-  const [idAlumno, setIdAlumno] = useState("");
+  const alumnoInicial = searchParams.get("alumno") ?? "";
+  const fechaDesdeInicial = searchParams.get("desde") ?? FECHA_REFERENCIA;
+  const [idAlumno, setIdAlumno] = useState(alumnoInicial);
   const [busquedaAlumno, setBusquedaAlumno] = useState("");
   const [opcionesAbiertas, setOpcionesAbiertas] = useState(false);
   const [opcionActiva, setOpcionActiva] = useState(0);
-  const [fechaDesde, setFechaDesde] = useState(FECHA_REFERENCIA);
-  const [fechaHasta, setFechaHasta] = useState("2027-03-31");
+  const [fechaDesde, setFechaDesde] = useState(fechaDesdeInicial);
+  const [fechaHasta, setFechaHasta] = useState(sumarDia(fechaDesdeInicial, 365));
   const [errorAlumno, setErrorAlumno] = useState<string | null>(null);
   const [errorFechas, setErrorFechas] = useState<string | null>(null);
 
   const busquedaAlumnoDebounceada = useDebouncedValue(busquedaAlumno);
   const busquedaPendiente = busquedaAlumno !== busquedaAlumnoDebounceada;
+  const alumnoPrefijado = alumnos.some(
+    (alumno) => alumno.idAlumno === alumnoInicial,
+  );
   const alumnosOrdenados = useMemo(
     () => [...alumnos].sort((a, b) => a.apellido.localeCompare(b.apellido)),
     [alumnos],
@@ -68,6 +75,11 @@ export default function NuevoContrato() {
     }
     if (fechaHasta <= fechaDesde) {
       setErrorFechas("La fecha de fin debe ser posterior a la de inicio.");
+      return;
+    }
+
+    if (contratosSuperpuestos(contratos, { idAlumno, fechaDesde, fechaHasta })) {
+      setErrorFechas("Las fechas se superponen con otro contrato del alumno.");
       return;
     }
 
@@ -113,6 +125,7 @@ export default function NuevoContrato() {
             label="Buscar alumno"
             type="search"
             value={busquedaAlumno}
+            disabled={alumnoPrefijado}
             autoComplete="off"
             role="combobox"
             aria-autocomplete="list"

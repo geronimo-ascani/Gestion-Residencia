@@ -18,7 +18,7 @@ export function StatCard({
   progress?: number;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+    <div className="rounded-lg border border-slate-300 bg-white shadow-sm p-5 dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">

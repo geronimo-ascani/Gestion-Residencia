@@ -1,9 +1,11 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { contratosSuperpuestos } from "./domain";
 import { FECHA_REFERENCIA } from "./config";
 import { createInitialData } from "./mock/data";
 import type {
   Alumno,
+  DatosIngresoAlumno,
   Ambiente,
   DataState,
   GrupoDeLimpieza,
@@ -30,7 +32,7 @@ export interface EditarMultaInput {
   fechaVence: string;
 }
 
-export interface NuevoAlumnoInput {
+export interface NuevoAlumnoInput extends DatosIngresoAlumno {
   nombre: string;
   apellido: string;
   telefono: string;
@@ -65,6 +67,7 @@ export interface DataContextValue extends DataState {
   crearAlumno: (input: NuevoAlumnoInput) => string;
   crearHabitacion: (input: NuevaHabitacionInput) => string;
   crearContrato: (input: NuevoContratoInput) => void;
+  cancelarContrato: (idContrato: string, fecha: string, motivo: string) => void;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -198,16 +201,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       crearHabitacion(input) {
         const idHabitacion = nuevoId("H");
-        setState((previo) => ({
-          ...previo,
-          habitaciones: [...previo.habitaciones, { ...input, idHabitacion }],
-        }));
+        setState((previo) => ({ ...previo, habitaciones: [...previo.habitaciones, { ...input, idHabitacion }] }));
         return idHabitacion;
+      },
+
+      cancelarContrato(idContrato, fecha, motivo) {
+        setState((previo) => {
+          const contrato = previo.contratos.find((c) => c.idContrato === idContrato);
+          if (!contrato || contrato.fechaCancelacion || fecha < contrato.fechaDesde || fecha > contrato.fechaHasta || fecha > FECHA_REFERENCIA || !motivo.trim()) return previo;
+          return {
+            ...previo,
+            contratos: previo.contratos.map((c) => c.idContrato === idContrato ? { ...c, fechaCancelacion: fecha, motivoCancelacion: motivo.trim() } : c),
+            asignaciones: previo.asignaciones.map((a) => a.idAlumno === contrato.idAlumno && a.fechaDesde <= contrato.fechaHasta && (!a.fechaHasta || a.fechaHasta > fecha) ? { ...a, fechaHasta: a.fechaDesde > fecha ? a.fechaDesde : fecha } : a),
+          };
+        });
       },
 
       crearContrato({ idAlumno, fechaDesde, fechaHasta }) {
         const idContrato = nuevoId("C");
-        setState((previo) => ({
+        setState((previo) => contratosSuperpuestos(previo.contratos, { idAlumno, fechaDesde, fechaHasta }) || fechaHasta <= fechaDesde ? previo : ({
           ...previo,
           contratos: [
             ...previo.contratos,
