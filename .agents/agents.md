@@ -146,9 +146,9 @@ asignaciones).
 
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
-| `idHabitacion` | `string` | PK. Formato `H101` (H + número) |
+| `idHabitacion` | `string` | PK. Inventario inicial `H1`–`H5`; altas con ID interno único |
 | `numeroHabitacion` | `string` | Se muestra como `Hab. {número}` |
-| `pisoHabitacion` | `number` | Piso del edificio |
+| `pisoHabitacion` | `number \| null` | `0` = planta baja; residencia de un único piso |
 | `capacidadMaxima` | `number` | Entero > 0; cupos totales |
 | `descripcion` | `string` | Solo se muestra en ficha/diálogos, **no** en el listado |
 
@@ -529,17 +529,15 @@ debe coincidir para evitar errores de hidratación.
 
 `app/lib/mock/data.ts` genera siempre el mismo estado inicial:
 
-- **40 alumnos** (`A01`–`A40`), activos salvo `A38`–`A40` (`inactivo`).
-- **15 habitaciones** (`H101`–`H305`) distribuidas en 3 pisos, capacidades 2–4.
-- Asignaciones activas desde `2026-03-01`; historial de `A01`–`A03` con
-  `fechaHasta = 2026-03-01`.
-- **40 contratos**: la mayoría vence `2027-03-31`; algunos vencen en noviembre/
-  diciembre de 2026; los inactivos vencieron `2026-08-31`.
-- **37 pagos** de `$ 45.000` con concepto `"Residencia"`.
-- **12 multas** en distintos estados (pendiente, pagada, anulada).
-- **6 grupos de limpieza** (`G1`–`G6`), 10 ambientes (`AM01`–`AM10`) y sus
-  asignaciones con vigencia desde `2026-08-01`.
-- **3 usuarios**: un administrador y dos alumnos.
+- **5 habitaciones** (`H1`–`H5`), numeradas del 1 al 5 en planta baja (`pisoHabitacion: 0`).
+- Capacidades: **2, 2, 4, 4 y 5 personas**, respectivamente; **17 plazas** totales.
+- **14 alumnos ficticios** (`A01`–`A14`) con ficha personal, domicilio, carrera y dos contactos de emergencia. Los correos usan `example.com`.
+- **14 asignaciones vigentes** distribuidas 2, 2, 3, 4 y 3 por habitación: 14 plazas ocupadas y 3 libres; dos asignaciones históricas cerradas.
+- **16 contratos**: uno vigente por alumno (tres por vencer), más dos históricos para probar renovación y reingreso sin superposiciones.
+- **28 pagos** (septiembre y octubre de 2026) y **3 multas** (vencida, pendiente y pagada).
+- Un grupo de limpieza y un ambiente por habitación; cada residente pertenece al grupo de su habitación.
+- Un administrador de prueba de `session.ts` y un usuario por alumno. Todos los datos personales y movimientos son de ejemplo.
+- El alta de habitaciones sugiere el número siguiente y fija la ubicación en planta baja.
 
 Reglas para modificar el mock:
 

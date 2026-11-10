@@ -98,7 +98,7 @@ export default function HabitacionDetalle() {
         eyebrow={
           habitacion.pisoHabitacion === null
             ? "Piso no especificado"
-            : `Piso ${habitacion.pisoHabitacion}`
+            : habitacion.pisoHabitacion === 0 ? "Planta baja" : `Piso ${habitacion.pisoHabitacion}`
         }
         title={`Habitación ${habitacion.numeroHabitacion}`}
         description={habitacion.descripcion}

@@ -56,7 +56,7 @@ export function AsignarHabitacionDialog({
       );
   }
 
-  const alumnosOrdenados = [...alumnos].sort((a, b) =>
+  const alumnosOrdenados = alumnos.filter((alumno) => alumno.estado === "activo").sort((a, b) =>
     a.apellido.localeCompare(b.apellido),
   );
   const alumnosConHabitacion = new Set(
@@ -159,7 +159,7 @@ export function AsignarHabitacionDialog({
             </SelectField>
           ) : (
             <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
-              No hay alumnos sin habitación asignada.
+              No hay alumnos disponibles. Registrá un alumno activo sin habitación desde la sección Alumnos.
             </p>
           )
         ) : (
@@ -223,7 +223,7 @@ export function AsignarHabitacionDialog({
           </Button>
           <Button
             type="submit"
-            disabled={!idHabitacion && disponibles.length === 0}
+            disabled={!alumnoSeleccionado || (!idHabitacion && disponibles.length === 0)}
           >
             Asignar
           </Button>

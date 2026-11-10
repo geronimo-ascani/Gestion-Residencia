@@ -10,7 +10,6 @@ import { useData } from "../lib/store";
 
 interface Errores {
   numeroHabitacion?: string;
-  pisoHabitacion?: string;
   capacidadMaxima?: string;
   descripcion?: string;
 }
@@ -24,8 +23,9 @@ export default function NuevaHabitacion() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const idBase = useId();
-  const [numeroHabitacion, setNumeroHabitacion] = useState("");
-  const [pisoHabitacion, setPisoHabitacion] = useState("");
+  const [numeroHabitacion, setNumeroHabitacion] = useState(() =>
+    String(Math.max(0, ...habitaciones.map((habitacion) => Number(habitacion.numeroHabitacion))) + 1),
+  );
   const [capacidadMaxima, setCapacidadMaxima] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [errores, setErrores] = useState<Errores>({});
@@ -33,12 +33,12 @@ export default function NuevaHabitacion() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nuevosErrores: Errores = {};
-    const numeroNormalizado = numeroHabitacion.trim();
-    const piso = pisoHabitacion.trim() ? Number(pisoHabitacion) : null;
+    const numero = Number(numeroHabitacion);
+    const numeroNormalizado = String(numero);
     const capacidad = Number(capacidadMaxima);
 
-    if (!numeroNormalizado) {
-      nuevosErrores.numeroHabitacion = "Ingresá el número de habitación.";
+    if (!Number.isInteger(numero) || numero < 1) {
+      nuevosErrores.numeroHabitacion = "Ingresá un número entero a partir de 1.";
     } else if (
       habitaciones.some(
         (habitacion) =>
@@ -49,9 +49,6 @@ export default function NuevaHabitacion() {
       nuevosErrores.numeroHabitacion = "Ya existe una habitación con ese número.";
     }
 
-    if (piso !== null && (!Number.isInteger(piso) || piso < 1)) {
-      nuevosErrores.pisoHabitacion = "Ingresá un piso mayor que cero.";
-    }
     if (!Number.isInteger(capacidad) || capacidad < 1) {
       nuevosErrores.capacidadMaxima = "La capacidad debe ser al menos 1.";
     }
@@ -66,16 +63,13 @@ export default function NuevaHabitacion() {
 
     const idHabitacion = crearHabitacion({
       numeroHabitacion: numeroNormalizado,
-      pisoHabitacion: piso,
+      pisoHabitacion: 0,
       capacidadMaxima: capacidad,
       descripcion: descripcion.trim(),
     });
     toast({
       title: "Habitación agregada",
-      description:
-        piso === null
-          ? `Habitación ${numeroNormalizado}`
-          : `Habitación ${numeroNormalizado} · Piso ${piso}`,
+      description: `Habitación ${numeroNormalizado} · Planta baja`,
     });
     navigate(`/habitaciones/${idHabitacion}`);
   }
@@ -85,7 +79,7 @@ export default function NuevaHabitacion() {
       <PageHeader
         eyebrow="Habitaciones"
         title="Agregar habitación"
-        description="Ingresá los datos para incorporarla al inventario."
+        description="Las habitaciones de la residencia se encuentran en planta baja."
         actions={
           <Link to="/habitaciones">
             <Button variant="outline">
@@ -101,26 +95,16 @@ export default function NuevaHabitacion() {
           <TextField
             id={`${idBase}-numero`}
             label="Número de habitación"
+            type="number"
+            min={1}
+            step={1}
+            hint="Se sugiere el siguiente número del listado."
             value={numeroHabitacion}
             required
             error={errores.numeroHabitacion}
             onChange={(event) => {
               setNumeroHabitacion(event.target.value);
               setErrores((previo) => ({ ...previo, numeroHabitacion: undefined }));
-            }}
-          />
-          <TextField
-            id={`${idBase}-piso`}
-            label="Piso (opcional)"
-            type="number"
-            min={1}
-            step={1}
-            value={pisoHabitacion}
-            hint="Dejalo vacío si no está especificado."
-            error={errores.pisoHabitacion}
-            onChange={(event) => {
-              setPisoHabitacion(event.target.value);
-              setErrores((previo) => ({ ...previo, pisoHabitacion: undefined }));
             }}
           />
           <TextField
