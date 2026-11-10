@@ -11,7 +11,7 @@ registerHooks({
     return nextResolve(specifier, context);
   },
 });
-const { contratoVigente, contratosSuperpuestos, estadoContrato, finEstadia, sumarDia, tipoIngreso } = await import("../app/lib/domain.ts");
+const { asignacionesAmbienteActivas, contratoVigente, contratosSuperpuestos, estadoContrato, finEstadia, sumarDia, tipoIngreso } = await import("../app/lib/domain.ts");
 const original = { idContrato: "C1", idAlumno: "A1", fechaDesde: "2025-03-01", fechaHasta: "2026-02-28" };
 const renovacion = { idContrato: "C2", idAlumno: "A1", fechaDesde: "2026-03-01", fechaHasta: "2027-02-28" };
 
@@ -61,4 +61,16 @@ test("no considera residentes a los ingresos futuros y calcula los cambios de me
   assert.equal(contratoVigente([renovacion], "A1", "2026-02-28"), undefined);
   assert.equal(sumarDia("2026-12-31"), "2027-01-01");
   assert.equal(sumarDia("2024-02-28"), "2024-02-29");
+});
+
+test("las asignaciones de ambientes incluyen el inicio y excluyen la fecha final", () => {
+  const asignaciones = [
+    { idGrupoLimpieza: "G1", idAmbiente: "AM1", fechaDesde: "2026-10-20", fechaHasta: null },
+    { idGrupoLimpieza: "G2", idAmbiente: "AM2", fechaDesde: "2026-10-19", fechaHasta: "2026-10-20" },
+    { idGrupoLimpieza: "G3", idAmbiente: "AM3", fechaDesde: "2026-10-21", fechaHasta: null },
+  ];
+  assert.deepEqual(
+    asignacionesAmbienteActivas(asignaciones, "2026-10-20").map((asignacion) => asignacion.idAmbiente),
+    ["AM1"],
+  );
 });

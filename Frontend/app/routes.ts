@@ -26,6 +26,12 @@ export default [
     route("multas/nueva", "routes/multas.nueva.tsx"),
     route("multas/:idMulta/editar", "routes/multas.$idMulta.editar.tsx"),
     route("multas/:idMulta", "routes/multas.$idMulta.tsx"),
+    route("limpieza", "routes/limpieza.tsx"),
+    route("limpieza/nueva", "routes/limpieza.nueva.tsx"),
+    route("limpieza/:idGrupoLimpieza/editar", "routes/limpieza.$idGrupoLimpieza.editar.tsx"),
+    route("limpieza/:idGrupoLimpieza/alumnos", "routes/limpieza.$idGrupoLimpieza.alumnos.tsx"),
+    route("limpieza/:idGrupoLimpieza/ambientes/nuevo", "routes/limpieza.$idGrupoLimpieza.ambientes.nuevo.tsx"),
+    route("limpieza/:idGrupoLimpieza", "routes/limpieza.$idGrupoLimpieza.tsx"),
     route("*", "routes/proximamente.tsx"),
   ]),
 ] satisfies RouteConfig;

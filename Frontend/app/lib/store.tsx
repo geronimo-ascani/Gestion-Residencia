@@ -47,6 +47,10 @@ export interface NuevaHabitacionInput {
   descripcion: string;
 }
 
+export interface NuevoGrupoLimpiezaInput {
+  nombreDelGrupo: string;
+}
+
 export interface NuevoContratoInput {
   idAlumno: string;
   fechaDesde: string;
@@ -66,6 +70,16 @@ export interface DataContextValue extends DataState {
   liberarHabitacion: (idAlumno: string) => void;
   crearAlumno: (input: NuevoAlumnoInput) => string;
   crearHabitacion: (input: NuevaHabitacionInput) => string;
+  crearGrupoLimpieza: (input: NuevoGrupoLimpiezaInput) => string;
+  actualizarGrupoLimpieza: (idGrupoLimpieza: string, nombreDelGrupo: string) => void;
+  eliminarGrupoLimpieza: (idGrupoLimpieza: string) => void;
+  guardarAlumnosGrupo: (idGrupoLimpieza: string, idAlumnos: string[]) => void;
+  asignarAmbienteGrupo: (
+    idGrupoLimpieza: string,
+    idAmbiente: string,
+    fechaDesde: string,
+  ) => boolean;
+  liberarAmbienteGrupo: (idGrupoLimpieza: string, idAmbiente: string) => void;
   crearContrato: (input: NuevoContratoInput) => void;
   cancelarContrato: (idContrato: string, fecha: string, motivo: string) => void;
 }
@@ -203,6 +217,109 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const idHabitacion = nuevoId("H");
         setState((previo) => ({ ...previo, habitaciones: [...previo.habitaciones, { ...input, idHabitacion }] }));
         return idHabitacion;
+      },
+
+      crearGrupoLimpieza({ nombreDelGrupo }) {
+        const idGrupoLimpieza = nuevoId("G");
+        setState((previo) => ({
+          ...previo,
+          grupos: [...previo.grupos, { idGrupoLimpieza, nombreDelGrupo }],
+        }));
+        return idGrupoLimpieza;
+      },
+
+      actualizarGrupoLimpieza(idGrupoLimpieza, nombreDelGrupo) {
+        setState((previo) => ({
+          ...previo,
+          grupos: previo.grupos.map((grupo) =>
+            grupo.idGrupoLimpieza === idGrupoLimpieza
+              ? { ...grupo, nombreDelGrupo }
+              : grupo,
+          ),
+        }));
+      },
+
+      eliminarGrupoLimpieza(idGrupoLimpieza) {
+        setState((previo) => ({
+          ...previo,
+          grupos: previo.grupos.filter(
+            (grupo) => grupo.idGrupoLimpieza !== idGrupoLimpieza,
+          ),
+          grupoAlumnos: previo.grupoAlumnos.filter(
+            (asignacion) => asignacion.idGrupoLimpieza !== idGrupoLimpieza,
+          ),
+          grupoAmbientes: previo.grupoAmbientes.filter(
+            (asignacion) => asignacion.idGrupoLimpieza !== idGrupoLimpieza,
+          ),
+        }));
+      },
+
+      guardarAlumnosGrupo(idGrupoLimpieza, idAlumnos) {
+        const alumnosValidos = new Set(
+          idAlumnos.filter((idAlumno) =>
+            state.alumnos.some((alumno) => alumno.idAlumno === idAlumno),
+          ),
+        );
+        setState((previo) => ({
+          ...previo,
+          grupoAlumnos: [
+            ...previo.grupoAlumnos.filter(
+              (asignacion) => asignacion.idGrupoLimpieza !== idGrupoLimpieza,
+            ),
+            ...[...alumnosValidos].map((idAlumno) => ({
+              idGrupoLimpieza,
+              idAlumno,
+            })),
+          ],
+        }));
+      },
+
+      asignarAmbienteGrupo(idGrupoLimpieza, idAmbiente, fechaDesde) {
+        const yaAsignado = state.grupoAmbientes.some(
+          (asignacion) =>
+            asignacion.idAmbiente === idAmbiente &&
+            (asignacion.fechaHasta === null ||
+              asignacion.fechaHasta > fechaDesde),
+        );
+        if (yaAsignado) return false;
+
+        setState((previo) => {
+          const ocupado = previo.grupoAmbientes.some(
+            (asignacion) =>
+              asignacion.idAmbiente === idAmbiente &&
+              (asignacion.fechaHasta === null ||
+                asignacion.fechaHasta > fechaDesde),
+          );
+          if (ocupado) return previo;
+          return {
+            ...previo,
+            grupoAmbientes: [
+              ...previo.grupoAmbientes,
+              {
+                idGrupoLimpieza,
+                idAmbiente,
+                fechaDesde,
+                fechaHasta: null,
+              },
+            ],
+          };
+        });
+        return true;
+      },
+
+      liberarAmbienteGrupo(idGrupoLimpieza, idAmbiente) {
+        setState((previo) => ({
+          ...previo,
+          grupoAmbientes: previo.grupoAmbientes.map((asignacion) =>
+            asignacion.idGrupoLimpieza === idGrupoLimpieza &&
+            asignacion.idAmbiente === idAmbiente &&
+            asignacion.fechaDesde <= FECHA_REFERENCIA &&
+            (asignacion.fechaHasta === null ||
+              asignacion.fechaHasta > FECHA_REFERENCIA)
+              ? { ...asignacion, fechaHasta: FECHA_REFERENCIA }
+              : asignacion,
+          ),
+        }));
       },
 
       cancelarContrato(idContrato, fecha, motivo) {

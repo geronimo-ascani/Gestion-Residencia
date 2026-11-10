@@ -3,6 +3,7 @@ import type {
   Contrato,
   Habitacion,
   HabitacionAlumno,
+  GrupoLimpiezaAmbiente,
   Multa,
   Pago,
 } from "./types";
@@ -38,6 +39,17 @@ export function asignacionActiva(
 ): HabitacionAlumno | undefined {
   return asignaciones.find(
     (a) => a.idAlumno === idAlumno && estaActiva(a.fechaDesde, a.fechaHasta, hoy),
+  );
+}
+
+export function asignacionesAmbienteActivas(
+  asignaciones: GrupoLimpiezaAmbiente[],
+  hoy: string = FECHA_REFERENCIA,
+): GrupoLimpiezaAmbiente[] {
+  return asignaciones.filter(
+    (asignacion) =>
+      asignacion.fechaDesde <= hoy &&
+      (asignacion.fechaHasta === null || asignacion.fechaHasta > hoy),
   );
 }
 
