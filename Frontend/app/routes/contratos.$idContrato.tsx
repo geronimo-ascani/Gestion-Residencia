@@ -79,6 +79,7 @@ export default function ContratoDetalle() {
                 </span>
               </Link>
             </Button>
+            <Link to={`/facturacion/nueva?contrato=${contrato.idContrato}`}><Button variant="outline"><Icon name="payments" className="h-4 w-4" />Generar factura</Button></Link>
           </div>
         }
       />

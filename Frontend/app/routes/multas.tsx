@@ -5,14 +5,23 @@ import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { ListSummary, ListToolbar } from "../Components/ui/list-page";
+import { Tabs } from "../Components/ui/tabs";
 import { PageHeader } from "../Components/ui/page-header";
 import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/table";
+import { importeMulta } from "../lib/multas";
 import { estadoMultaVisual } from "../lib/domain";
 import { formatARS, formatFecha } from "../lib/format";
 import { useData } from "../lib/store";
 import { useDebouncedValue } from "../lib/use-debounced-value";
 
-type FiltroMulta = "todas" | "pendiente" | "vencida" | "pagada" | "anulada";
+const vistas = [
+  { id: "pendiente", label: "Vigentes" },
+  { id: "vencida", label: "Vencidas" },
+  { id: "pagada", label: "Pagas" },
+  { id: "todas", label: "Todas" },
+] as const;
+type FiltroMulta = (typeof vistas)[number]["id"];
+const prioridadEstado = { pendiente: 0, vencida: 1, pagada: 2, anulada: 3 };
 
 export function meta() {
   return [{ title: "Multas · Gestión de Residencia" }];
@@ -21,7 +30,7 @@ export function meta() {
 export default function Multas() {
   const { multas, alumnoPorId } = useData();
   const [busqueda, setBusqueda] = useState("");
-  const [filtro, setFiltro] = useState<FiltroMulta>("todas");
+  const [filtro, setFiltro] = useState<FiltroMulta>("pendiente");
   const busquedaDebounceada = useDebouncedValue(busqueda);
 
   const filas = useMemo(() => {
@@ -43,6 +52,7 @@ export default function Multas() {
         ].some((dato) => dato.toLocaleLowerCase().includes(termino));
       })
       .sort((a, b) =>
+        prioridadEstado[a.estado] - prioridadEstado[b.estado] ||
         a.multa.fechaVence.localeCompare(b.multa.fechaVence) ||
         a.multa.idMulta.localeCompare(b.multa.idMulta),
       );
@@ -73,20 +83,11 @@ export default function Multas() {
         { label: "Pagadas", value: multas.filter((m) => estadoMultaVisual(m) === "pagada").length },
       ]} />
 
-      <ListToolbar title="Listado de multas" count={filas.length} search={busqueda} onSearch={setBusqueda} placeholder="Buscar por multa, alumno o DNI…" searchLabel="Buscar multas">
-        <select
-          value={filtro}
-          onChange={(event) => setFiltro(event.target.value as FiltroMulta)}
-          aria-label="Filtrar multas por estado"
-          className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/25 sm:w-auto dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-        >
-          <option value="todas">Todos los estados</option>
-          <option value="pendiente">Pendientes</option>
-          <option value="vencida">Vencidas</option>
-          <option value="pagada">Pagadas</option>
-          <option value="anulada">Anuladas</option>
-        </select>
-      </ListToolbar>
+      <Tabs label="Vistas de multas" className="flex-wrap self-start" value={filtro}
+        items={vistas.map((vista) => ({ ...vista, count: vista.id === "todas" ? multas.length : multas.filter((multa) => estadoMultaVisual(multa) === vista.id).length }))}
+        onChange={(value) => setFiltro(value as FiltroMulta)} />
+
+      <ListToolbar title="Listado de multas" count={filas.length} search={busqueda} onSearch={setBusqueda} placeholder="Buscar por multa, alumno o DNI…" searchLabel="Buscar multas" />
 
       <TableWrap>
         <Table>
@@ -110,7 +111,7 @@ export default function Multas() {
                     title={multas.length ? "Sin resultados" : "Sin multas"}
                     description={
                       multas.length
-                        ? "No hay multas que coincidan con la búsqueda y el estado seleccionados."
+                        ? "No hay multas en esta vista con la búsqueda aplicada. Podés cambiar de vista o consultar Todas."
                         : "Todavía no se emitieron multas."
                     }
                     action={
@@ -162,17 +163,10 @@ export default function Multas() {
                     <StatusBadge estado={estado} />
                   </TD>
                   <TD className="text-right tabular-nums">
-                    <Badge variant="neutral">{formatARS(multa.monto)}</Badge>
+                    <Badge variant="neutral">{formatARS(importeMulta(multa).total)}</Badge>
                   </TD>
                   <TD className="text-right">
                     <div className="flex justify-end gap-1">
-                      {multa.estado === "pendiente" ? (
-                        <Link to={`/multas/${multa.idMulta}/editar`}>
-                          <Button size="sm" variant="ghost">
-                            Editar
-                          </Button>
-                        </Link>
-                      ) : null}
                       <Link to={`/multas/${multa.idMulta}`}>
                         <Button size="sm" variant="outline">
                           Ver detalle

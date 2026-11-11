@@ -1,3 +1,4 @@
+import { importeMulta } from "../lib/multas";
 import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { AlumnoContratos } from "../Components/alumno-contratos";
@@ -26,7 +27,7 @@ export default function AlumnoDetalle() {
   const [params] = useSearchParams();
   const origen = params.get("origen");
   const volver = origen === "historico" || origen === "pendientes" ? `/alumnos?vista=${origen}` : "/alumnos";
-  const { alumnos, contratos, asignaciones, habitaciones, pagos, multas, registrarPagoMulta, anularMulta } = useData();
+  const { alumnos, contratos, asignaciones, habitaciones, pagos, facturas, multas, registrarPagoMulta, anularMulta } = useData();
   const { toast } = useToast();
 
   const [tab, setTab] = useState("resumen");
@@ -83,7 +84,7 @@ export default function AlumnoDetalle() {
     registrarPagoMulta(multa.idMulta);
     toast({
       title: "Pago de multa registrado",
-      description: `${alumno!.nombre} ${alumno!.apellido} · ${formatARS(multa.monto)}`,
+      description: `${alumno!.nombre} ${alumno!.apellido} · ${formatARS(importeMulta(multa).total)}`,
     });
   }
 
@@ -112,6 +113,7 @@ export default function AlumnoDetalle() {
         description={`DNI ${alumno.documento} · ${alumno.correo} · ${alumno.telefono}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <Link to={`/facturacion?alumno=${alumno.idAlumno}`}><Button variant="outline"><Icon name="payments" className="h-4 w-4" />Facturas y saldos</Button></Link>
             <Link to={volver}>
               <Button variant="outline">
                 <Icon name="arrow" className="h-4 w-4 rotate-180" />
@@ -304,9 +306,9 @@ export default function AlumnoDetalle() {
                       <TD>
                         <StatusBadge estado={ev} />
                       </TD>
-                      <TD className="text-right tabular-nums">{formatARS(multa.monto)}</TD>
+                      <TD className="text-right tabular-nums">{formatARS(importeMulta(multa).total)}</TD>
                       <TD className="text-right">
-                        {multa.estado === "pendiente" ? (
+                        {facturas.some((f) => f.detalles.some((d) => d.idMulta === multa.idMulta)) ? <Link to={`/facturacion/${facturas.find((f) => f.detalles.some((d) => d.idMulta === multa.idMulta))!.idFactura}`}><Button size="sm" variant="outline">Ver factura</Button></Link> : multa.estado === "pendiente" ? (
                           <div className="flex justify-end gap-1">
                             <Button size="sm" variant="outline" onClick={() => pagarMulta(multa)}>
                               Pagar

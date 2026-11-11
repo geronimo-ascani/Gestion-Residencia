@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
 import { InputField } from "./input";
 
-export function ListSummary({ title, description, icon, items }: {
+export function ListSummary({ title, description, icon, items, compactValues = false }: {
   title: string;
   description: string;
   icon: IconName;
   items: { label: string; value: number | string }[];
+  compactValues?: boolean;
 }) {
   return (
     <section aria-label={title} className="overflow-hidden rounded-xl border border-brand-200 bg-white dark:border-slate-700 dark:bg-slate-900">
@@ -21,7 +22,7 @@ export function ListSummary({ title, description, icon, items }: {
         {items.map(({ label, value }) => (
           <div key={label}>
             <dt className="text-sm text-slate-500 dark:text-slate-400">{label}</dt>
-            <dd className="mt-1 text-3xl font-semibold tabular-nums text-brand-900 dark:text-brand-200">{value}</dd>
+            <dd className={`mt-1 font-semibold tabular-nums text-brand-900 dark:text-brand-200 ${compactValues ? "text-xl whitespace-nowrap sm:text-3xl" : "text-3xl"}`}>{value}</dd>
           </div>
         ))}
       </dl>

@@ -13,7 +13,9 @@ export function formatNumero(valor: number): string {
 }
 
 export function formatARS(valor: number): string {
-  return `${valor < 0 ? "-" : ""}$ ${agrupar(valor)}`;
+  const centavos = Math.round(Math.abs(valor) * 100);
+  const decimales = centavos % 100;
+  return `${valor < 0 ? "-" : ""}$ ${agrupar(Math.floor(centavos / 100))}${decimales ? `,${String(decimales).padStart(2, "0")}` : ""}`;
 }
 
 export function formatFecha(iso: string | null | undefined): string {

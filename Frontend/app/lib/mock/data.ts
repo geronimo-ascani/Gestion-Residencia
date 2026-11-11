@@ -1,7 +1,64 @@
-import type { Alumno, Contrato, DataState, Habitacion, HabitacionAlumno } from "../types";
+import { TAREAS_LIMPIEZA } from "../domain";
+import type { Alumno, Ambiente, Contrato, DataState, Habitacion, HabitacionAlumno } from "../types";
 import { usuarioActual } from "../session";
 
 const CAPACIDADES = [2, 2, 4, 4, 5] as const;
+
+const AMBIENTES_COMUNES: Ambiente[] = [
+  {
+    idAmbiente: "AM_LAVADERO",
+    ambiente: "Lavadero",
+    tipo: "Lavadero",
+    equipamiento: [{ nombre: "Lavarropas", cantidad: 1 }],
+    tareas: "",
+  },
+  ...[1, 2].map((numero): Ambiente => ({
+    idAmbiente: `AM_ESTUDIO_${numero}`,
+    ambiente: `Sala de estudio ${numero}`,
+    tipo: "Sala de estudio",
+    equipamiento: [{ nombre: "Mesas", cantidad: 3 }, { nombre: "Sillas", cantidad: 3 }],
+    tareas: "Limpiar las mesas y las sillas, barrer y limpiar el piso, ordenar y retirar los residuos.",
+  })),
+  ...[1, 2, 3].map((numero): Ambiente => ({
+    idAmbiente: `AM_BANO_${numero}`,
+    ambiente: `Baño ${numero}`,
+    tipo: "Baño",
+    equipamiento: [{ nombre: "Inodoro", cantidad: 1 }, { nombre: "Lavamanos", cantidad: 1 }],
+    tareas: "Limpiar y desinfectar el inodoro y el lavamanos, limpiar el piso y retirar los residuos.",
+  })),
+  ...[1, 2].map((numero): Ambiente => ({
+    idAmbiente: `AM_COCINA_${numero}`,
+    ambiente: `Cocina ${numero}`,
+    tipo: "Cocina",
+    equipamiento: [
+      { nombre: "Hornos eléctricos", cantidad: 2 },
+      { nombre: "Heladeras", cantidad: 2 },
+      ...(numero === 1 ? [{ nombre: "Freezer grande", cantidad: 1 }] : []),
+    ],
+    tareas: "Limpiar los hornos, las heladeras y las superficies, barrer y limpiar el piso y retirar los residuos. Coordinar la limpieza del freezer compartido.",
+  })),
+  {
+    idAmbiente: "AM_DUCHAS",
+    ambiente: "Duchas",
+    tipo: "Duchas",
+    equipamiento: [
+      { nombre: "Duchas", cantidad: 4 },
+      { nombre: "Mingitorios", cantidad: 2 },
+      { nombre: "Bacha", cantidad: 1 },
+    ],
+    tareas: "Limpiar y desinfectar las duchas, los mingitorios y la bacha, limpiar el piso y retirar los residuos.",
+  },
+  {
+    idAmbiente: "AM_COMEDOR",
+    ambiente: "Comedor",
+    tipo: "Comedor",
+    equipamiento: [
+      { nombre: "Mesas grandes", cantidad: 4 },
+      { nombre: "Sillas", cantidad: 16 },
+    ],
+    tareas: "Limpiar las mesas y las sillas, ordenar el mobiliario, barrer y limpiar el piso y retirar los residuos.",
+  },
+];
 
 const CARRERAS = [
   "Ingeniería en Sistemas de Información",
@@ -74,6 +131,8 @@ export function createInitialData(): DataState {
     idAlumno: alumno.idAlumno,
     fechaDesde: "2026-03-01",
     fechaHasta: indice < 3 ? "2026-11-10" : "2027-02-28",
+    montoMensual: 45000,
+    diaVencimientoPago: 10,
   }));
 
   // Un caso de renovación y otro de reingreso, sin superponer contratos.
@@ -101,6 +160,15 @@ export function createInitialData(): DataState {
   );
 
   return {
+    facturas: alumnos.flatMap((alumno, indice) => ["2026-09", "2026-10"].map((periodo) => ({
+      idFactura: `F-${alumno.idAlumno}-${periodo}`, idContrato: contratos[indice].idContrato,
+      idAlumno: alumno.idAlumno, titular: `${alumno.apellido}, ${alumno.nombre}`, documento: alumno.documento,
+      periodo, fechaEmision: `${periodo}-01`, fechaVence: `${periodo}-10`,
+      detalles: [
+        { concepto: `Alojamiento mensual · ${periodo}`, monto: 45000 },
+        ...(alumno.idAlumno === "A03" && periodo === "2026-10" ? [{ concepto: "Multa M01 · Sanción de residencia", monto: 5000, idMulta: "M01" }] : []),
+      ],
+    }))),
     habitaciones,
     alumnos,
     asignaciones,
@@ -108,6 +176,7 @@ export function createInitialData(): DataState {
     pagos: alumnos.flatMap((alumno, indice) => [
       {
         idPago: `P${pad(indice * 2 + 1)}`,
+        idFactura: `F-${alumno.idAlumno}-2026-09`,
         idAlumno: alumno.idAlumno,
         monto: 45_000,
         fecha: "2026-09-05",
@@ -115,6 +184,7 @@ export function createInitialData(): DataState {
       },
       {
         idPago: `P${pad(indice * 2 + 2)}`,
+        idFactura: `F-${alumno.idAlumno}-2026-10`,
         idAlumno: alumno.idAlumno,
         monto: 45_000,
         fecha: `2026-10-${pad(1 + indice)}`,
@@ -126,25 +196,22 @@ export function createInitialData(): DataState {
       { idMulta: "M02", idAlumno: "A08", monto: 4_000, fechaEmision: "2026-10-15", fechaVence: "2026-10-30", estado: "pendiente", fechaPago: null },
       { idMulta: "M03", idAlumno: "A12", monto: 3_000, fechaEmision: "2026-09-10", fechaVence: "2026-09-25", estado: "pagada", fechaPago: "2026-09-20" },
     ],
-    grupos: habitaciones.map((habitacion) => ({
-      idGrupoLimpieza: `G${habitacion.numeroHabitacion}`,
-      nombreDelGrupo: `Habitación ${habitacion.numeroHabitacion}`,
+    tareasLimpieza: TAREAS_LIMPIEZA.map((tarea) => ({ ...tarea, tareas: [...tarea.tareas] })),
+    grupos: [1, 2, 3, 4].map((numero) => ({
+      idGrupoLimpieza: `G${numero}`,
+      nombreDelGrupo: `Grupo ${numero}`,
+      tareaInicial: numero,
     })),
     grupoAlumnos: RESIDENTES.map(([, , habitacion], indice) => ({
-      idGrupoLimpieza: `G${habitacion}`,
+      idGrupoLimpieza: `G${Math.min(habitacion, 4)}`,
       idAlumno: alumnos[indice].idAlumno,
     })),
-    ambientes: habitaciones.map((habitacion) => ({
+    ambientes: [...habitaciones.map((habitacion) => ({
       idAmbiente: `AM${habitacion.numeroHabitacion}`,
       ambiente: `Habitación ${habitacion.numeroHabitacion}`,
       tareas: "Barrer, limpiar el piso, ordenar los espacios compartidos y retirar los residuos.",
-    })),
-    grupoAmbientes: habitaciones.map((habitacion) => ({
-      idGrupoLimpieza: `G${habitacion.numeroHabitacion}`,
-      idAmbiente: `AM${habitacion.numeroHabitacion}`,
-      fechaDesde: "2026-03-01",
-      fechaHasta: null,
-    })),
+    })), ...AMBIENTES_COMUNES],
+    grupoAmbientes: [],
     usuarios: [
       { ...usuarioActual },
       ...alumnos.map((alumno, indice) => ({

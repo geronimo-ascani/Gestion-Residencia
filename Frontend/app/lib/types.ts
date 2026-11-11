@@ -95,11 +95,21 @@ export interface BorradorContrato {
 }
 
 export interface Pago {
+  idFactura?: string;
+  medio?: "efectivo" | "transferencia" | "tarjeta";
+  referencia?: string;
   idPago: string;
   idAlumno: string;
   monto: number;
   fecha: string;
   concepto: string;
+}
+
+export interface CambioMulta {
+  fecha: string;
+  accion: "edicion" | "prorroga";
+  motivo?: string;
+  cambios: { campo: string; anterior: string; nuevo: string }[];
 }
 
 export interface Multa {
@@ -110,9 +120,34 @@ export interface Multa {
   fechaVence: string;
   estado: EstadoMulta;
   fechaPago: string | null;
+  tipo?: string;
+  motivo?: string;
+  observaciones?: string;
+  huboDanios?: boolean;
+  detalleDanios?: string;
+  periodoDesde?: string;
+  periodoHasta?: string;
+  idEmision?: string;
+  historial?: CambioMulta[];
+  montoPagado?: number;
+  montoSancion?: number;
+  montoDanios?: number;
+}
+
+export interface TareaLimpieza {
+  enRotacion: boolean;
+  numero: number;
+  nombre: string;
+  tareas: string[];
+}
+
+export interface NuevaTareaLimpiezaInput {
+  nombre: string;
+  tareas: string[];
 }
 
 export interface GrupoDeLimpieza {
+  tareaInicial: number;
   idGrupoLimpieza: string;
   nombreDelGrupo: string;
 }
@@ -122,10 +157,22 @@ export interface GrupoLimpiezaAlumno {
   idAlumno: string;
 }
 
+export const TIPOS_AMBIENTE = ["Sala de estudio", "Baño", "Cocina", "Duchas", "Comedor", "Lavadero", "Otro"] as const;
+export type TipoAmbienteComun = (typeof TIPOS_AMBIENTE)[number];
+
+export interface EquipamientoAmbiente {
+  nombre: string;
+  cantidad: number;
+}
+
 export interface Ambiente {
   idAmbiente: string;
   ambiente: string;
   tareas: string;
+  tipo?: TipoAmbienteComun;
+  equipamiento?: EquipamientoAmbiente[];
+  ubicacion?: string;
+  descripcion?: string;
 }
 
 export interface GrupoLimpiezaAmbiente {
@@ -136,6 +183,8 @@ export interface GrupoLimpiezaAmbiente {
 }
 
 export interface DataState {
+  facturas: Factura[];
+  tareasLimpieza: TareaLimpieza[];
   alumnos: Alumno[];
   habitaciones: Habitacion[];
   asignaciones: HabitacionAlumno[];
@@ -147,4 +196,30 @@ export interface DataState {
   ambientes: Ambiente[];
   grupoAmbientes: GrupoLimpiezaAmbiente[];
   usuarios: Usuario[];
+}
+
+export interface DetalleFactura {
+  concepto: string;
+  monto: number;
+  idMulta?: string;
+}
+
+export interface Factura {
+  idFactura: string;
+  idContrato: string;
+  idAlumno: string;
+  titular: string;
+  documento: string;
+  periodo: string;
+  fechaEmision: string;
+  fechaVence: string;
+  detalles: DetalleFactura[];
+}
+
+export interface RegistrarCobroInput {
+  idFactura: string;
+  monto: number;
+  fecha: string;
+  medio: NonNullable<Pago["medio"]>;
+  referencia: string;
 }

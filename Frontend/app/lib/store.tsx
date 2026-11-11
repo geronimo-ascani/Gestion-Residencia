@@ -1,14 +1,23 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { contratosSuperpuestos } from "./domain";
+import { calendarioMulta, conHistorialMulta, extenderMes, importeMulta, TIPOS_MULTA } from "./multas";
+import { actualizarIntegrantesLimpieza, validarGrupoLimpieza, validarTareaLimpieza, contratoVigente, contratosSuperpuestos } from "./domain";
 import { FECHA_REFERENCIA } from "./config";
+import { aplicarCobro, prepararFactura } from "./facturacion";
+import type { RegistrarCobroInput } from "./types";
+import { normalizar } from "./format";
 import { createInitialData } from "./mock/data";
+import { validarNuevoAmbiente } from "./ambientes";
+import type { NuevoAmbienteInput } from "./ambientes";
+import { TIPOS_AMBIENTE } from "./types";
 import type {
   Alumno,
   DatosIngresoAlumno,
   Ambiente,
   DataState,
+  EquipamientoAmbiente,
   GrupoDeLimpieza,
+  NuevaTareaLimpiezaInput,
   Habitacion,
   Multa,
 } from "./types";
@@ -20,17 +29,17 @@ function nuevoId(prefijo: string): string {
   return `${prefijo}${secuencia}`;
 }
 
-export interface NuevaMultaInput {
-  idAlumno: string;
-  monto: number;
-  fechaVence: string;
+export interface DatosMultaInput {
+  tipo: string;
+  motivo: string;
+  observaciones: string;
+  huboDanios: boolean;
+  detalleDanios: string;
+  montoSancion: number;
+  montoDanios: number;
 }
-
-export interface EditarMultaInput {
-  idMulta: string;
-  monto: number;
-  fechaVence: string;
-}
+export interface NuevaMultaInput extends DatosMultaInput { idAlumnos: string[]; }
+export interface EditarMultaInput extends DatosMultaInput { idMulta: string; }
 
 export interface NuevoAlumnoInput extends DatosIngresoAlumno {
   nombre: string;
@@ -48,6 +57,8 @@ export interface NuevaHabitacionInput {
 }
 
 export interface NuevoGrupoLimpiezaInput {
+  tareaInicial: number;
+  idAlumnos: string[];
   nombreDelGrupo: string;
 }
 
@@ -63,18 +74,25 @@ export interface NuevoContratoInput {
 }
 
 export interface DataContextValue extends DataState {
+  generarFactura: (idContrato: string, periodo: string) => string;
+  registrarCobro: (input: RegistrarCobroInput) => string;
   alumnoPorId: Map<string, Alumno>;
   habitacionPorId: Map<string, Habitacion>;
   grupoPorId: Map<string, GrupoDeLimpieza>;
   ambientePorId: Map<string, Ambiente>;
+  crearAmbiente: (input: NuevoAmbienteInput) => string | null;
+  agregarEquipamientoAmbiente: (idAmbiente: string, equipo: EquipamientoAmbiente) => boolean;
   registrarPagoMulta: (idMulta: string) => void;
   anularMulta: (idMulta: string) => void;
-  emitirMulta: (input: NuevaMultaInput) => string;
+  emitirMulta: (input: NuevaMultaInput) => string[];
   actualizarMulta: (input: EditarMultaInput) => void;
+  extenderPlazoMulta: (idMulta: string, motivo: string) => void;
   asignarHabitacion: (idAlumno: string, idHabitacion: string) => void;
   liberarHabitacion: (idAlumno: string) => void;
   crearAlumno: (input: NuevoAlumnoInput) => string;
   crearHabitacion: (input: NuevaHabitacionInput) => string;
+  actualizarTareaLimpieza: (numero: number, input: NuevaTareaLimpiezaInput) => void;
+  crearTareaLimpieza: (input: NuevaTareaLimpiezaInput) => void;
   crearGrupoLimpieza: (input: NuevoGrupoLimpiezaInput) => string;
   actualizarGrupoLimpieza: (idGrupoLimpieza: string, nombreDelGrupo: string) => void;
   eliminarGrupoLimpieza: (idGrupoLimpieza: string) => void;
@@ -122,18 +140,78 @@ export function DataProvider({ children }: { children: ReactNode }) {
       grupoPorId,
       ambientePorId,
 
+      generarFactura(idContrato, periodo) {
+        const id = nuevoId("F");
+        prepararFactura(state, idContrato, periodo, id);
+        setState((previo) => previo.facturas.some((f) => f.idContrato === idContrato && f.periodo === periodo) ? previo : {
+          ...previo, facturas: [...previo.facturas, prepararFactura(previo, idContrato, periodo, id)],
+        });
+        return id;
+      },
+
+      registrarCobro(input) {
+        const id = nuevoId("P");
+        aplicarCobro(state, input, id);
+        setState((previo) => aplicarCobro(previo, input, id));
+        return id;
+      },
+
+      crearAmbiente(input) {
+        const tipo = TIPOS_AMBIENTE.find((valor) => valor === input.tipo);
+        if (!tipo || Object.keys(validarNuevoAmbiente(input, state.ambientes)).length) return null;
+        const idAmbiente = nuevoId("AM");
+        const ambiente: Ambiente = {
+          idAmbiente,
+          ambiente: input.ambiente.trim(),
+          tipo,
+          ubicacion: input.ubicacion.trim(),
+          descripcion: input.descripcion.trim(),
+          equipamiento: input.equipamiento.map((equipo) => ({ nombre: equipo.nombre.trim(), cantidad: equipo.cantidad })),
+          tareas: "",
+        };
+        setState((previo) => Object.keys(validarNuevoAmbiente(input, previo.ambientes)).length ? previo : { ...previo, ambientes: [...previo.ambientes, ambiente] });
+        return idAmbiente;
+      },
+
+      agregarEquipamientoAmbiente(idAmbiente, equipo) {
+        const nombre = equipo.nombre.trim();
+        const ambiente = ambientePorId.get(idAmbiente);
+        if (!ambiente?.tipo || !nombre || !Number.isSafeInteger(equipo.cantidad) || equipo.cantidad <= 0) return false;
+        const existente = ambiente.equipamiento?.find((item) => normalizar(item.nombre) === normalizar(nombre));
+        if (existente && !Number.isSafeInteger(existente.cantidad + equipo.cantidad)) return false;
+
+        setState((previo) => ({
+          ...previo,
+          ambientes: previo.ambientes.map((item) => {
+            if (item.idAmbiente !== idAmbiente || !item.tipo) return item;
+            const equipamiento = item.equipamiento ?? [];
+            const repetido = equipamiento.find((objeto) => normalizar(objeto.nombre) === normalizar(nombre));
+            if (repetido && !Number.isSafeInteger(repetido.cantidad + equipo.cantidad)) return item;
+            return {
+              ...item,
+              equipamiento: repetido
+                ? equipamiento.map((objeto) => objeto === repetido ? { ...objeto, cantidad: objeto.cantidad + equipo.cantidad } : objeto)
+                : [...equipamiento, { nombre, cantidad: equipo.cantidad }],
+            };
+          }),
+        }));
+        return true;
+      },
+
       registrarPagoMulta(idMulta) {
+        if (state.facturas.some((f) => f.detalles.some((d) => d.idMulta === idMulta))) return;
         setState((previo) => ({
           ...previo,
           multas: previo.multas.map((multa) =>
             multa.idMulta === idMulta
-              ? { ...multa, estado: "pagada", fechaPago: FECHA_REFERENCIA }
+              ? { ...multa, estado: "pagada", fechaPago: FECHA_REFERENCIA, montoPagado: importeMulta(multa).total }
               : multa,
           ),
         }));
       },
 
       anularMulta(idMulta) {
+        if (state.facturas.some((f) => f.detalles.some((d) => d.idMulta === idMulta))) return;
         setState((previo) => ({
           ...previo,
           multas: previo.multas.map((multa) =>
@@ -144,35 +222,44 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }));
       },
 
-      emitirMulta({ idAlumno, monto, fechaVence }) {
-        const idMulta = nuevoId("M");
-        setState((previo) => ({
-          ...previo,
-          multas: [
-            {
-              idMulta,
-              idAlumno,
-              monto: Math.max(0, Math.round(monto)),
-              fechaEmision: FECHA_REFERENCIA,
-              fechaVence,
-              estado: "pendiente",
-              fechaPago: null,
-            },
-            ...previo.multas,
-          ],
+      emitirMulta({ idAlumnos, ...datos }) {
+        const tipo = TIPOS_MULTA.find((t) => t.id === datos.tipo);
+        if (!tipo || !datos.motivo.trim() || !Number.isFinite(datos.montoSancion) || datos.montoSancion <= 0 || !Number.isFinite(datos.montoDanios) || datos.montoDanios < 0 || (datos.huboDanios && (!datos.detalleDanios.trim() || datos.montoDanios <= 0))) return [];
+        const idEmision = nuevoId("E");
+        const nuevas: Multa[] = [...new Set(idAlumnos)].filter((id) => alumnoPorId.has(id)).map((idAlumno) => ({
+          ...datos, motivo: datos.motivo.trim(), observaciones: datos.observaciones.trim(),
+          detalleDanios: datos.huboDanios ? datos.detalleDanios.trim() : "",
+          idMulta: nuevoId("M"), idEmision, idAlumno,
+          montoSancion: tipo.id === "extraordinaria" ? datos.montoSancion : tipo.monto,
+          montoDanios: datos.huboDanios ? datos.montoDanios : 0,
+          monto: (tipo.id === "extraordinaria" ? datos.montoSancion : tipo.monto) + (datos.huboDanios ? datos.montoDanios : 0),
+          fechaEmision: FECHA_REFERENCIA,
+          ...calendarioMulta(FECHA_REFERENCIA, contratoVigente(state.contratos, idAlumno)?.diaVencimientoPago),
+          estado: "pendiente", fechaPago: null,
         }));
-        return idMulta;
+        setState((previo) => ({ ...previo, multas: [...nuevas, ...previo.multas] }));
+        return nuevas.map((m) => m.idMulta);
       },
 
-      actualizarMulta({ idMulta, monto, fechaVence }) {
-        setState((previo) => ({
-          ...previo,
-          multas: previo.multas.map((multa: Multa) =>
-            multa.idMulta === idMulta && multa.estado === "pendiente"
-              ? { ...multa, monto: Math.max(0, Math.round(monto)), fechaVence }
-              : multa,
-          ),
-        }));
+      actualizarMulta({ idMulta, ...datos }) {
+        if (state.facturas.some((f) => f.detalles.some((d) => d.idMulta === idMulta))) throw new Error("La multa ya está facturada y no admite modificaciones.");
+        const tipo = TIPOS_MULTA.find((t) => t.id === datos.tipo);
+        if (!tipo || !datos.motivo.trim() || !Number.isFinite(datos.montoSancion) || datos.montoSancion <= 0 || !Number.isFinite(datos.montoDanios) || datos.montoDanios < 0 || (datos.huboDanios && (!datos.detalleDanios.trim() || datos.montoDanios <= 0))) return;
+        setState((previo) => ({ ...previo, multas: previo.multas.map((multa) =>
+          multa.idMulta === idMulta && multa.estado === "pendiente"
+            ? conHistorialMulta(multa, { ...multa, ...datos, montoSancion: tipo.id === "extraordinaria" ? datos.montoSancion : tipo.monto, montoDanios: datos.huboDanios ? datos.montoDanios : 0, monto: (tipo.id === "extraordinaria" ? datos.montoSancion : tipo.monto) + (datos.huboDanios ? datos.montoDanios : 0), detalleDanios: datos.huboDanios ? datos.detalleDanios.trim() : "" }, "edicion")
+            : multa,
+        ) }));
+      },
+
+      extenderPlazoMulta(idMulta, motivo) {
+        if (state.facturas.some((f) => f.detalles.some((d) => d.idMulta === idMulta))) return;
+        if (!motivo.trim()) return;
+        setState((previo) => ({ ...previo, multas: previo.multas.map((multa) => {
+          if (multa.idMulta !== idMulta || multa.estado !== "pendiente") return multa;
+          const fechaVence = extenderMes(multa.fechaVence);
+          return conHistorialMulta(multa, { ...multa, fechaVence, periodoHasta: fechaVence.slice(0, 7) }, "prorroga", motivo.trim());
+        }) }));
       },
 
       asignarHabitacion(idAlumno, idHabitacion) {
@@ -224,16 +311,49 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return idHabitacion;
       },
 
-      crearGrupoLimpieza({ nombreDelGrupo }) {
+      actualizarTareaLimpieza(numero, input) {
+        if (!state.tareasLimpieza.some((tarea) => tarea.numero === numero)) throw new Error("La tarea no existe.");
+        const error = validarTareaLimpieza(input, state.tareasLimpieza, numero);
+        if (error) throw new Error(error);
+        setState((previo) => {
+          if (validarTareaLimpieza(input, previo.tareasLimpieza, numero)) return previo;
+          return { ...previo, tareasLimpieza: previo.tareasLimpieza.map((tarea) => tarea.numero === numero ? {
+            ...tarea, nombre: input.nombre.trim(), tareas: input.tareas.map((actividad) => actividad.trim()),
+          } : tarea) };
+        });
+      },
+
+      crearTareaLimpieza(input) {
+        const error = validarTareaLimpieza(input, state.tareasLimpieza);
+        if (error) throw new Error(error);
+        setState((previo) => {
+          if (validarTareaLimpieza(input, previo.tareasLimpieza)) return previo;
+          const numero = Math.max(0, ...previo.tareasLimpieza.map((tarea) => tarea.numero)) + 1;
+          return { ...previo, tareasLimpieza: [...previo.tareasLimpieza, {
+            numero,
+            enRotacion: false,
+            nombre: input.nombre.trim(),
+            tareas: input.tareas.map((actividad) => actividad.trim()),
+          }] };
+        });
+      },
+
+      crearGrupoLimpieza(input) {
+        const error = validarGrupoLimpieza(state, input);
+        if (error) throw new Error(error);
         const idGrupoLimpieza = nuevoId("G");
-        setState((previo) => ({
-          ...previo,
-          grupos: [...previo.grupos, { idGrupoLimpieza, nombreDelGrupo }],
-        }));
+        setState((previo) => {
+          if (validarGrupoLimpieza(previo, input)) return previo;
+          return actualizarIntegrantesLimpieza({ ...previo, grupos: [...previo.grupos, {
+            idGrupoLimpieza, nombreDelGrupo: input.nombreDelGrupo.trim(), tareaInicial: input.tareaInicial,
+          }] }, idGrupoLimpieza, input.idAlumnos);
+        });
         return idGrupoLimpieza;
       },
 
       actualizarGrupoLimpieza(idGrupoLimpieza, nombreDelGrupo) {
+        nombreDelGrupo = nombreDelGrupo.trim();
+        if (!nombreDelGrupo || state.grupos.some((g) => g.idGrupoLimpieza !== idGrupoLimpieza && g.nombreDelGrupo.trim().toLowerCase() === nombreDelGrupo.toLowerCase())) return;
         setState((previo) => ({
           ...previo,
           grupos: previo.grupos.map((grupo) =>
@@ -260,23 +380,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       },
 
       guardarAlumnosGrupo(idGrupoLimpieza, idAlumnos) {
-        const alumnosValidos = new Set(
-          idAlumnos.filter((idAlumno) =>
-            state.alumnos.some((alumno) => alumno.idAlumno === idAlumno),
-          ),
-        );
-        setState((previo) => ({
-          ...previo,
-          grupoAlumnos: [
-            ...previo.grupoAlumnos.filter(
-              (asignacion) => asignacion.idGrupoLimpieza !== idGrupoLimpieza,
-            ),
-            ...[...alumnosValidos].map((idAlumno) => ({
-              idGrupoLimpieza,
-              idAlumno,
-            })),
-          ],
-        }));
+        setState((previo) => actualizarIntegrantesLimpieza(previo, idGrupoLimpieza, idAlumnos));
       },
 
       asignarAmbienteGrupo(idGrupoLimpieza, idAmbiente, fechaDesde) {

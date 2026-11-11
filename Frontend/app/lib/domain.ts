@@ -1,6 +1,10 @@
+import { normalizar } from "./format";
 import { FECHA_REFERENCIA } from "./config";
 import type {
   Contrato,
+  DataState,
+  NuevaTareaLimpiezaInput,
+  TareaLimpieza,
   Habitacion,
   HabitacionAlumno,
   GrupoLimpiezaAmbiente,
@@ -168,4 +172,64 @@ export function tipoIngreso(contrato: Contrato, contratos: Contrato[]): string {
     c.fechaDesde < contrato.fechaDesde).sort((a, b) => finEstadia(b).localeCompare(finEstadia(a)))[0];
   if (!anterior) return "Primer ingreso";
   return !anterior.fechaCancelacion && sumarDia(anterior.fechaHasta) === contrato.fechaDesde ? "Renovación" : "Reingreso";
+}
+
+
+export const TAREAS_LIMPIEZA = [
+  { enRotacion: true, numero: 1, nombre: "Limpiar baños", tareas: ["Pisos limpios", "Lavamanos limpio", "Tacho de basura limpio", "Inodoro limpio"] },
+  { enRotacion: true, numero: 2, nombre: "Limpiar salas comunes", tareas: ["Limpiar salas de estudio", "Limpiar pasillos", "Limpiar comedor"] },
+  { enRotacion: true, numero: 3, nombre: "Limpiar duchas", tareas: ["Limpiar cada ducha", "Limpiar los mingitorios", "Limpiar el lavamanos"] },
+  { enRotacion: true, numero: 4, nombre: "Limpiar cocinas", tareas: ["Limpiar los hornos", "Limpiar el piso", "Limpiar las heladeras", "Limpiar la bacha", "Limpiar la mesada"] },
+] as const;
+
+export function semanaLimpieza(fecha = FECHA_REFERENCIA): number {
+  return Math.floor((Number(fecha.slice(8, 10)) - 1) / 7) + 1;
+}
+
+export function tareaLimpieza(
+  tareaInicial: number,
+  semana: number,
+  tareas: readonly { enRotacion: boolean; numero: number; nombre: string; tareas: readonly string[] }[] = TAREAS_LIMPIEZA,
+) {
+  const rotativas = tareas.filter((tarea) => tarea.enRotacion);
+  return rotativas[(tareaInicial + semana - 2) % rotativas.length];
+}
+
+export function validarGrupoLimpieza(
+  state: DataState,
+  input: { nombreDelGrupo: string; tareaInicial: number; idAlumnos: string[] },
+): string {
+  if (state.grupos.length >= 4) return "Ya existen los cuatro grupos de limpieza. Editá uno existente o eliminá uno para reemplazarlo.";
+  if (!input.nombreDelGrupo.trim()) return "Ingresá el nombre del grupo.";
+  if (state.grupos.some((g) => g.nombreDelGrupo.trim().toLowerCase() === input.nombreDelGrupo.trim().toLowerCase())) return "Ya existe un grupo con ese nombre.";
+  if (![1, 2, 3, 4].includes(input.tareaInicial) || state.grupos.some((g) => g.tareaInicial === input.tareaInicial)) return "Elegí una tarea inicial disponible.";
+  if (!input.idAlumnos.length) return "Seleccioná al menos un integrante.";
+  if (input.idAlumnos.some((id) => !state.alumnos.some((a) => a.idAlumno === id && a.estado === "activo"))) return "Solo se pueden asignar alumnos activos existentes.";
+  return "";
+}
+
+export function actualizarIntegrantesLimpieza(
+  state: DataState, idGrupoLimpieza: string, idAlumnos: string[],
+): DataState {
+  if (!state.grupos.some((g) => g.idGrupoLimpieza === idGrupoLimpieza)) return state;
+  if (idAlumnos.some((id) => !state.alumnos.some((a) => a.idAlumno === id && a.estado === "activo"))) return state;
+  const ids = new Set(idAlumnos);
+  return { ...state, grupoAlumnos: [
+    ...state.grupoAlumnos.filter((a) => a.idGrupoLimpieza !== idGrupoLimpieza && !ids.has(a.idAlumno)),
+    ...[...ids].map((idAlumno) => ({ idGrupoLimpieza, idAlumno })),
+  ] };
+}
+
+
+export function validarTareaLimpieza(input: NuevaTareaLimpiezaInput, tareas: TareaLimpieza[], numeroActual?: number): string {
+  if (!input.nombre.trim()) return "Ingresá el nombre de la tarea.";
+  if (tareas.some((tarea) => tarea.numero !== numeroActual && normalizar(tarea.nombre.trim()) === normalizar(input.nombre.trim()))) {
+    return "Ya existe una tarea con ese nombre.";
+  }
+  if (!input.tareas.length || input.tareas.some((actividad) => !actividad.trim())) {
+    return "Ingresá al menos una actividad y completá cada renglón.";
+  }
+  const actividades = input.tareas.map((actividad) => normalizar(actividad.trim()));
+  if (new Set(actividades).size !== actividades.length) return "Las actividades no deben repetirse.";
+  return "";
 }

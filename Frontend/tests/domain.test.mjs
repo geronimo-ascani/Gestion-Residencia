@@ -5,8 +5,8 @@ import { test } from "node:test";
 // Node strips TypeScript; resolve the extensionless config import used by Vite.
 registerHooks({
   resolve(specifier, context, nextResolve) {
-    if (specifier === "./config" && context.parentURL?.endsWith("/app/lib/domain.ts")) {
-      return nextResolve("./config.ts", context);
+    if (specifier.startsWith(".") && !specifier.match(/\.[a-z]+$/i) && context.parentURL?.endsWith(".ts")) {
+      return nextResolve(`${specifier}.ts`, context);
     }
     return nextResolve(specifier, context);
   },
