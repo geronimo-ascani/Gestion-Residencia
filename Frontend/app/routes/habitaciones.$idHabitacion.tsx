@@ -28,6 +28,7 @@ export default function HabitacionDetalle() {
   } = useData();
   const { toast } = useToast();
   const [dialogoAsignacionAbierto, setDialogoAsignacionAbierto] = useState(false);
+  const [alumnoACambiar, setAlumnoACambiar] = useState<string | null>(null);
   const [asignacionALiberar, setAsignacionALiberar] =
     useState<HabitacionAlumno | null>(null);
 
@@ -189,15 +190,24 @@ export default function HabitacionDetalle() {
                     <TD className="hidden md:table-cell">
                       {formatFecha(asignacion.fechaDesde)}
                     </TD>
-                    <TD className="text-right">
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => setAsignacionALiberar(asignacion)}
-                      >
-                        <Icon name="close" className="h-3.5 w-3.5" />
-                        Liberar
-                      </Button>
+                    <TD>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setAlumnoACambiar(alumno.idAlumno)}
+                        >
+                          Cambiar de habitación
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => setAsignacionALiberar(asignacion)}
+                        >
+                          <Icon name="close" className="h-3.5 w-3.5" />
+                          Liberar
+                        </Button>
+                      </div>
                     </TD>
                   </TR>
                 ))
@@ -211,6 +221,11 @@ export default function HabitacionDetalle() {
         open={dialogoAsignacionAbierto}
         onClose={() => setDialogoAsignacionAbierto(false)}
         idHabitacion={habitacion.idHabitacion}
+      />
+      <AsignarHabitacionDialog
+        open={alumnoACambiar !== null}
+        onClose={() => setAlumnoACambiar(null)}
+        idAlumno={alumnoACambiar ?? undefined}
       />
       <ConfirmDialog
         open={Boolean(asignacionALiberar)}

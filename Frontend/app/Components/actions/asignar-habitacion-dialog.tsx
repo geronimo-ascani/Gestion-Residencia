@@ -110,8 +110,11 @@ export function AsignarHabitacionDialog({
     }
 
     asignarHabitacion(alumnoSeleccionado, habitacionSeleccionada);
+    const estaCambiando = Boolean(
+      asignacionActiva(asignaciones, alumnoSeleccionado),
+    );
     toast({
-      title: "Habitación asignada",
+      title: estaCambiando ? "Cambio de habitación registrado" : "Habitación asignada",
       description: `${alumno ? `${alumno.nombre} ${alumno.apellido}` : "Alumno"} · Habitación ${habitacion?.numeroHabitacion ?? habitacionSeleccionada}`,
     });
     onClose();
@@ -121,11 +124,15 @@ export function AsignarHabitacionDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title="Asignar habitación"
+      title={idAlumno && asignacionActiva(asignaciones, idAlumno) ? "Cambiar de habitación" : "Asignar habitación"}
+      size={idAlumno ? "lg" : "md"}
+      closeOnOverlayClick={false}
       description={
         idHabitacion
           ? "Seleccioná un alumno que todavía no tenga habitación asignada."
-          : "Si el alumno ya tenía una habitación, la asignación anterior se cierra con la fecha de hoy."
+          : idAlumno && asignacionActiva(asignaciones, idAlumno)
+            ? "Elegí otra habitación con plazas libres. Se conservará el historial de la asignación anterior."
+            : "Si el alumno ya tenía una habitación, la asignación anterior se cierra con la fecha de hoy."
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -225,7 +232,7 @@ export function AsignarHabitacionDialog({
             type="submit"
             disabled={!alumnoSeleccionado || (!idHabitacion && disponibles.length === 0)}
           >
-            Asignar
+            {idAlumno && asignacionActiva(asignaciones, idAlumno) ? "Confirmar cambio" : "Asignar"}
           </Button>
         </div>
       </form>

@@ -6,7 +6,6 @@ import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { InputField } from "../Components/ui/input";
 import { PageHeader } from "../Components/ui/page-header";
-import { Progress } from "../Components/ui/progress";
 import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/table";
 import { asignacionesActivas, calcularOcupacion } from "../lib/domain";
 import { useData } from "../lib/store";
@@ -19,6 +18,10 @@ export function meta() {
 export default function Habitaciones() {
   const { habitaciones, asignaciones } = useData();
   const [busqueda, setBusqueda] = useState("");
+  const [orden, setOrden] = useState<{
+    columna: "habitacion" | "estado";
+    direccion: "asc" | "desc";
+  }>({ columna: "habitacion", direccion: "asc" });
   const busquedaDebounceada = useDebouncedValue(busqueda);
   const resumen = calcularOcupacion(habitaciones, asignaciones);
 
@@ -31,39 +34,60 @@ export default function Habitaciones() {
       );
     }
 
-    const termino = busquedaDebounceada.trim().toLowerCase();
+    const termino = busquedaDebounceada.trim().toLocaleLowerCase("es");
     return habitaciones
-      .map((habitacion) => {
+          .map((habitacion) => {
         const ocupadas = ocupacionPorHabitacion.get(habitacion.idHabitacion) ?? 0;
         const capacidad = habitacion.capacidadMaxima;
         return {
           habitacion,
           ocupadas,
           disponibles: Math.max(0, capacidad - ocupadas),
-          porcentaje: capacidad > 0 ? (ocupadas / capacidad) * 100 : 0,
         };
       })
-      .filter(({ habitacion }) =>
-        [habitacion.numeroHabitacion, habitacion.pisoHabitacion ?? ""]
-          .some((dato) => String(dato).toLowerCase().includes(termino)),
-      )
+      .filter(({ habitacion, ocupadas, disponibles }) => {
+        const estado = ocupadas === 0 ? "vacia" : disponibles === 0 ? "llena" : "disponible";
+        return [habitacion.numeroHabitacion, habitacion.pisoHabitacion === 0 ? "planta baja" : String(habitacion.pisoHabitacion ?? ""), estado, estado === "vacia" ? "vacía" : ""]
+          .some((dato) => dato.toLocaleLowerCase("es").includes(termino));
+      })
       .sort(
         (a, b) => {
           const pisoA = a.habitacion.pisoHabitacion;
           const pisoB = b.habitacion.pisoHabitacion;
           if (pisoA === null && pisoB !== null) return 1;
           if (pisoA !== null && pisoB === null) return -1;
-          return (
+          const comparacionHabitacion =
             (pisoA ?? 0) - (pisoB ?? 0) ||
             a.habitacion.numeroHabitacion.localeCompare(
               b.habitacion.numeroHabitacion,
               "es",
               { numeric: true },
-            )
-          );
+            );
+          const comparacion = orden.columna === "estado"
+            ? (a.disponibles === a.habitacion.capacidadMaxima ? 0 : a.disponibles === 0 ? 2 : 1) - (b.disponibles === b.habitacion.capacidadMaxima ? 0 : b.disponibles === 0 ? 2 : 1)
+            : comparacionHabitacion;
+          return orden.direccion === "asc" ? comparacion : -comparacion;
         },
       );
-  }, [asignaciones, busquedaDebounceada, habitaciones]);
+  }, [asignaciones, busquedaDebounceada, habitaciones, orden]);
+
+  function encabezadoOrdenable(columna: "habitacion" | "estado", texto: string) {
+    const seleccionado = orden.columna === columna;
+    return (
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 rounded-sm hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+        aria-label={`Ordenar por ${texto.toLowerCase()} ${seleccionado && orden.direccion === "asc" ? "descendente" : "ascendente"}`}
+        onClick={() => setOrden((actual) => ({
+          columna,
+          direccion: actual.columna === columna && actual.direccion === "asc" ? "desc" : "asc",
+        }))}
+      >
+        {texto}
+        <Icon name="chevron" className={`h-3.5 w-3.5 ${seleccionado && orden.direccion === "desc" ? "rotate-180" : ""}`} />
+      </button>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,12 +151,12 @@ export default function Habitaciones() {
             <caption className="sr-only">Capacidad, ocupación y disponibilidad por habitación, ordenadas por número.</caption>
             <THead>
               <TR>
-                <TH>Habitación</TH>
+                <TH aria-sort={orden.columna === "habitacion" ? orden.direccion === "asc" ? "ascending" : "descending" : "none"}>{encabezadoOrdenable("habitacion", "Habitación")}</TH>
                 <TH className="text-center">Capacidad</TH>
                 <TH>Ocupación</TH>
                 <TH className="text-center">Plazas libres</TH>
-                <TH>Estado</TH>
-                <TH className="text-right">Detalle</TH>
+                <TH aria-sort={orden.columna === "estado" ? orden.direccion === "asc" ? "ascending" : "descending" : "none"}>{encabezadoOrdenable("estado", "Estado")}</TH>
+                <TH className="text-right">Administración</TH>
               </TR>
             </THead>
             <TBody>
@@ -152,14 +176,13 @@ export default function Habitaciones() {
                   </TD>
                 </TR>
               ) : (
-                filas.map(({ habitacion, ocupadas, disponibles, porcentaje }) => {
+                filas.map(({ habitacion, ocupadas, disponibles }) => {
                   const estado =
                     ocupadas === 0
                       ? "vacia"
                       : disponibles === 0
                         ? "llena"
                         : "disponible";
-                  const tono = estado === "llena" ? "warning" : "brand";
 
                   return (
                     <TR key={habitacion.idHabitacion}>
@@ -183,11 +206,35 @@ export default function Habitaciones() {
                         <span className="ml-1 text-slate-500 dark:text-slate-400">personas</span>
                       </TD>
                       <TD className="min-w-40">
-                        <div className="flex max-w-44 flex-col gap-2">
-                          <span className="text-xs tabular-nums text-slate-600 dark:text-slate-300">
-                            {ocupadas} de {habitacion.capacidadMaxima} ocupadas
+                        <div className="flex flex-col gap-1.5">
+                          <div
+                            className="flex min-h-3 items-center gap-1.5"
+                            role="img"
+                            aria-label={`${ocupadas} de ${habitacion.capacidadMaxima} plazas ocupadas`}
+                          >
+                            {Array.from(
+                              { length: Math.min(habitacion.capacidadMaxima, 8) },
+                              (_, indice) => (
+                                <span
+                                  key={indice}
+                                  aria-hidden="true"
+                                  className={`h-2.5 w-2.5 rounded-full ${
+                                    indice < ocupadas
+                                      ? "bg-emerald-700 dark:bg-emerald-500"
+                                      : "bg-slate-200 dark:bg-slate-700"
+                                  }`}
+                                />
+                              ),
+                            )}
+                            {habitacion.capacidadMaxima > 8 && (
+                              <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">
+                                +{habitacion.capacidadMaxima - 8}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400">
+                            {ocupadas} / {habitacion.capacidadMaxima}
                           </span>
-                          <Progress value={porcentaje} tone={tono} />
                         </div>
                       </TD>
                       <TD className="text-center">
@@ -199,7 +246,7 @@ export default function Habitaciones() {
                       <TD className="text-right">
                         <Link to={`/habitaciones/${habitacion.idHabitacion}`} aria-label={`Ver habitación ${habitacion.numeroHabitacion}`}>
                           <Button size="sm" variant="outline">
-                            Ver detalle
+                            Administrar
                             <Icon name="arrow" className="h-3.5 w-3.5" />
                           </Button>
                         </Link>

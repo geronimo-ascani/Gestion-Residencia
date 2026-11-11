@@ -19,6 +19,7 @@ export function Dialog({
   description,
   children,
   size = "md",
+  closeOnOverlayClick = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -26,6 +27,7 @@ export function Dialog({
   description?: string;
   children: ReactNode;
   size?: DialogSize;
+  closeOnOverlayClick?: boolean;
 }) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -60,7 +62,9 @@ export function Dialog({
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
       <div
         className="absolute inset-0 bg-slate-950/60"
-        onClick={() => onCloseRef.current()}
+        onClick={() => {
+          if (closeOnOverlayClick) onCloseRef.current();
+        }}
         aria-hidden="true"
       />
       <div

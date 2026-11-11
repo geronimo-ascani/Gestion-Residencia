@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { AlumnoContratos } from "../Components/alumno-contratos";
+import { AsignarHabitacionDialog } from "../Components/actions/asignar-habitacion-dialog";
 import { FECHA_REFERENCIA } from "../lib/config";
 import { Button } from "../Components/ui/button";
 import { ConfirmDialog } from "../Components/ui/confirm-dialog";
@@ -30,6 +31,7 @@ export default function AlumnoDetalle() {
 
   const [tab, setTab] = useState("resumen");
   const [multaAAnular, setMultaAAnular] = useState<Multa | null>(null);
+  const [cambioHabitacionAbierto, setCambioHabitacionAbierto] = useState(false);
 
   const alumno = useMemo(() => alumnos.find((a) => a.idAlumno === idAlumno), [alumnos, idAlumno]);
 
@@ -230,6 +232,12 @@ export default function AlumnoDetalle() {
                 <dd className="mt-1 text-sm text-slate-900 dark:text-white">{habitacion.descripcion}</dd>
               </div>
             </dl>
+            <div className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-800">
+              <Button variant="outline" onClick={() => setCambioHabitacionAbierto(true)}>
+                <Icon name="arrow" className="h-4 w-4" />
+                Cambiar de habitación
+              </Button>
+            </div>
           </div>
         ) : (
           <EmptyState icon="building" title="Sin asignación" description="Este alumno no tiene una habitación asignada actualmente." />
@@ -327,6 +335,11 @@ export default function AlumnoDetalle() {
         title="Anular multa"
         description={multaAAnular ? `Se anulará la multa de ${alumno.nombre} ${alumno.apellido} por ${formatARS(multaAAnular.monto)}.` : undefined}
         confirmLabel="Anular multa"
+      />
+      <AsignarHabitacionDialog
+        open={cambioHabitacionAbierto}
+        onClose={() => setCambioHabitacionAbierto(false)}
+        idAlumno={alumno.idAlumno}
       />
     </div>
   );
