@@ -73,9 +73,25 @@ export interface Contrato {
   idAlumno: string;
   fechaDesde: string;
   fechaHasta: string;
+  fechaFirma?: string;
+  montoMensual?: number;
+  depositoGarantia?: number;
+  diaVencimientoPago?: number;
+  observaciones?: string;
   /** Baja efectiva: desde esta fecha ya no reside. Se conserva el fin pactado. */
   fechaCancelacion?: string;
   motivoCancelacion?: string;
+}
+
+export interface BorradorContrato {
+  idAlumno: string;
+  fechaDesde: string;
+  fechaHasta: string;
+  fechaFirma: string;
+  montoMensual: string;
+  depositoGarantia: string;
+  diaVencimientoPago: string;
+  observaciones: string;
 }
 
 export interface Pago {

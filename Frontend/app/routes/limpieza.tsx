@@ -4,7 +4,7 @@ import { Badge } from "../Components/ui/badge";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
-import { InputField } from "../Components/ui/input";
+import { ListSummary, ListToolbar } from "../Components/ui/list-page";
 import { PageHeader } from "../Components/ui/page-header";
 import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/table";
 import { asignacionesAmbienteActivas } from "../lib/domain";
@@ -44,9 +44,9 @@ export default function Limpieza() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow="Organización"
-        title="Grupos de limpieza"
-        description={`${grupos.length} grupos · ${ambientes.length} ambientes · ${filas.length} mostrados`}
+        eyebrow="Residencia"
+        title="Limpieza"
+        description="Organizá los grupos y la distribución de los ambientes de limpieza."
         actions={
           <Link to="/limpieza/nueva">
             <Button>
@@ -57,16 +57,14 @@ export default function Limpieza() {
         }
       />
 
-      <div className="relative w-full sm:max-w-sm">
-        <Icon name="search" className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <InputField
-          value={busqueda}
-          onChange={(event) => setBusqueda(event.target.value)}
-          placeholder="Buscar grupo..."
-          aria-label="Buscar grupos de limpieza"
-          className="pl-9"
-        />
-      </div>
+      <ListSummary title="Resumen de limpieza" description="Organización de los grupos y ambientes de la residencia" icon="cleaning" items={[
+        { label: "Grupos registrados", value: grupos.length },
+        { label: "Alumnos en grupos", value: new Set(grupoAlumnos.map((a) => a.idAlumno)).size },
+        { label: "Ambientes asignados", value: new Set(asignacionesAmbienteActivas(grupoAmbientes).map((a) => a.idAmbiente)).size },
+        { label: "Ambientes sin asignar", value: ambientes.filter((ambiente) => !asignacionesAmbienteActivas(grupoAmbientes).some((a) => a.idAmbiente === ambiente.idAmbiente)).length },
+      ]} />
+
+      <ListToolbar title="Listado de grupos de limpieza" count={filas.length} search={busqueda} onSearch={setBusqueda} placeholder="Buscar por grupo…" searchLabel="Buscar grupos de limpieza" />
 
       <TableWrap>
         <Table>

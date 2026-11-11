@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
-import { InputField } from "../Components/ui/input";
+import { ListSummary, ListToolbar } from "../Components/ui/list-page";
 import { PageHeader } from "../Components/ui/page-header";
 import { Badge } from "../Components/ui/badge";
 import { Tabs } from "../Components/ui/tabs";
@@ -61,6 +61,11 @@ export default function Alumnos() {
   const actuales = datos.filter((f) => f.contrato);
   const historico = datos.filter((f) => f.anteriores.length > 0);
   const pendientes = datos.filter((f) => !f.contrato && f.anteriores.length === 0);
+  const residentesConHabitacion = actuales.filter((f) => f.habitacion).length;
+  const contratosPorVencer = actuales.filter((f) => {
+    const dias = f.contrato ? diasHasta(f.contrato.fechaHasta) : -1;
+    return dias >= 0 && dias <= 30;
+  }).length;
   const base = vista === "actuales" ? actuales : vista === "historico" ? historico : pendientes;
   const termino = busqueda.trim().toLocaleLowerCase();
   const habitacionesOrdenadas = [...habitaciones].sort((a, b) => a.numeroHabitacion.localeCompare(b.numeroHabitacion, "es", { numeric: true }));
@@ -93,23 +98,19 @@ export default function Alumnos() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader eyebrow="Alumnos" title="Alumnos de la residencia"
+      <PageHeader eyebrow="Residencia" title="Alumnos"
         description="Consultá quiénes residen hoy y el recorrido de cada alumno en la residencia."
         actions={<Link to="/alumnos/nuevo"><Button><Icon name="plus" className="h-4 w-4" />Ingresar alumno</Button></Link>} />
+      <ListSummary title="Resumen de alumnos" description="Situación y seguimiento de los alumnos de la residencia" icon="users" items={[
+        { label: "Alumnos registrados", value: alumnos.length },
+        { label: "Residentes actuales", value: actuales.length },
+        { label: "Con habitación asignada", value: residentesConHabitacion },
+        { label: "Contratos por vencer (30 días)", value: contratosPorVencer },
+      ]} />
       <Tabs label="Vistas de alumnos" className="flex-wrap self-start" value={vista}
         items={[{ id: "actuales", label: "Residentes actuales", count: actuales.length }, { id: "historico", label: "Histórico", count: historico.length }, { id: "pendientes", label: "Pendientes de ingreso", count: pendientes.length }]}
         onChange={(v) => { setParams(v === "actuales" ? {} : { vista: v }); setFiltro("todos"); setFiltroHabitacion("todas"); setOrden({ columna: "alumno", direccion: "asc" }); }} />
-      <div className="rounded-xl border border-slate-300 bg-white shadow-sm p-5 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="font-semibold text-slate-900 dark:text-white">{vista === "actuales" ? "Residentes actuales" : vista === "historico" ? "Historial de alumnos" : "Alumnos sin estadías previas"}</h2>
-        <p className="mt-1 text-sm text-slate-500">{vista === "actuales" ? "Alumnos con contrato vigente. Las bajas y los contratos finalizados se consultan en el histórico." : vista === "historico" ? "Todos los alumnos que tuvieron una estadía, incluidos los residentes actuales. Cada ficha conserva todos sus contratos." : "Alumnos registrados que aún no ingresaron. Incluye contratos programados y registros sin contrato."}</p>
-        <p className="mt-2 text-xs text-slate-500">Fecha de referencia del prototipo: {formatFecha(FECHA_REFERENCIA)}</p>
-      </div>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <Icon name="search" className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <InputField aria-label="Buscar alumnos" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar por nombre, DNI o correo…" className="pl-9" />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <ListToolbar title="Listado de alumnos" count={filas.length} search={busqueda} onSearch={setBusqueda} placeholder="Buscar por nombre, DNI o correo…" searchLabel="Buscar alumnos">
           <select
             aria-label={vista === "historico" ? "Filtrar por habitación actual o anterior" : "Filtrar por habitación"}
             value={filtroHabitacion}
@@ -124,10 +125,8 @@ export default function Alumnos() {
           <option value="todos">{vista === "historico" ? "Todos los que residieron" : "Todos los residentes"}</option>
           {vista === "historico" ? <><option value="residentes">Residentes</option><option value="egresados">No residentes</option></> : <><option value="sin-habitacion">Sin habitación asignada</option><option value="vence-30">Vencen en 30 días o menos</option></>}
         </select> : null}
-        </div>
-      </div>
-      {vista === "historico" && filtroHabitacion !== "todas" && filtroHabitacion !== "sin-asignar" ? <p className="text-xs text-slate-500">Incluye alumnos que tienen o tuvieron asignada esa habitación.</p> : null}
-      <p className="text-sm text-slate-500" aria-live="polite">{filas.length} de {base.length} alumnos</p>
+      </ListToolbar>
+
       <TableWrap><Table>
         <THead><TR>
           <TH aria-sort={orden.columna === "alumno" ? orden.direccion === "asc" ? "ascending" : "descending" : "none"}>{encabezadoOrdenable("alumno", "Alumno")}</TH>

@@ -1,11 +1,11 @@
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "../Components/ui/button";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
 import { SelectField } from "../Components/ui/select-field";
-import type { ContactoEmergencia } from "../lib/types";
+import type { BorradorContrato, ContactoEmergencia } from "../lib/types";
 import { TextField } from "../Components/ui/text-field";
 import { useToast } from "../Components/ui/toast";
 import { useData } from "../lib/store";
@@ -26,6 +26,9 @@ export default function NuevoAlumno() {
   const { crearAlumno, alumnos } = useData();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const contratoBorrador = (location.state as { contratoBorrador?: BorradorContrato } | null)?.contratoBorrador;
+  const destinoVolver = contratoBorrador ? "/contratos/nuevo" : "/alumnos";
   const idBase = useId();
 
   const [nombre, setNombre] = useState("");
@@ -93,7 +96,11 @@ export default function NuevoAlumno() {
       title: "Alumno ingresado",
       description: `${nombre.trim()} ${apellido.trim()} se agregó al padrón.`,
     });
-    navigate(`/alumnos/${idAlumno}`);
+    if (contratoBorrador) {
+      navigate("/contratos/nuevo", { replace: true, state: { contratoBorrador: { ...contratoBorrador, idAlumno } } });
+    } else {
+      navigate(`/alumnos/${idAlumno}`);
+    }
   }
 
   return (
@@ -103,14 +110,16 @@ export default function NuevoAlumno() {
         title="Ingresar alumno"
         description="Completá la ficha de ingreso del alumno. Los campos con asterisco son obligatorios."
         actions={
-          <Link to="/alumnos">
+          <Link to={destinoVolver} state={contratoBorrador ? { contratoBorrador } : undefined}>
             <Button variant="outline">
               <Icon name="arrow" className="h-4 w-4 rotate-180" />
-              Volver al listado
+              {contratoBorrador ? "Volver al contrato" : "Volver al listado"}
             </Button>
           </Link>
         }
       />
+
+      {contratoBorrador ? <p className="rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-100">Estás cargando el titular de un nuevo contrato. Al guardar volverás al formulario de contrato con este alumno seleccionado y los datos que ya completaste.</p> : null}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <section className="rounded-xl border border-slate-300 bg-white shadow-sm p-6 dark:border-slate-800 dark:bg-slate-900">
@@ -230,14 +239,14 @@ export default function NuevoAlumno() {
         <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">Al guardar se crea la ficha del alumno. El contrato y la habitación se gestionan después; el alumno figurará como pendiente de ingreso hasta tener un contrato vigente.</p>
         {errorIngreso ? <p role="alert" className="text-sm text-red-600">{errorIngreso}</p> : null}
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <Link to="/alumnos">
+          <Link to={destinoVolver} state={contratoBorrador ? { contratoBorrador } : undefined}>
             <Button type="button" variant="outline">
               Cancelar
             </Button>
           </Link>
           <Button type="submit">
             <Icon name="plus" className="h-4 w-4" />
-            Ingresar alumno
+            {contratoBorrador ? "Guardar alumno y continuar contrato" : "Ingresar alumno"}
           </Button>
         </div>
       </form>

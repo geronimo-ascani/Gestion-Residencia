@@ -4,7 +4,7 @@ import { Badge, StatusBadge } from "../Components/ui/badge";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
-import { InputField } from "../Components/ui/input";
+import { ListSummary, ListToolbar } from "../Components/ui/list-page";
 import { PageHeader } from "../Components/ui/page-header";
 import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/table";
 import { estadoMultaVisual } from "../lib/domain";
@@ -48,14 +48,14 @@ export default function Multas() {
       );
   }, [alumnoPorId, busquedaDebounceada, filtro, multas]);
 
-  const pendientes = multas.filter((multa) => multa.estado === "pendiente").length;
+
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow="Administración"
+        eyebrow="Residencia"
         title="Multas"
-        description={`${multas.length} multas registradas · ${pendientes} pendientes · ${filas.length} mostradas`}
+        description="Consultá las multas y el estado de los pagos de los alumnos."
         actions={
           <Link to="/multas/nueva">
             <Button>
@@ -66,17 +66,14 @@ export default function Multas() {
         }
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <Icon name="search" className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <InputField
-            value={busqueda}
-            onChange={(event) => setBusqueda(event.target.value)}
-            placeholder="Buscar por multa, alumno o DNI..."
-            aria-label="Buscar multas"
-            className="pl-9"
-          />
-        </div>
+      <ListSummary title="Resumen de multas" description="Seguimiento de las sanciones y sus pagos" icon="fines" items={[
+        { label: "Multas registradas", value: multas.length },
+        { label: "Pendientes", value: multas.filter((m) => estadoMultaVisual(m) === "pendiente").length },
+        { label: "Vencidas", value: multas.filter((m) => estadoMultaVisual(m) === "vencida").length },
+        { label: "Pagadas", value: multas.filter((m) => estadoMultaVisual(m) === "pagada").length },
+      ]} />
+
+      <ListToolbar title="Listado de multas" count={filas.length} search={busqueda} onSearch={setBusqueda} placeholder="Buscar por multa, alumno o DNI…" searchLabel="Buscar multas">
         <select
           value={filtro}
           onChange={(event) => setFiltro(event.target.value as FiltroMulta)}
@@ -89,7 +86,7 @@ export default function Multas() {
           <option value="pagada">Pagadas</option>
           <option value="anulada">Anuladas</option>
         </select>
-      </div>
+      </ListToolbar>
 
       <TableWrap>
         <Table>

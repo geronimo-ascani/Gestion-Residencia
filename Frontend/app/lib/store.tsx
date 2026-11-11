@@ -55,6 +55,11 @@ export interface NuevoContratoInput {
   idAlumno: string;
   fechaDesde: string;
   fechaHasta: string;
+  fechaFirma?: string;
+  montoMensual?: number;
+  depositoGarantia?: number;
+  diaVencimientoPago?: number;
+  observaciones?: string;
 }
 
 export interface DataContextValue extends DataState {
@@ -334,13 +339,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         });
       },
 
-      crearContrato({ idAlumno, fechaDesde, fechaHasta }) {
+      crearContrato(input) {
+        const { idAlumno, fechaDesde, fechaHasta } = input;
         const idContrato = nuevoId("C");
         setState((previo) => contratosSuperpuestos(previo.contratos, { idAlumno, fechaDesde, fechaHasta }) || fechaHasta <= fechaDesde ? previo : ({
           ...previo,
           contratos: [
             ...previo.contratos,
-            { idContrato, idAlumno, fechaDesde, fechaHasta },
+            { ...input, idContrato },
           ],
         }));
       },

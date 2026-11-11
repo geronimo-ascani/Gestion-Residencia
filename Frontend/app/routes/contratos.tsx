@@ -3,9 +3,10 @@ import { Link } from "react-router";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
-import { InputField } from "../Components/ui/input";
+import { ListSummary, ListToolbar } from "../Components/ui/list-page";
 import { PageHeader } from "../Components/ui/page-header";
-import { Badge, StatusBadge } from "../Components/ui/badge";
+import { Tabs } from "../Components/ui/tabs";
+import { StatusBadge } from "../Components/ui/badge";
 import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/table";
 import { diasHasta, estadoContrato } from "../lib/domain";
 import { formatFecha } from "../lib/format";
@@ -13,21 +14,23 @@ import { useData } from "../lib/store";
 import { useDebouncedValue } from "../lib/use-debounced-value";
 import type { EstadoContrato as EstadoContratoTipo } from "../lib/domain";
 
-type FiltroContrato = "todos" | EstadoContratoTipo;
+type FiltroContrato = "todos" | "actuales" | "historial" | EstadoContratoTipo;
 type FiltroAlumno = "todos" | "activo" | "inactivo";
 
-function textoVencimiento(contrato: { fechaHasta: string }, estado: EstadoContratoTipo) {
-  const dias = diasHasta(contrato.fechaHasta);
-  if (estado === "cancelado") return "Contrato cancelado";
-  if (estado === "programado") return "Aún no iniciado";
-  if (estado === "finalizado") {
-    if (dias < 0) return `Venció hace ${Math.abs(dias)} día${Math.abs(dias) === 1 ? "" : "s"}`;
-    return "Finalizado";
-  }
-  if (dias === 0) return "Vence hoy";
-  if (dias > 0) return `Vence en ${dias} día${dias === 1 ? "" : "s"}`;
-  return `Venció hace ${Math.abs(dias)} día${Math.abs(dias) === 1 ? "" : "s"}`;
-}
+const prioridadEstado: Record<EstadoContratoTipo, number> = {
+  "por-vencer": 0,
+  vigente: 0,
+  programado: 1,
+  finalizado: 2,
+  cancelado: 2,
+};
+
+const vistas = [
+  { valor: "actuales", etiqueta: "Vigentes" },
+  { valor: "programado", etiqueta: "Programados" },
+  { valor: "historial", etiqueta: "Finalizados" },
+  { valor: "todos", etiqueta: "Todos" },
+] as const;
 
 export function meta() {
   return [{ title: "Contratos · Gestión de Residencia" }];
@@ -37,7 +40,7 @@ export default function Contratos() {
   const { contratos, alumnos, alumnoPorId } = useData();
   const [busqueda, setBusqueda] = useState("");
   const busquedaDebounceada = useDebouncedValue(busqueda);
-  const [filtroContrato, setFiltroContrato] = useState<FiltroContrato>("todos");
+  const [filtroContrato, setFiltroContrato] = useState<FiltroContrato>("actuales");
   const [filtroAlumno, setFiltroAlumno] = useState<FiltroAlumno>("todos");
 
   const filas = useMemo(() => {
@@ -65,11 +68,28 @@ export default function Contratos() {
             fila.alumno.correo.toLowerCase().includes(termino);
           if (!hayCoincidencia) return false;
         }
-        if (filtroContrato !== "todos" && fila.estado !== filtroContrato) return false;
+        if (filtroContrato === "actuales") {
+          if (fila.estado !== "vigente" && fila.estado !== "por-vencer") return false;
+        } else if (filtroContrato === "historial") {
+          if (fila.estado !== "finalizado" && fila.estado !== "cancelado") return false;
+        } else if (filtroContrato !== "todos" && fila.estado !== filtroContrato) {
+          return false;
+        }
         if (filtroAlumno !== "todos" && fila.alumno.estado !== filtroAlumno) return false;
         return true;
       })
       .sort((a, b) => {
+        const prioridad = prioridadEstado[a.estado] - prioridadEstado[b.estado];
+        if (prioridad !== 0) return prioridad;
+        // En el historial, primero los que terminaron más recientemente.
+        if (prioridadEstado[a.estado] === 2) {
+          const finA = a.estado === "cancelado" ? a.contrato.fechaCancelacion! : a.contrato.fechaHasta;
+          const finB = b.estado === "cancelado" ? b.contrato.fechaCancelacion! : b.contrato.fechaHasta;
+          return finB.localeCompare(finA) || a.contrato.idContrato.localeCompare(b.contrato.idContrato);
+        }
+        if (a.estado === "programado" && b.estado === "programado") {
+          return a.contrato.fechaDesde.localeCompare(b.contrato.fechaDesde) || a.contrato.idContrato.localeCompare(b.contrato.idContrato);
+        }
         const diasA = a.dias;
         const diasB = b.dias;
         if (diasA === diasB) {
@@ -82,9 +102,9 @@ export default function Contratos() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow="Contratos"
-        title="Listado de contratos"
-        description={`${contratos.length} contratos registrados · ${filas.length} mostrados`}
+        eyebrow="Residencia"
+        title="Contratos"
+        description="Consultá las vigencias y el historial de los contratos de la residencia."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link to="/contratos/nuevo">
@@ -103,20 +123,17 @@ export default function Contratos() {
         }
       />
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full lg:max-w-sm">
-          <Icon
-            name="search"
-            className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400"
-          />
-          <InputField
-            value={busqueda}
-            onChange={(event) => setBusqueda(event.target.value)}
-            placeholder="Buscar por contrato, alumno o DNI..."
-            className="pl-9"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <ListSummary title="Resumen de contratos" description="Vigencias y seguimiento de los contratos de la residencia" icon="contracts" items={[
+        { label: "Contratos registrados", value: contratos.length },
+        { label: "Vigentes", value: contratos.filter((c) => ["vigente", "por-vencer"].includes(estadoContrato(c))).length },
+        { label: "Por vencer (30 días)", value: contratos.filter((c) => estadoContrato(c) === "por-vencer").length },
+        { label: "Programados", value: contratos.filter((c) => estadoContrato(c) === "programado").length },
+      ]} />
+      <Tabs label="Vistas de contratos" className="flex-wrap self-start" value={filtroContrato === "vigente" || filtroContrato === "por-vencer" ? "actuales" : filtroContrato === "finalizado" || filtroContrato === "cancelado" ? "historial" : filtroContrato}
+        items={vistas.map((vista) => ({ id: vista.valor, label: vista.etiqueta }))}
+        onChange={(value) => setFiltroContrato(value as FiltroContrato)} />
+
+      <ListToolbar title="Listado de contratos" count={filas.length} search={busqueda} onSearch={setBusqueda} placeholder="Buscar por contrato, alumno o DNI…" searchLabel="Buscar contratos">
           <select
             value={filtroContrato}
             onChange={(event) => setFiltroContrato(event.target.value as FiltroContrato)}
@@ -124,6 +141,8 @@ export default function Contratos() {
             className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/25 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           >
             <option value="todos">Todos los contratos</option>
+            <option value="actuales">Vigentes y por vencer</option>
+            <option value="historial">Finalizados y cancelados</option>
             <option value="vigente">Vigente</option>
             <option value="por-vencer">Por vencer</option>
             <option value="programado">Programado</option>
@@ -140,8 +159,7 @@ export default function Contratos() {
             <option value="activo">Alumnos activos</option>
             <option value="inactivo">Alumnos inactivos</option>
           </select>
-        </div>
-      </div>
+      </ListToolbar>
 
       <TableWrap>
         <Table>
@@ -149,24 +167,22 @@ export default function Contratos() {
             <TR>
               <TH>Contrato</TH>
               <TH>Alumno</TH>
-              <TH>Estado alumno</TH>
               <TH>Desde</TH>
               <TH>Hasta</TH>
-              <TH>Estado contrato</TH>
-              <TH>Vencimiento</TH>
+              <TH>Estado</TH>
               <TH className="text-right">Acciones</TH>
             </TR>
           </THead>
           <TBody>
             {filas.length === 0 ? (
               <TR>
-                <TD colSpan={8}>
+                <TD colSpan={6}>
                   <EmptyState
                     icon="contracts"
                     title={contratos.length ? "Sin resultados" : "Sin contratos"}
                     description={
                       contratos.length
-                        ? "No hay contratos que coincidan con los filtros aplicados."
+                        ? "No hay contratos en esta vista con los filtros aplicados. Podés cambiar de vista o consultar Todos."
                         : "Aún no hay contratos registrados."
                     }
                   />
@@ -182,12 +198,6 @@ export default function Contratos() {
                         <span className="font-medium text-slate-900 dark:text-white">
                           {fila.contrato.idContrato}
                         </span>
-                        <Link
-                          to={`/contratos/${fila.contrato.idContrato}`}
-                          className="text-xs text-brand-600 hover:underline dark:text-brand-300"
-                        >
-                          Ver ficha
-                        </Link>
                       </div>
                     </TD>
                     <TD>
@@ -203,30 +213,18 @@ export default function Contratos() {
                         </span>
                       </Link>
                     </TD>
-                    <TD>
-                      <Badge variant={fila.alumno.estado === "activo" ? "success" : "neutral"}>
-                        {fila.alumno.estado === "activo" ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </TD>
                     <TD>{formatFecha(fila.contrato.fechaDesde)}</TD>
                     <TD>{formatFecha(fila.contrato.fechaHasta)}</TD>
                     <TD>
                       <StatusBadge estado={fila.estado} />
                     </TD>
-                    <TD>
-                      <span className="text-sm text-slate-600 dark:text-slate-300">
-                        {textoVencimiento(fila.contrato, fila.estado)}
-                      </span>
-                    </TD>
                     <TD className="text-right">
-                      <Button size="sm" variant="ghost">
-                        <Link to={`/alumnos/${fila.alumno.idAlumno}`}>
-                          <span className="inline-flex items-center gap-2">
-                            Ver alumno
-                            <Icon name="chevron" className="h-4 w-4 rotate-[-90deg]" />
-                          </span>
-                        </Link>
-                      </Button>
+                      <Link to={`/contratos/${fila.contrato.idContrato}`} aria-label={`Ver detalle del contrato ${fila.contrato.idContrato}`}>
+                        <Button size="sm" variant="outline">
+                          Ver detalle
+                          <Icon name="arrow" className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
                     </TD>
                   </TR>
                 );

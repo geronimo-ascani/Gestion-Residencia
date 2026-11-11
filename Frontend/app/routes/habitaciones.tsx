@@ -4,7 +4,7 @@ import { StatusBadge } from "../Components/ui/badge";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
-import { InputField } from "../Components/ui/input";
+import { ListSummary, ListToolbar } from "../Components/ui/list-page";
 import { PageHeader } from "../Components/ui/page-header";
 import { Table, TableWrap, TBody, TD, TH, THead, TR } from "../Components/ui/table";
 import { asignacionesActivas, calcularOcupacion } from "../lib/domain";
@@ -105,46 +105,15 @@ export default function Habitaciones() {
         }
       />
 
-      <section aria-label="Resumen de habitaciones" className="overflow-hidden rounded-xl border border-brand-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-        <div className="flex items-center gap-3 border-b border-brand-200 bg-brand-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800">
-          <Icon name="building" className="h-5 w-5 text-brand-700 dark:text-brand-300" />
-          <div>
-            <h2 className="font-semibold text-slate-900 dark:text-white">Distribución de la residencia</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">Un único piso · Planta baja</p>
-          </div>
-        </div>
-        <dl className="grid grid-cols-2 gap-y-5 px-5 py-5 sm:grid-cols-4">
-          {[
-            { label: "Habitaciones", valor: habitaciones.length },
-            { label: "Plazas totales", valor: resumen.capacidadTotal },
-            { label: "Plazas ocupadas", valor: resumen.camasOcupadas },
-            { label: "Plazas libres", valor: Math.max(0, resumen.capacidadTotal - resumen.camasOcupadas) },
-          ].map(({ label, valor }) => (
-            <div key={label}>
-              <dt className="text-sm text-slate-500 dark:text-slate-400">{label}</dt>
-              <dd className="mt-1 text-3xl font-semibold tabular-nums text-brand-900 dark:text-brand-200">{valor}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      <ListSummary title="Resumen de habitaciones" description="Distribución de la residencia · Planta baja" icon="building" items={[
+        { label: "Habitaciones", value: habitaciones.length },
+        { label: "Plazas totales", value: resumen.capacidadTotal },
+        { label: "Plazas ocupadas", value: resumen.camasOcupadas },
+        { label: "Plazas libres", value: Math.max(0, resumen.capacidadTotal - resumen.camasOcupadas) },
+      ]} />
 
-      <section aria-labelledby="listado-habitaciones" className="flex flex-col gap-4">
-        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-          <div>
-            <h2 id="listado-habitaciones" className="text-lg font-semibold text-slate-900 dark:text-white">Listado de habitaciones</h2>
-            <p aria-live="polite" className="text-sm text-slate-500 dark:text-slate-400">{habitaciones.length} registradas · {filas.length} mostradas</p>
-          </div>
-          <div className="relative w-full sm:max-w-xs">
-            <Icon name="search" className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <InputField
-              value={busqueda}
-              onChange={(event) => setBusqueda(event.target.value)}
-              placeholder="Buscar por habitación o piso..."
-              aria-label="Buscar habitaciones"
-              className="pl-9"
-            />
-          </div>
-        </div>
+      <section aria-label="Listado de habitaciones" className="flex flex-col gap-6">
+        <ListToolbar title="Listado de habitaciones" count={filas.length} search={busqueda} onSearch={setBusqueda} placeholder="Buscar por habitación o piso…" searchLabel="Buscar habitaciones" />
 
         <TableWrap className="dark:border-slate-700 dark:bg-slate-900">
           <Table>
