@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Badge, StatusBadge } from "../Components/ui/badge";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
@@ -29,8 +29,9 @@ export function meta() {
 
 export default function Multas() {
   const { multas, alumnoPorId } = useData();
+  const [params] = useSearchParams();
   const [busqueda, setBusqueda] = useState("");
-  const [filtro, setFiltro] = useState<FiltroMulta>("pendiente");
+  const [filtro, setFiltro] = useState<FiltroMulta>(params.get("vista") === "vencida" ? "vencida" : "pendiente");
   const busquedaDebounceada = useDebouncedValue(busqueda);
 
   const filas = useMemo(() => {

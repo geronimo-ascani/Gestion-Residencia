@@ -728,3 +728,23 @@ comportamiento deseado; corregirlos al tocar las áreas involucradas.
   abre su grupo automáticamente y resalta el enlace y su encabezado.
 - En el menú reducido, pulsar un grupo expande el sidebar y muestra sus rutas.
   En móvil se conserva el mismo esquema y navegar cierra el menú.
+### Panel de administración
+
+- `/` usa PageHeader, ListSummary, tablas, badges y botones compartidos, con el
+  mismo formato de los listados. No presenta la recaudación histórica como mensual.
+- `lib/panel.ts` compone las reglas existentes de domain y facturación para el
+  resumen: residentes activos con contrato vigente, ocupación física, contratos
+  próximos a vencer, cobros del mes y deuda acumulada de facturas emitidas.
+- Los ingresos mensuales excluyen fechas posteriores a FECHA_REFERENCIA. La deuda
+  suma saldos de facturas, sin volver a sumar multas incluidas en esos conceptos.
+- Hay avisos de facturas vencidas, cuotas sin emitir del mes y multas vencidas.
+  Cobros acepta `?periodo=todos&estado=adeudan` para revisar la deuda acumulada;
+  Multas acepta `?vista=vencida` para abrir la vista pertinente desde el panel.
+- Se muestran hasta cinco facturas pendientes y cinco contratos próximos a vencer,
+  ordenados por vencimiento, con acceso directo a cobrar o consultar el detalle.
+- Las tablas de habitaciones y limpieza muestran la ocupación actual y las tareas
+  de la semana; los integrantes de limpieza cuentan residentes actuales.
+- Se conservan estados vacíos y scroll horizontal en tablas para móvil. Los
+  indicadores se recalculan con el store compartido después de registrar cobros.
+- `tests/panel.test.mjs` cubre las diferencias entre ingresos y deuda, cobros
+  parciales/completos, fechas futuras, contratos cancelados y datos vacíos.

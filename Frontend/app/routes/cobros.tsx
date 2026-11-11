@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { EstadoFacturaBadge } from "../Components/factura-detalle";
 import { Button } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
@@ -17,9 +17,10 @@ export function meta() { return [{ title: "Cobros · Gestión de Residencia" }];
 
 export default function Cobros() {
   const { facturas, pagos, contratos, alumnoPorId } = useData();
+  const [params] = useSearchParams();
   const [busqueda, setBusqueda] = useState("");
-  const [estado, setEstado] = useState("todos");
-  const [periodo, setPeriodo] = useState(FECHA_REFERENCIA.slice(0, 7));
+  const [estado, setEstado] = useState(params.get("estado") === "adeudan" ? "adeudan" : "todos");
+  const [periodo, setPeriodo] = useState(params.get("periodo") === "todos" ? "" : FECHA_REFERENCIA.slice(0, 7));
   const base = useMemo(() => facturas.filter((f) => (!periodo || f.periodo === periodo) && normalizar(`${f.titular} ${f.documento} ${f.idFactura}`).includes(normalizar(busqueda))), [facturas, periodo, busqueda]);
   const filas = useMemo(() => base.filter((f) => estado === "todos" || (estado === "pagaron" ? saldoFactura(f, pagos) === 0 : saldoFactura(f, pagos) > 0)).sort((a, b) => b.periodo.localeCompare(a.periodo) || a.titular.localeCompare(b.titular)), [base, estado, pagos]);
   const movimientos = useMemo(() => pagos.filter((p) => (!periodo || p.fecha.startsWith(periodo)) && normalizar(`${alumnoPorId.get(p.idAlumno)?.apellido} ${alumnoPorId.get(p.idAlumno)?.nombre} ${alumnoPorId.get(p.idAlumno)?.documento} ${p.idFactura ?? ""}`).includes(normalizar(busqueda))).sort((a, b) => b.fecha.localeCompare(a.fecha)), [pagos, periodo, busqueda, alumnoPorId]);
