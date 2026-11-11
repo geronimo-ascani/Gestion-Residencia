@@ -196,8 +196,7 @@ buscador filtra únicamente por `numeroHabitacion` o `pisoHabitacion`.
 | `fecha` | `string` | ISO |
 | `concepto` | `string` | Ej.: `"Residencia"` |
 
-Los pagos son inmutables en el prototipo: solo se listan y se suman. No hay
-acción para registrar un pago nuevo (sí para pagar multas).
+Los pagos registrados son inmutables. Desde /cobros/registrar se agregan cobros completos o parciales vinculados a una factura mediante idFactura, medio y referencia.
 
 ### 4.7 Multa
 
@@ -219,13 +218,35 @@ acción para registrar un pago nuevo (sí para pagar multas).
 
 ### 4.8 Limpieza
 
-`GrupoDeLimpieza`: `idGrupoLimpieza` (PK, `G1`…), `nombreDelGrupo`.
+`GrupoDeLimpieza`: `idGrupoLimpieza` (PK, `G1`…), `nombreDelGrupo`,
+`tareaInicial` (1–4, única entre grupos).
 `GrupoLimpiezaAlumno`: `idGrupoLimpieza` + `idAlumno` (pertenencia).
 `Ambiente`: `idAmbiente` (PK, `AM01`…), `ambiente` (nombre), `tareas` (texto).
+Los espacios comunes tienen además `tipo` (`Sala de estudio`, `Baño`, `Cocina`,
+`Duchas`, `Comedor`, `Lavadero` u `Otro`) y `equipamiento` (nombre y cantidad).
+`TIPOS_AMBIENTE` centraliza las opciones. `ubicacion` y `descripcion` son opcionales.
+Desde `/ambientes/nuevo` se registran espacios con nombre único y tipo obligatorio,
+ubicación, descripción e inventario inicial opcionales. `validarNuevoAmbiente`
+en `lib/ambientes.ts` se comparte entre formulario y store; rechaza objetos
+duplicados y cantidades que no sean enteros positivos seguros. `crearAmbiente`
+devuelve el ID y agrega el espacio al catálogo compartido con Limpieza, sin
+asignación inicial ni tareas predefinidas.
+Los ambientes de habitaciones conservan sus IDs y no llevan `tipo`.
+El listado `/ambientes` muestra solo espacios comunes y permite buscar por
+nombre/equipamiento y filtrar por tipo. El freezer compartido se registra una
+sola vez, en Cocina 1. No mostrar aclaraciones del equipamiento ni tareas de
+limpieza en las páginas de ambientes; las tareas se conservan para Limpieza.
+Cada fila incluye «Ver detalle» a `/ambientes/:idAmbiente`. En la ficha se
+agregan objetos por nombre y cantidad entera positiva mediante
+`agregarEquipamientoAmbiente`, validando la referencia y los datos en el store.
+Un nombre existente (sin distinguir mayúsculas ni acentos) suma su cantidad.
+Los cambios se comparten con el listado y se reinician al recargar.
 `GrupoLimpiezaAmbiente`: `idGrupoLimpieza`, `idAmbiente`, `fechaDesde`,
 `fechaHasta` (mismo criterio histórico que las asignaciones de habitación).
 
-La sección de Limpieza todavía no tiene página propia ni acciones en el store.
+Limpieza tiene listado, detalle, alta, edición de nombre y administración de
+integrantes. La planificación usa `TAREAS_LIMPIEZA` en `lib/domain.ts` y no las
+asignaciones manuales de ambientes. El catálogo de ambientes conserva su historial.
 
 ### 4.9 Estado global (`DataState`)
 
@@ -332,12 +353,22 @@ Todas las reglas de fechas y estados se calculan contra `FECHA_REFERENCIA`
 - No crear contratos para alumnos inactivos.
 - Al crear un alumno debe crearse también su contrato (ver §12).
 
-### 5.8 Limpieza (regla prevista)
+### 5.8 Limpieza
 
-- Cada alumno pertenece a un grupo.
-- Cada grupo tiene ambientes asignados con vigencia (`fechaDesde`/`fechaHasta`).
-- Las tareas se describen en `Ambiente.tareas`.
-- La UI de esta sección aún no está implementada; respetar el modelo al hacerla.
+- Hay cuatro grupos como máximo, con tareas iniciales 1–4 distintas; el mock inicia con cuatro.
+- Tareas: baños (pisos, lavamanos, tacho e inodoro); salas comunes (estudio,
+  pasillos y comedor); duchas (cada ducha, mingitorios y lavamanos); cocinas
+  (hornos, piso, heladeras, bacha y mesada).
+- Semanas del mes: 1–7, 8–14, 15–21, 22–28 y 29–31. La tarea avanza una posición
+  cada semana, vuelve a la primera después de la cuarta tarea principal y se reinicia cada mes.
+- La planificación se deriva de `FECHA_REFERENCIA`; no requiere guardar cambios semanales.
+- Un alumno pertenece como máximo a un grupo. Seleccionarlo en otro lo traslada
+  al guardar. La UI informa el grupo de origen antes de guardar.
+- Se pueden agregar residentes actuales de varias habitaciones y ajustar la selección
+  individualmente; cambiar una habitación luego no altera automáticamente el grupo.
+- Alta formal con nombre único, tarea inicial disponible e integrantes activos.
+- Eliminar un grupo libera su tarea inicial y deja sus alumnos sin grupo; se muestra
+  la cobertura incompleta hasta crear un reemplazo. El detalle incluye volver al listado.
 
 ---
 
@@ -380,7 +411,7 @@ Todas las reglas de fechas y estados se calculan contra `FECHA_REFERENCIA`
 | `crearContrato(input)` | Agrega un contrato |
 
 No existen todavía acciones para editar/inactivar alumnos, editar/eliminar
-contratos, registrar pagos ni gestionar limpieza.
+contratos; los cobros disponen de registrarCobro y limpieza dispone de crear/actualizar/eliminar grupos y guardar integrantes.
 
 ---
 
@@ -395,11 +426,14 @@ Configuración central: `app/routes.ts`.
 | `/alumnos/nuevo` | `routes/alumnos.nuevo.tsx` | Implementado |
 | `/alumnos/:idAlumno` | `routes/alumnos.$idAlumno.tsx` | Implementado |
 | `/habitaciones` | `routes/habitaciones.tsx` | Implementado |
+| `/ambientes` | `routes/ambientes.tsx` | Implementado; inventario de espacios comunes |
+| `/ambientes/nuevo` | `routes/ambientes.nuevo.tsx` | Implementado; alta de espacio e inventario inicial |
+| `/ambientes/:idAmbiente` | `routes/ambientes.$idAmbiente.tsx` | Implementado; detalle y alta de equipamiento |
 | `/habitaciones/:idHabitacion` | `routes/habitaciones.$idHabitacion.tsx` | Implementado |
 | `/contratos` | `routes/contratos.tsx` | Implementado |
 | `/contratos/:idContrato` | `routes/contratos.$idContrato.tsx` | Implementado |
 | `/multas` | fallback `proximamente.tsx` | Pendiente |
-| `/limpieza` | fallback `proximamente.tsx` | Pendiente |
+| `/limpieza` y subrutas | `routes/limpieza*.tsx` | Implementado: listado, detalle, alta, edición e integrantes |
 | `/configuracion` | fallback `proximamente.tsx` | Pendiente |
 | `/login`, `/register`, `/forgot-password`, `/reset-password` | `routes/*.tsx` | UI lista; backend pendiente |
 | `*` | `routes/proximamente.tsx` | Fallback |
@@ -535,7 +569,8 @@ debe coincidir para evitar errores de hidratación.
 - **14 asignaciones vigentes** distribuidas 2, 2, 3, 4 y 3 por habitación: 14 plazas ocupadas y 3 libres; dos asignaciones históricas cerradas.
 - **16 contratos**: uno vigente por alumno (tres por vencer), más dos históricos para probar renovación y reingreso sin superposiciones.
 - **28 pagos** (septiembre y octubre de 2026) y **3 multas** (vencida, pendiente y pagada).
-- Un grupo de limpieza y un ambiente por habitación; cada residente pertenece al grupo de su habitación.
+- Cuatro grupos de limpieza: habitaciones 1, 2 y 3 en grupos 1, 2 y 3; habitaciones 4 y 5 comparten el grupo 4. Cada grupo tiene una tarea inicial distinta. Un ambiente de catálogo por habitación, sin asignación de limpieza inicial.
+- **10 ambientes comunes adicionales**: 2 salas de estudio (3 mesas y 3 sillas cada una), 3 baños (1 inodoro y 1 lavamanos cada uno), 2 cocinas (2 hornos eléctricos y 2 heladeras cada una, más 1 freezer grande compartido), 1 habitación de duchas (4 duchas, 2 mingitorios y 1 bacha), 1 comedor (4 mesas grandes y 16 sillas) y 1 lavadero (1 lavarropas). Se incorporan al catálogo de limpieza sin asignación inicial.
 - Un administrador de prueba de `session.ts` y un usuario por alumno. Todos los datos personales y movimientos son de ejemplo.
 - El alta de habitaciones sugiere el número siguiente y fija la ubicación en planta baja.
 
@@ -559,7 +594,7 @@ comportamiento deseado; corregirlos al tocar las áreas involucradas.
    regla dice que ningún alumno puede quedar sin contrato. El flujo de
    `/alumnos/nuevo` debería crear ambos o redirigir a la creación de contrato.
 2. **Sin acciones de edición/baja.** No hay UI para editar alumno, marcarlo
-   inactivo, editar/eliminar contratos ni registrar pagos.
+   inactivo, editar/eliminar contratos. El registro de cobros ya está implementado.
 3. **Detección de habitación en el listado de alumnos.** `alumnos.tsx` usa
    `asignacion.fechaHasta !== null` para descartar asignaciones; lo correcto es
    usar `asignacionActiva` (las fechas mandan).
@@ -573,8 +608,7 @@ comportamiento deseado; corregirlos al tocar las áreas involucradas.
    fechas; falta validar que no se superponga con otro contrato del alumno.
 7. **Capacidad validada solo en UI.** El store no rechaza asignaciones que
    excedan `capacidadMaxima`; la validación debería vivir también en la acción.
-8. **Multas y limpieza sin ruta.** El menú enlaza a `/multas` y `/limpieza`, pero
-   no hay páginas registradas: caen en `proximamente.tsx`.
+8. **Limpieza implementada.** Cuatro grupos con rotación semanal y asignación flexible de integrantes.
 9. **Auth sin backend.** `lib/auth.ts` apunta a `/api/auth/*`; no hay servidor.
    Las rutas del panel no están protegidas.
 10. **Sin persistencia.** Recargar reinicia todos los cambios. Es esperado en el
@@ -622,3 +656,75 @@ comportamiento deseado; corregirlos al tocar las áreas involucradas.
 - No mostrar la descripción en el listado de habitaciones.
 - No eliminar columnas o cambiar `colSpan` sin ajustar el encabezado y el estado
   vacío.
+
+
+### Actualización del catálogo de tareas de limpieza
+
+- `DataState.tareasLimpieza` contiene número, nombre, actividades y `enRotacion` de cada tarea;
+  se inicializa con las cuatro tareas de `TAREAS_LIMPIEZA`.
+- `/limpieza` muestra el catálogo en tabla. `/limpieza/tareas/nueva` permite
+  agregar una tarea con nombre único (ignorando acentos y mayúsculas) y una
+  actividad por renglón, sin actividades vacías o repetidas.
+- `crearTareaLimpieza` valida también en el store y agrega un número correlativo.
+- Las cuatro tareas originales tienen `enRotacion: true`; las nuevas tareas se
+  registran como adicionales (`enRotacion: false`) y no alteran el cronograma.
+  La tabla muestra el tipo Rotativa / Adicional. El formulario de grupo solo
+  ofrece tareas rotativas. `tareaLimpieza` filtra el catálogo compartido para
+  listado, detalle y cronograma, repitiendo el ciclo de las cuatro originales.
+- Los botones Crear grupo / Crear tarea incluyen el ícono plus; Ver detalle
+  en Ambientes y Limpieza incluye arrow, y Volver al listado en Nuevo grupo
+  incluye arrow rotada 180 grados.
+
+
+- Las tareas incluyen Ver detalle con flecha a `/limpieza/tareas/:numero`.
+  La ficha permite Modificar tarea en `/limpieza/tareas/:numero/editar`.
+  Se editan nombre y actividades con validación compartida; se preservan número
+  y participación en la rotación. El store valida existencia y nombres únicos,
+  excluyendo la propia tarea. Cancelar vuelve al detalle sin guardar.
+
+### Facturación y cobros
+
+- Rutas: `/facturacion`, `/facturacion/nueva`, `/facturacion/:idFactura`, `/cobros`
+  y `/cobros/registrar`. Se accede desde el menú, contratos y fichas de alumnos.
+- `DataState.facturas` guarda el titular y DNI al emitir, contrato, período,
+  emisión, vencimiento y conceptos con sus importes. `Pago.idFactura` vincula
+  cada cobro; `medio` y `referencia` conservan el comprobante de la operación.
+- Las reglas de facturación se concentran en `lib/facturacion.ts`, junto con
+  las derivaciones generales de `lib/domain.ts`. Cada mes con al menos un día
+  de estadía genera una cuota completa, sin prorrateo ni depósito de garantía.
+  Se excluyen períodos futuros y meses posteriores al fin o baja efectiva.
+- Una cuota se factura una sola vez por contrato y período. Las multas pendientes
+  se incluyen desde su primer período habilitado (`periodoDesde`, o el mes de
+  emisión si no lo tiene), con el recargo vigente al emitir. No se duplican multas
+  ya facturadas. Los importes y datos emitidos quedan congelados.
+- `generarFactura` y `registrarCobro` validan también en el store. Los cobros
+  aceptan hasta dos decimales, requieren importe positivo no superior al saldo,
+  fecha válida entre emisión y FECHA_REFERENCIA y referencia para transferencia
+  o tarjeta. `formatARS` conserva los centavos cuando existen.
+- Estados de factura: pagada, pendiente, vencida y pago parcial (este último
+  también se señala si la factura está vencida). El vencimiento usa el día del
+  contrato, ajustado al último día del mes. Las multas facturadas se pagan al
+  cancelar el total de la factura y se gestionan exclusivamente desde ella;
+  no admiten edición, anulación ni prórroga independiente.
+- Facturación muestra cuotas sin facturar para el período. Cobros muestra las
+  facturas, sus saldos, cuotas sin facturar y el historial por fecha de cobro.
+  Los totales de cobranza corresponden a facturas emitidas, sin imputar cobros
+  antiguos sin vínculo a una factura. El prototipo mantiene todo en memoria.
+- El mock agrega importe mensual de $45.000 y vencimiento el día 10 a los
+  contratos actuales. Sus 28 cobros se vinculan a 28 facturas de septiembre y
+  octubre. La factura de A03 en octubre incluye M01, dejando $5.000 pendientes.
+- La factura tiene impresión propia sin navegación ni controles. Se presenta
+  como comprobante interno de la residencia, sin integración fiscal externa.
+- Pruebas: `node --test tests/*.test.mjs`, `npm run typecheck`, `npm run build`.
+### Navegación lateral agrupada
+
+- `GRUPOS_NAV` en `Components/layout/app-shell.tsx` organiza el sidebar en
+  Residentes (Alumnos y Contratos), Residencia (Habitaciones, Ambientes y
+  Limpieza), y Facturación y pagos (Facturación, Cobros y Multas).
+- Panel mantiene su acceso directo y Configuración permanece al pie.
+- Los encabezados son botones desplegables con `aria-expanded` y
+  `aria-controls`; cada instancia usa IDs únicos mediante `useId`.
+- Solo se abre un grupo a la vez. Navegar a una ruta, incluso a un detalle,
+  abre su grupo automáticamente y resalta el enlace y su encabezado.
+- En el menú reducido, pulsar un grupo expande el sidebar y muestra sus rutas.
+  En móvil se conserva el mismo esquema y navegar cierra el menú.

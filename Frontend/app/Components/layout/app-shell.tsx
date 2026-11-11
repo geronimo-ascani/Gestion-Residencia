@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   Link,
   NavLink,
@@ -12,24 +12,52 @@ import { BrandMark } from "../brand";
 import { Avatar } from "../ui/avatar";
 import { Icon, type IconName } from "../ui/icons";
 
-const NAV: Array<{
-  to: string;
+const GRUPOS_NAV: Array<{
+  id: string;
   label: string;
   icon: IconName;
-  end?: boolean;
+  items: { to: string; label: string; icon: IconName }[];
 }> = [
-  { to: "/", label: "Panel", icon: "dashboard", end: true },
-  { to: "/alumnos", label: "Alumnos", icon: "users" },
-  { to: "/habitaciones", label: "Habitaciones", icon: "rooms" },
-  { to: "/contratos", label: "Contratos", icon: "contracts" },
-  { to: "/multas", label: "Multas", icon: "fines" },
-  { to: "/limpieza", label: "Limpieza", icon: "cleaning" },
+  {
+    id: "residentes", label: "Residentes", icon: "users",
+    items: [
+      { to: "/alumnos", label: "Alumnos", icon: "users" },
+      { to: "/contratos", label: "Contratos", icon: "contracts" },
+    ],
+  },
+  {
+    id: "residencia", label: "Residencia", icon: "building",
+    items: [
+      { to: "/habitaciones", label: "Habitaciones", icon: "rooms" },
+      { to: "/ambientes", label: "Ambientes", icon: "building" },
+      { to: "/limpieza", label: "Limpieza", icon: "cleaning" },
+    ],
+  },
+  {
+    id: "finanzas", label: "Facturación y pagos", icon: "payments",
+    items: [
+      { to: "/facturacion", label: "Facturación", icon: "contracts" },
+      { to: "/cobros", label: "Cobros", icon: "payments" },
+      { to: "/multas", label: "Multas", icon: "fines" },
+    ],
+  },
 ];
+
+function grupoDeRuta(pathname: string) {
+  return GRUPOS_NAV.find((grupo) => grupo.items.some((item) =>
+    pathname === item.to || pathname.startsWith(`${item.to}/`),
+  ))?.id ?? null;
+}
 
 const ETIQUETAS: Record<string, string> = {
   alumnos: "Alumnos",
   habitaciones: "Habitaciones",
+  ambientes: "Ambientes",
   contratos: "Contratos",
+  facturacion: "Facturación",
+  cobros: "Cobros",
+  nueva: "Nueva factura",
+  registrar: "Registrar cobro",
   multas: "Multas",
   limpieza: "Limpieza",
   configuracion: "Configuración",
@@ -74,7 +102,7 @@ export function AppShell() {
           colapsado ? "w-[76px]" : "w-[260px]",
         )}
       >
-        <SidebarContent colapsado={colapsado} />
+        <SidebarContent colapsado={colapsado} onExpand={() => setColapsado(false)} />
       </aside>
 
       {menuMovil ? (
@@ -116,11 +144,21 @@ export function AppShell() {
 function SidebarContent({
   colapsado = false,
   onNavigate,
+  onExpand,
 }: {
   colapsado?: boolean;
   onNavigate?: () => void;
+  onExpand?: () => void;
 }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const idBase = useId();
+  const grupoActivo = grupoDeRuta(pathname);
+  const [grupoAbierto, setGrupoAbierto] = useState<string | null>(() => grupoDeRuta(pathname));
+
+  useEffect(() => {
+    setGrupoAbierto(grupoDeRuta(pathname));
+  }, [pathname]);
 
   function cerrarSesion() {
     onNavigate?.();
@@ -152,45 +190,68 @@ function SidebarContent({
         )}
       >
         <div className="space-y-1">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={onNavigate}
-              title={colapsado ? item.label : undefined}
-              aria-label={colapsado ? item.label : undefined}
-              className={({ isActive }) =>
-                cn(
-                  "group relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
-                  colapsado && "justify-center px-0",
-                  isActive
-                    ? "bg-white/10 text-white"
-                    : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r bg-slate-200"
-                    />
-                  ) : null}
-                  <Icon
-                    name={item.icon}
-                    className={cn(
-                      "h-5 w-5 shrink-0",
-                      isActive ? "text-slate-100" : "text-slate-500",
-                    )}
-                  />
-                  {!colapsado ? <span>{item.label}</span> : null}
-                </>
-              )}
-            </NavLink>
-          ))}
+          <NavLink
+            to="/"
+            end
+            onClick={onNavigate}
+            title={colapsado ? "Panel" : undefined}
+            aria-label={colapsado ? "Panel" : undefined}
+            className={({ isActive }) => cn(
+              "relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+              colapsado && "justify-center px-0",
+              isActive ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
+            )}
+          >
+            <Icon name="dashboard" className="h-5 w-5 shrink-0" />
+            {!colapsado ? <span>Panel</span> : null}
+          </NavLink>
+          {GRUPOS_NAV.map((grupo) => {
+            const abierto = !colapsado && grupoAbierto === grupo.id;
+            const activo = grupoActivo === grupo.id;
+            const idSubmenu = `${idBase}-${grupo.id}`;
+            return (
+              <div key={grupo.id}>
+                <button
+                  type="button"
+                  aria-expanded={abierto}
+                  aria-controls={idSubmenu}
+                  aria-label={colapsado ? grupo.label : undefined}
+                  title={colapsado ? grupo.label : undefined}
+                  onClick={() => {
+                    if (colapsado) onExpand?.();
+                    setGrupoAbierto(abierto ? null : grupo.id);
+                  }}
+                  className={cn(
+                    "relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                    colapsado && "justify-center px-0",
+                    activo ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
+                  )}
+                >
+                  {activo ? <span aria-hidden="true" className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r bg-slate-200" /> : null}
+                  <Icon name={grupo.icon} className="h-5 w-5 shrink-0" />
+                  {!colapsado ? <><span className="flex-1">{grupo.label}</span><Icon name="chevron" className={cn("h-4 w-4 shrink-0 transition-transform", abierto && "rotate-180")} /></> : null}
+                </button>
+                <div id={idSubmenu} hidden={!abierto}>
+                  <div className="my-2 ml-5 space-y-1 border-l border-white/15 pl-3">
+                    {grupo.items.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        onClick={onNavigate}
+                        className={({ isActive }) => cn(
+                          "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                          isActive ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
+                        )}
+                      >
+                        <Icon name={item.icon} className="h-4 w-4 shrink-0" />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </nav>
 
