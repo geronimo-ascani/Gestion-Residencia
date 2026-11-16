@@ -1,7 +1,8 @@
+import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
-import { Button } from "../Components/ui/button";
+import { useNavigate } from "react-router";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
 import { TextField } from "../Components/ui/text-field";
@@ -24,7 +25,7 @@ export default function NuevaHabitacion() {
   const navigate = useNavigate();
   const idBase = useId();
   const [numeroHabitacion, setNumeroHabitacion] = useState(() =>
-    String(Math.max(0, ...habitaciones.map((habitacion) => Number(habitacion.numeroHabitacion))) + 1),
+    String(Math.max(0, ...habitaciones.map((habitacion) => Number(habitacion.numeroHabitacion)).filter(Number.isFinite)) + 1),
   );
   const [capacidadMaxima, setCapacidadMaxima] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -61,12 +62,13 @@ export default function NuevaHabitacion() {
       return;
     }
 
-    const idHabitacion = crearHabitacion({
+    let idHabitacion: string;
+    try { idHabitacion = crearHabitacion({
       numeroHabitacion: numeroNormalizado,
       pisoHabitacion: 0,
       capacidadMaxima: capacidad,
       descripcion: descripcion.trim(),
-    });
+    }); } catch (error) { setErrores({ numeroHabitacion: error instanceof Error ? error.message : "No se pudo crear la habitación." }); return; }
     toast({
       title: "Habitación agregada",
       description: `Habitación ${numeroNormalizado} · Planta baja`,
@@ -81,12 +83,7 @@ export default function NuevaHabitacion() {
         title="Agregar habitación"
         description="Las habitaciones de la residencia se encuentran en planta baja."
         actions={
-          <Link to="/habitaciones">
-            <Button variant="outline">
-              <Icon name="arrow" className="h-4 w-4 rotate-180" />
-              Volver al listado
-            </Button>
-          </Link>
+          <BackToList to="/habitaciones" />
         }
       />
 
@@ -156,11 +153,9 @@ export default function NuevaHabitacion() {
             Los campos marcados con * son obligatorios.
           </p>
           <div className="flex gap-2">
-          <Link to="/habitaciones">
-            <Button type="button" variant="outline">
+          <ButtonLink to="/habitaciones" variant="outline">
               Cancelar
-            </Button>
-          </Link>
+            </ButtonLink>
           <Button type="submit">
             <Icon name="plus" className="h-4 w-4" />
             Agregar habitación

@@ -1,17 +1,34 @@
+import type { Parametros } from "./parametros";
 export type Rol = "administrador" | "alumno";
 
 export type EstadoAlumno = "activo" | "inactivo";
+export type EstadoCuenta = "pendiente" | "activo" | "suspendido" | "inactivo";
+
+export interface CambioAdministrativo {
+  id: string;
+  idActor: string;
+  fecha: string;
+  seccion: string;
+  accion: string;
+  detalle: string;
+}
 
 export type EstadoMulta = "pendiente" | "pagada" | "anulada";
 
 export interface Usuario {
+  apellido?: string;
+  documento?: string;
+  passwordHash?: string;
   idUsuario: string;
   nombre: string;
   correo: string;
   rol: Rol;
   /** Presente solo cuando el rol es `alumno`. */
   idAlumno?: string;
-  estado: EstadoAlumno;
+  estado: EstadoCuenta;
+  gestionaAdministradores?: boolean;
+  telefono?: string;
+  fechaAlta?: string;
 }
 
 export interface ContactoEmergencia {
@@ -113,6 +130,7 @@ export interface CambioMulta {
 }
 
 export interface Multa {
+  recargoPorcentaje?: number;
   idMulta: string;
   idAlumno: string;
   monto: number;
@@ -183,6 +201,8 @@ export interface GrupoLimpiezaAmbiente {
 }
 
 export interface DataState {
+  reclamos: Reclamo[];
+  parametros: Parametros;
   facturas: Factura[];
   tareasLimpieza: TareaLimpieza[];
   alumnos: Alumno[];
@@ -196,6 +216,41 @@ export interface DataState {
   ambientes: Ambiente[];
   grupoAmbientes: GrupoLimpiezaAmbiente[];
   usuarios: Usuario[];
+  historialAdministrativo: CambioAdministrativo[];
+}
+
+export type TipoReclamo = "reclamo" | "solicitud" | "problema";
+export type CategoriaReclamo = "mantenimiento" | "limpieza" | "convivencia" | "administracion" | "otro";
+export type EstadoReclamo = "pendiente" | "en_revision" | "resuelto" | "rechazado" | "cancelado";
+
+export interface NuevoReclamoInput {
+  tipo: TipoReclamo;
+  categoria: CategoriaReclamo;
+  asunto: string;
+  descripcion: string;
+  ubicacion: string;
+  detalleUbicacion: string;
+  prioridad: "normal" | "alta";
+}
+
+export interface SeguimientoReclamo {
+  id: string;
+  fecha: string;
+  autor: string;
+  rol: Rol;
+  tipo: "creacion" | "comentario" | "estado";
+  mensaje: string;
+  estado?: EstadoReclamo;
+}
+
+export interface Reclamo extends Omit<NuevoReclamoInput, "ubicacion"> {
+  idReclamo: string;
+  idAlumno: string;
+  ubicacion: string;
+  estado: EstadoReclamo;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+  historial: SeguimientoReclamo[];
 }
 
 export interface DetalleFactura {

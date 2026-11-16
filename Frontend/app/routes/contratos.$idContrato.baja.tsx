@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import { Button } from "../Components/ui/button";
+import { useNavigate, useParams } from "react-router";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
@@ -45,12 +45,10 @@ export default function BajaContrato() {
           title="No se puede registrar la baja"
           description="Volvé a la ficha del alumno o al listado de contratos."
           action={
-            <Link to="/contratos">
-              <Button>
+            <ButtonLink to="/contratos">
                 <Icon name="arrow" className="h-4 w-4 rotate-180" />
                 Volver a contratos
-              </Button>
-            </Link>
+              </ButtonLink>
           }
         />
       </div>
@@ -91,12 +89,10 @@ export default function BajaContrato() {
             : "La baja conserva el historial del contrato y libera la habitación."
         }
         actions={
-          <Link to={`/contratos/${contrato.idContrato}`}>
-            <Button variant="outline">
+          <ButtonLink to={`/contratos/${contrato.idContrato}`} variant="outline">
               <Icon name="arrow" className="h-4 w-4 rotate-180" />
               Volver al contrato
-            </Button>
-          </Link>
+            </ButtonLink>
         }
       />
 
@@ -129,11 +125,9 @@ export default function BajaContrato() {
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <Link to={`/contratos/${contrato.idContrato}`}>
-            <Button type="button" variant="outline">
+          <ButtonLink to={`/contratos/${contrato.idContrato}`} variant="outline">
               Cancelar
-            </Button>
-          </Link>
+            </ButtonLink>
           <Button type="submit" variant="danger">
             Registrar baja
           </Button>

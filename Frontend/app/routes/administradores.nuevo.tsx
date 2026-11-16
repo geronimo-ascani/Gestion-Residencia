@@ -1,0 +1,23 @@
+import { BackToList } from "../Components/ui/back-to-list";
+import { claveInicial } from "../lib/credenciales";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { Button, ButtonLink } from "../Components/ui/button";
+
+import { PageHeader } from "../Components/ui/page-header";
+import { TextField } from "../Components/ui/text-field";
+import { SelectField } from "../Components/ui/select-field";
+import { useToast } from "../Components/ui/toast";
+import { puedeGestionarAdministradores } from "../lib/administracion";
+import { useData } from "../lib/store";
+
+export function meta() { return [{ title: "Nuevo administrador · Gestión de Residencia" }]; }
+export default function NuevoAdministrador() {
+  const datos = useData(); const navigate = useNavigate(); const { toast } = useToast();
+  const [nombre, setNombre] = useState(""); const [apellido, setApellido] = useState(""); const [documento, setDocumento] = useState(""); const [correo, setCorreo] = useState(""); const [telefono, setTelefono] = useState(""); const [permiso, setPermiso] = useState("residencia"); const [error, setError] = useState("");
+  return <div className="flex flex-col gap-6"><PageHeader eyebrow="Administración / Administradores" title="Nuevo administrador" description="Registrá un integrante del equipo con una cuenta personal." actions={<BackToList to="/administracion/administradores" />} />
+    {puedeGestionarAdministradores(datos) ? <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); setError(""); try { const id = datos.crearAdministrador({ nombre, apellido, documento, correo, telefono, gestionaAdministradores: permiso === "administradores" }); toast({ title: "Administrador registrado", description: "Cuenta activa con correo y contraseña inicial." }); navigate(`/administracion/administradores/${id}`); } catch (err) { setError(err instanceof Error ? err.message : "No se pudo crear la cuenta."); } }}>
+    <section className="rounded-xl border border-slate-300 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"><h2 className="text-lg font-semibold">Datos del perfil</h2><p className="mt-1 mb-6 text-sm text-slate-500">El correo será su identificador para iniciar sesión.</p><div className="grid gap-5 sm:grid-cols-2"><TextField id="admin-nombre" label="Nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} /><TextField id="admin-apellido" label="Apellido(s)" required value={apellido} onChange={(e) => setApellido(e.target.value)} /><TextField id="admin-dni" label="DNI" required inputMode="numeric" pattern="[0-9. -]{3,}" value={documento} onChange={(e) => setDocumento(e.target.value)} /><TextField id="admin-clave" label="Contraseña inicial" readOnly value={apellido.trim() && documento.replace(/\D/g, "").length >= 3 ? claveInicial(apellido, documento) : ""} hint="Primer apellido y últimos 3 dígitos del DNI." /><TextField id="admin-correo" label="Correo electrónico" type="email" required value={correo} onChange={(e) => setCorreo(e.target.value)} /><TextField id="admin-telefono" label="Teléfono (opcional)" type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} /><SelectField id="admin-permisos" label="Permisos" value={permiso} onChange={(e) => setPermiso(e.target.value)}><option value="residencia">Gestión de residencia</option><option value="administradores">Gestión de residencia y administradores</option></SelectField></div><p className="mt-5 text-sm text-slate-500">El permiso para gestionar administradores permite agregar y suspender cuentas del equipo.</p></section>
+    <p className="rounded-xl border border-brand-200 bg-brand-50 p-5 text-sm text-brand-900 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-100">La cuenta quedará activa con la contraseña inicial indicada. Su titular podrá cambiarla desde Mi perfil.</p>{error ? <p role="alert" className="text-sm text-red-600">{error}</p> : null}<div className="flex justify-end gap-2"><ButtonLink to="/administracion/administradores" variant="outline">Cancelar</ButtonLink><Button type="submit">Crear administrador</Button></div></form> : <p role="alert">No tenés permiso para crear administradores.</p>}
+  </div>;
+}

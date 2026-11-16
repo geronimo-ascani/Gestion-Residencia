@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { EstadoFacturaBadge } from "../Components/factura-detalle";
 import { Badge, StatusBadge } from "../Components/ui/badge";
-import { Button } from "../Components/ui/button";
+import { ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import type { IconName } from "../Components/ui/icons";
@@ -27,7 +27,7 @@ function SeccionPanel({ title, description, to, label, children }: {
     <section className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p></div>
-        <Link to={to}><Button variant="outline" size="sm">{label}<Icon name="arrow" className="h-3.5 w-3.5" /></Button></Link>
+        <ButtonLink to={to} variant="outline" size="sm">{label}<Icon name="arrow" className="h-3.5 w-3.5" /></ButtonLink>
       </div>
       {children}
     </section>
@@ -37,9 +37,11 @@ function SeccionPanel({ title, description, to, label, children }: {
 export default function Dashboard() {
   const data = useData();
   const panel = useMemo(() => resumenPanel(data), [data]);
+  const reclamosAbiertos = (data.reclamos ?? []).filter((r) => r.estado === "pendiente" || r.estado === "en_revision").length;
   const avisos: { title: string; description: string; count: number; icon: IconName; to: string }[] = [
     { title: "Facturas vencidas", description: "Consultá los saldos y registrá los cobros.", count: panel.facturasVencidas, icon: "payments", to: "/cobros?periodo=todos&estado=adeudan" },
     { title: "Cuotas sin facturar", description: `Contratos del período ${panel.periodo} pendientes de emisión.`, count: panel.sinFacturar.length, icon: "contracts", to: "/facturacion" },
+    { title: "Reclamos por gestionar", description: "Revisá las presentaciones de los alumnos y actualizá su estado.", count: reclamosAbiertos, icon: "contracts", to: "/reclamos?vista=abiertos" },
     { title: "Multas vencidas", description: "Revisá las sanciones pendientes de pago.", count: panel.multasVencidas, icon: "fines", to: "/multas?vista=vencida" },
   ];
 
@@ -47,8 +49,8 @@ export default function Dashboard() {
     <div className="flex flex-col gap-6">
       <PageHeader eyebrow="Administración" title="Panel" description={`Resumen de la residencia al ${formatFecha(FECHA_REFERENCIA)}. Consultá los pendientes y accedé a cada gestión.`} actions={
         <div className="flex flex-wrap gap-2">
-          <Link to="/alumnos/nuevo"><Button variant="outline"><Icon name="plus" className="h-4 w-4" />Nuevo alumno</Button></Link>
-          <Link to="/cobros/registrar"><Button><Icon name="payments" className="h-4 w-4" />Registrar cobro</Button></Link>
+          <ButtonLink to="/alumnos/nuevo" variant="outline"><Icon name="plus" className="h-4 w-4" />Nuevo alumno</ButtonLink>
+          <ButtonLink to="/cobros/registrar"><Icon name="payments" className="h-4 w-4" />Registrar cobro</ButtonLink>
         </div>
       } />
 
@@ -59,7 +61,7 @@ export default function Dashboard() {
         { label: "Contratos por vencer", value: panel.porVencer.length },
       ]} />
 
-      <section aria-label="Gestiones pendientes" className="grid gap-3 md:grid-cols-3">
+      <section aria-label="Gestiones pendientes" className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {avisos.map((aviso) => <Link key={aviso.title} to={aviso.to} className="group flex items-start gap-3 rounded-xl border border-slate-300 bg-white p-4 transition hover:border-brand-400 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800">
           <span className="rounded-md bg-brand-50 p-2 text-brand-700 dark:bg-slate-800 dark:text-brand-300"><Icon name={aviso.icon} className="h-5 w-5" /></span>
           <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><h2 className="text-sm font-semibold group-hover:underline">{aviso.title}</h2><Badge variant={aviso.count ? "warning" : "success"}>{aviso.count}</Badge></div><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{aviso.description}</p></div>
@@ -80,7 +82,7 @@ export default function Dashboard() {
             {panel.pendientes.length ? panel.pendientes.slice(0, 5).map(({ factura, saldo }) => <TR key={factura.idFactura}>
               <TD><Link to={`/facturacion/${factura.idFactura}`} className="font-medium text-brand-800 hover:underline dark:text-brand-300">{factura.titular}</Link><p className="mt-1 text-xs text-slate-500">{factura.periodo} · {factura.idFactura}</p><div className="mt-2"><EstadoFacturaBadge factura={factura} pagos={data.pagos} /></div></TD>
               <TD className="whitespace-nowrap">{formatFecha(factura.fechaVence)}</TD><TD className="text-right font-medium whitespace-nowrap">{formatARS(saldo)}</TD>
-              <TD className="text-right"><Link to={`/cobros/registrar?factura=${factura.idFactura}`}><Button variant="outline" size="sm">Cobrar<Icon name="arrow" className="h-3.5 w-3.5" /></Button></Link></TD>
+              <TD className="text-right"><ButtonLink to={`/cobros/registrar?factura=${factura.idFactura}`} variant="outline" size="sm">Cobrar<Icon name="arrow" className="h-3.5 w-3.5" /></ButtonLink></TD>
             </TR>) : <TR><TD colSpan={4}><EmptyState icon="check" title="Sin saldos facturados pendientes" description="Todas las facturas emitidas están saldadas. Las cuotas sin emitir se consultan en Facturación." /></TD></TR>}
           </TBody></Table></TableWrap>
         </SeccionPanel>
@@ -90,7 +92,7 @@ export default function Dashboard() {
             {panel.porVencer.length ? panel.porVencer.slice(0, 5).map((contrato) => {
               const alumno = data.alumnoPorId.get(contrato.idAlumno);
               const dias = diasHasta(contrato.fechaHasta);
-              return <TR key={contrato.idContrato}><TD><Link to={`/alumnos/${contrato.idAlumno}`} className="font-medium hover:underline">{alumno ? `${alumno.apellido}, ${alumno.nombre}` : contrato.idAlumno}</Link><p className="mt-1 text-xs text-slate-500">{contrato.idContrato}</p></TD><TD className="whitespace-nowrap">{formatFecha(contrato.fechaHasta)}</TD><TD><Badge variant="warning">{dias === 0 ? "Hoy" : `${dias} días`}</Badge></TD><TD className="text-right"><Link to={`/contratos/${contrato.idContrato}`}><Button variant="outline" size="sm">Ver detalle<Icon name="arrow" className="h-3.5 w-3.5" /></Button></Link></TD></TR>;
+              return <TR key={contrato.idContrato}><TD><Link to={`/alumnos/${contrato.idAlumno}`} className="font-medium hover:underline">{alumno ? `${alumno.apellido}, ${alumno.nombre}` : contrato.idAlumno}</Link><p className="mt-1 text-xs text-slate-500">{contrato.idContrato}</p></TD><TD className="whitespace-nowrap">{formatFecha(contrato.fechaHasta)}</TD><TD><Badge variant="warning">{dias === 0 ? "Hoy" : `${dias} días`}</Badge></TD><TD className="text-right"><ButtonLink to={`/contratos/${contrato.idContrato}`} variant="outline" size="sm">Ver detalle<Icon name="arrow" className="h-3.5 w-3.5" /></ButtonLink></TD></TR>;
             }) : <TR><TD colSpan={4}><EmptyState icon="contracts" title="Sin vencimientos próximos" description="No hay contratos que finalicen dentro de los próximos 30 días." /></TD></TR>}
           </TBody></Table></TableWrap>
         </SeccionPanel>

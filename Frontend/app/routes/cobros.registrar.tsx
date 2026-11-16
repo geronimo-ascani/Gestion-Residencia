@@ -1,6 +1,7 @@
+import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
-import { Button } from "../Components/ui/button";
+import { useNavigate, useSearchParams } from "react-router";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
@@ -33,8 +34,8 @@ export default function RegistrarCobro() {
   const navigate = useNavigate();
   const { toast } = useToast();
   return <div className="flex flex-col gap-6">
-    <PageHeader eyebrow="Cobros" title="Registrar cobro" description="Asociá el pago a una factura. Podés cancelar el saldo completo o registrar un pago parcial." actions={<Link to="/cobros"><Button variant="outline"><Icon name="arrow" className="h-4 w-4 rotate-180" />Volver al listado</Button></Link>} />
-    {pendientes.length === 0 ? <EmptyState icon="payments" title="No hay facturas con saldo pendiente" description="Todas las facturas emitidas están pagadas. Podés consultar o generar facturas desde Facturación." action={<Link to="/facturacion"><Button variant="outline">Ir a facturación</Button></Link>} /> : <form className="flex flex-col gap-6" onSubmit={(event) => {
+    <PageHeader eyebrow="Cobros" title="Registrar cobro" description="Asociá el pago a una factura. Podés cancelar el saldo completo o registrar un pago parcial." actions={<BackToList to="/cobros" />} />
+    {pendientes.length === 0 ? <EmptyState icon="payments" title="No hay facturas con saldo pendiente" description="Todas las facturas emitidas están pagadas. Podés consultar o generar facturas desde Facturación." action={<ButtonLink to="/facturacion" variant="outline">Ir a facturación</ButtonLink>} /> : <form className="flex flex-col gap-6" onSubmit={(event) => {
       event.preventDefault();
       if (enviando.current) return;
       enviando.current = true;
@@ -54,7 +55,7 @@ export default function RegistrarCobro() {
         <p className="text-sm text-slate-500 sm:col-span-2">Las multas incluidas se marcan como pagadas al cancelar el total de la factura.</p>
       </CardContent></Card>
       {error ? <p role="alert" className="rounded-md border border-red-200 bg-white p-4 text-sm text-red-700 dark:bg-slate-900">{error}</p> : null}
-      <div className="flex justify-end gap-3"><Link to="/cobros"><Button type="button" variant="outline">Cancelar</Button></Link><Button type="submit" disabled={!factura || saldoFactura(factura, pagos) <= 0 || confirmado}><Icon name="check" className="h-4 w-4" />Registrar cobro</Button></div>
+      <div className="flex justify-end gap-3"><ButtonLink to="/cobros" variant="outline">Cancelar</ButtonLink><Button type="submit" disabled={!factura || saldoFactura(factura, pagos) <= 0 || confirmado}><Icon name="check" className="h-4 w-4" />Registrar cobro</Button></div>
     </form>}
   </div>;
 }

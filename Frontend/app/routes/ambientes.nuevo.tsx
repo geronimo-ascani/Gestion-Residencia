@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
-import { Button } from "../Components/ui/button";
+import { useNavigate } from "react-router";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../Components/ui/card";
 import { FormErrorSummary } from "../Components/ui/form-error-summary";
 import { PageHeader } from "../Components/ui/page-header";
@@ -90,7 +90,7 @@ export default function NuevoAmbiente() {
         </Card>
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-300 pt-5 dark:border-slate-700">
           <p className="text-xs text-slate-500 dark:text-slate-400">Los campos marcados con * son obligatorios.</p>
-          <div className="flex gap-3"><Link to="/ambientes"><Button type="button" variant="outline">Cancelar</Button></Link><Button type="submit">Registrar ambiente</Button></div>
+          <div className="flex gap-3"><ButtonLink to="/ambientes" variant="outline">Cancelar</ButtonLink><Button type="submit">Registrar ambiente</Button></div>
         </div>
       </form>
     </div>

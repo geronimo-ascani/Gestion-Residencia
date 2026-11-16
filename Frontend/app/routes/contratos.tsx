@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Button } from "../Components/ui/button";
+import { ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { ListSummary, ListToolbar } from "../Components/ui/list-page";
@@ -107,18 +107,14 @@ export default function Contratos() {
         description="Consultá las vigencias y el historial de los contratos de la residencia."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link to="/contratos/nuevo">
-              <Button>
+            <ButtonLink to="/contratos/nuevo">
                 <Icon name="plus" className="h-4 w-4" />
                 Nuevo contrato
-              </Button>
-            </Link>
-            <Link to="/alumnos">
-              <Button variant="ghost">
+              </ButtonLink>
+            <ButtonLink to="/alumnos" variant="ghost">
                 <Icon name="users" className="h-4 w-4" />
                 Ver alumnos
-              </Button>
-            </Link>
+              </ButtonLink>
           </div>
         }
       />
@@ -219,12 +215,10 @@ export default function Contratos() {
                       <StatusBadge estado={fila.estado} />
                     </TD>
                     <TD className="text-right">
-                      <Link to={`/contratos/${fila.contrato.idContrato}`} aria-label={`Ver detalle del contrato ${fila.contrato.idContrato}`}>
-                        <Button size="sm" variant="outline">
+                      <ButtonLink to={`/contratos/${fila.contrato.idContrato}`} aria-label={`Ver detalle del contrato ${fila.contrato.idContrato}`} size="sm" variant="outline">
                           Ver detalle
                           <Icon name="arrow" className="h-3.5 w-3.5" />
-                        </Button>
-                      </Link>
+                        </ButtonLink>
                     </TD>
                   </TR>
                 );

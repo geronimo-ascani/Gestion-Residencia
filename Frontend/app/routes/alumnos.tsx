@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router";
-import { Button } from "../Components/ui/button";
+import { useSearchParams } from "react-router";
+import { ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { ListSummary, ListToolbar } from "../Components/ui/list-page";
@@ -100,7 +100,7 @@ export default function Alumnos() {
     <div className="flex flex-col gap-6">
       <PageHeader eyebrow="Residencia" title="Alumnos"
         description="Consultá quiénes residen hoy y el recorrido de cada alumno en la residencia."
-        actions={<Link to="/alumnos/nuevo"><Button><Icon name="plus" className="h-4 w-4" />Ingresar alumno</Button></Link>} />
+        actions={<ButtonLink to="/alumnos/nuevo"><Icon name="plus" className="h-4 w-4" />Ingresar alumno</ButtonLink>} />
       <ListSummary title="Resumen de alumnos" description="Situación y seguimiento de los alumnos de la residencia" icon="users" items={[
         { label: "Alumnos registrados", value: alumnos.length },
         { label: "Residentes actuales", value: actuales.length },
@@ -149,7 +149,7 @@ export default function Alumnos() {
             )}</TD>
             <TD className="hidden sm:table-cell">{vista === "actuales" ? f.habitacion ? `Hab. ${f.habitacion.numeroHabitacion}` : "Sin asignar" : `${f.historial.length} ${f.historial.length === 1 ? "contrato" : "contratos"}`}</TD>
             <TD className="hidden md:table-cell">{periodo ? <><p>{formatFecha(periodo.fechaDesde)} — {formatFecha(periodo.fechaHasta)}</p><p className="text-xs text-slate-500">{periodo.fechaCancelacion ? `Baja: ${formatFecha(periodo.fechaCancelacion)}` : f.contrato ? diasHasta(periodo.fechaHasta) === 0 ? "Vence hoy" : `Vence en ${diasHasta(periodo.fechaHasta)} días` : "Fin pactado"}</p></> : "Sin contratos registrados"}</TD>
-            <TD className="text-right"><Link to={`/alumnos/${f.alumno.idAlumno}?origen=${vista}`}><Button size="sm" variant="outline">Ver ficha<Icon name="arrow" className="h-3.5 w-3.5" /></Button></Link></TD>
+            <TD className="text-right"><ButtonLink to={`/alumnos/${f.alumno.idAlumno}?origen=${vista}`} size="sm" variant="outline">Ver ficha<Icon name="arrow" className="h-3.5 w-3.5" /></ButtonLink></TD>
           </TR>;
         })}</TBody>
       </Table></TableWrap>

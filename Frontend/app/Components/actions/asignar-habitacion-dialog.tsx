@@ -109,7 +109,8 @@ export function AsignarHabitacionDialog({
       return;
     }
 
-    asignarHabitacion(alumnoSeleccionado, habitacionSeleccionada);
+    try { asignarHabitacion(alumnoSeleccionado, habitacionSeleccionada); }
+    catch (err) { setError(err instanceof Error ? err.message : "No se pudo asignar la habitación."); return; }
     const estaCambiando = Boolean(
       asignacionActiva(asignaciones, alumnoSeleccionado),
     );

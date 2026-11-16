@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { Link, type LinkProps } from "react-router";
 import { cn } from "../../lib/cn";
 
 export type ButtonVariant = "solid" | "outline" | "ghost" | "danger";
@@ -32,6 +33,11 @@ const sizes: Record<ButtonSize, string> = {
   md: "h-11 px-4 text-sm",
   lg: "h-12 px-6 text-base",
 };
+
+/** Un enlace de navegación con la apariencia de un botón y un solo foco. */
+export function ButtonLink({ variant = "solid", size = "md", className, ...props }: LinkProps & { variant?: ButtonVariant; size?: ButtonSize }) {
+  return <Link className={cn(base, variants[variant], sizes[size], className)} {...props} />;
+}
 
 export function Button({
   variant = "solid",

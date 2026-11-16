@@ -1,5 +1,6 @@
-import { Link, useParams } from "react-router";
-import { Button } from "../Components/ui/button";
+import { BackToList } from "../Components/ui/back-to-list";
+import { useParams } from "react-router";
+import { ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
@@ -14,7 +15,7 @@ export default function DetalleTareaLimpieza() {
   const { numero } = useParams();
   const { tareasLimpieza } = useData();
   const tarea = tareasLimpieza.find((item) => String(item.numero) === numero);
-  if (!tarea) return <EmptyState icon="cleaning" title="Tarea no encontrada" description="No existe la tarea solicitada." action={<Link to="/limpieza"><Button><Icon name="arrow" className="h-4 w-4 rotate-180" />Volver al listado</Button></Link>} />;
+  if (!tarea) return <EmptyState icon="cleaning" title="Tarea no encontrada" description="No existe la tarea solicitada." action={<BackToList to="/limpieza" />} />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,8 +24,8 @@ export default function DetalleTareaLimpieza() {
         title={tarea.nombre}
         description={tarea.enRotacion ? "Tarea principal de la rotación semanal." : "Tarea adicional fuera de la rotación semanal."}
         actions={<div className="flex flex-wrap gap-2">
-          <Link to="/limpieza"><Button variant="outline"><Icon name="arrow" className="h-4 w-4 rotate-180" />Volver al listado</Button></Link>
-          <Link to={`/limpieza/tareas/${tarea.numero}/editar`}><Button><Icon name="settings" className="h-4 w-4" />Modificar tarea</Button></Link>
+          <BackToList to="/limpieza" />
+          <ButtonLink to={`/limpieza/tareas/${tarea.numero}/editar`}><Icon name="settings" className="h-4 w-4" />Modificar tarea</ButtonLink>
         </div>}
       />
       <section className="space-y-3" aria-labelledby="actividades-tarea">

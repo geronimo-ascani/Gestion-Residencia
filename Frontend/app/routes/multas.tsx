@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Badge, StatusBadge } from "../Components/ui/badge";
-import { Button } from "../Components/ui/button";
+import { ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { ListSummary, ListToolbar } from "../Components/ui/list-page";
@@ -28,7 +28,7 @@ export function meta() {
 }
 
 export default function Multas() {
-  const { multas, alumnoPorId } = useData();
+  const { facturas, multas, alumnoPorId } = useData();
   const [params] = useSearchParams();
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<FiltroMulta>(params.get("vista") === "vencida" ? "vencida" : "pendiente");
@@ -68,12 +68,10 @@ export default function Multas() {
         title="Multas"
         description="Consultá las multas y el estado de los pagos de los alumnos."
         actions={
-          <Link to="/multas/nueva">
-            <Button>
+          <ButtonLink to="/multas/nueva">
               <Icon name="plus" className="h-4 w-4" />
               Emitir multa
-            </Button>
-          </Link>
+            </ButtonLink>
         }
       />
 
@@ -117,12 +115,10 @@ export default function Multas() {
                     }
                     action={
                       multas.length ? undefined : (
-                        <Link to="/multas/nueva">
-                          <Button>
+                        <ButtonLink to="/multas/nueva">
                             <Icon name="plus" className="h-4 w-4" />
                             Emitir multa
-                          </Button>
-                        </Link>
+                          </ButtonLink>
                       )
                     }
                   />
@@ -164,16 +160,14 @@ export default function Multas() {
                     <StatusBadge estado={estado} />
                   </TD>
                   <TD className="text-right tabular-nums">
-                    <Badge variant="neutral">{formatARS(importeMulta(multa).total)}</Badge>
+                    <Badge variant="neutral">{formatARS(importeMulta(multa, undefined, facturas).total)}</Badge>
                   </TD>
                   <TD className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Link to={`/multas/${multa.idMulta}`}>
-                        <Button size="sm" variant="outline">
+                      <ButtonLink to={`/multas/${multa.idMulta}`} size="sm" variant="outline">
                           Ver detalle
                           <Icon name="arrow" className="h-3.5 w-3.5" />
-                        </Button>
-                      </Link>
+                        </ButtonLink>
                     </div>
                   </TD>
                 </TR>

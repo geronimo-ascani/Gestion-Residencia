@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { StatusBadge } from "../Components/ui/badge";
-import { Button } from "../Components/ui/button";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { ListSummary, ListToolbar } from "../Components/ui/list-page";
@@ -96,12 +96,10 @@ export default function Habitaciones() {
         title="Habitaciones"
         description="Consultá la capacidad y los lugares disponibles de cada habitación."
         actions={
-          <Link to="/habitaciones/nueva">
-            <Button>
+          <ButtonLink to="/habitaciones/nueva">
               <Icon name="plus" className="h-4 w-4" />
               Agregar habitación
-            </Button>
-          </Link>
+            </ButtonLink>
         }
       />
 
@@ -213,12 +211,10 @@ export default function Habitaciones() {
                         <StatusBadge estado={estado} />
                       </TD>
                       <TD className="text-right">
-                        <Link to={`/habitaciones/${habitacion.idHabitacion}`} aria-label={`Ver habitación ${habitacion.numeroHabitacion}`}>
-                          <Button size="sm" variant="outline">
+                        <ButtonLink to={`/habitaciones/${habitacion.idHabitacion}`} aria-label={`Ver habitación ${habitacion.numeroHabitacion}`} size="sm" variant="outline">
                             Administrar
                             <Icon name="arrow" className="h-3.5 w-3.5" />
-                          </Button>
-                        </Link>
+                          </ButtonLink>
                       </TD>
                     </TR>
                   );

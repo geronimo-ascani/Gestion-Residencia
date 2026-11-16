@@ -1,47 +1,9 @@
-import { Link, useLocation } from "react-router";
+import { Link } from "react-router";
 import { Card } from "../Components/ui/card";
 import { EmptyState } from "../Components/ui/empty-state";
-import { PageHeader } from "../Components/ui/page-header";
-
-const SECCIONES: Record<string, string> = {
-  alumnos: "Alumnos",
-  habitaciones: "Habitaciones",
-  contratos: "Contratos",
-  multas: "Multas",
-  limpieza: "Limpieza",
-  configuracion: "Configuración",
-};
-
-export function meta() {
-  return [{ title: "Sección en preparación · Gestión de Residencia" }];
-}
-
-export default function Proximamente() {
-  const { pathname } = useLocation();
-  const seccion = pathname.split("/").filter(Boolean)[0] ?? "";
-  const nombre = SECCIONES[seccion] ?? "Sección";
-
-  return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title={nombre}
-        description="Esta sección se implementa en la próxima etapa."
-      />
-      <Card>
-        <EmptyState
-          icon="building"
-          title={`${nombre} en preparación`}
-          description="Por ahora está disponible el panel principal con el resumen del edificio. Las pantallas de detalle y gestión llegan en la próxima iteración."
-          action={
-            <Link
-              to="/"
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-            >
-              Volver al panel
-            </Link>
-          }
-        />
-      </Card>
-    </div>
-  );
+import { useData } from "../lib/store";
+export function meta() { return [{ title: "Página no encontrada · Gestión de Residencia" }]; }
+export default function PaginaNoEncontrada() {
+  const { usuarioAutenticado } = useData();
+  return <Card><EmptyState icon="building" title="Página no encontrada" description="La dirección no existe o la página cambió de ubicación." action={<Link to={usuarioAutenticado?.rol === "alumno" ? "/estudiante" : "/"} className="inline-flex h-10 items-center rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700">Volver al panel</Link>} /></Card>;
 }

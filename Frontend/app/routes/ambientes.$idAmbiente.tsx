@@ -1,6 +1,7 @@
+import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { Button } from "../Components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { EmptyState } from "../Components/ui/empty-state";
@@ -28,7 +29,7 @@ export default function AmbienteDetalle() {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader eyebrow="Ambientes" title="Ambiente no encontrado" description="No existe un ambiente común con el identificador solicitado." />
-        <EmptyState icon="building" title="Sin resultados" description="Verificá la ruta o volvé al listado de ambientes." action={<Link to="/ambientes"><Button>Volver a ambientes</Button></Link>} />
+        <EmptyState icon="building" title="Sin resultados" description="Verificá la ruta o volvé al listado de ambientes." action={<BackToList to="/ambientes" />} />
       </div>
     );
   }
@@ -47,7 +48,7 @@ export default function AmbienteDetalle() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader eyebrow="Ambientes" title={ambiente.ambiente} description={ambiente.tipo} actions={<Link to="/ambientes"><Button variant="outline">Volver a ambientes</Button></Link>} />
+      <PageHeader eyebrow="Ambientes" title={ambiente.ambiente} description={ambiente.tipo} actions={<BackToList to="/ambientes" />} />
       {ambiente.ubicacion || ambiente.descripcion ? (
         <Card><CardHeader><CardTitle>Datos del ambiente</CardTitle></CardHeader><CardContent>
           <dl className="grid gap-4 sm:grid-cols-2">

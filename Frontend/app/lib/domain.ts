@@ -192,7 +192,7 @@ export function tareaLimpieza(
   tareas: readonly { enRotacion: boolean; numero: number; nombre: string; tareas: readonly string[] }[] = TAREAS_LIMPIEZA,
 ) {
   const rotativas = tareas.filter((tarea) => tarea.enRotacion);
-  return rotativas[(tareaInicial + semana - 2) % rotativas.length];
+    return rotativas.length ? rotativas[(tareaInicial + semana - 2) % rotativas.length] : undefined;
 }
 
 export function validarGrupoLimpieza(

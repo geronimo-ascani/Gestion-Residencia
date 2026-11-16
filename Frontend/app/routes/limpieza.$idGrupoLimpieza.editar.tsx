@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import { Button } from "../Components/ui/button";
+import { useNavigate, useParams } from "react-router";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
@@ -32,9 +32,7 @@ export default function EditarGrupoLimpieza() {
           title="Sin resultados"
           description="Volvé al listado de grupos de limpieza."
           action={
-            <Link to="/limpieza">
-              <Button>Volver a grupos</Button>
-            </Link>
+            <ButtonLink to="/limpieza">Volver a grupos</ButtonLink>
           }
         />
       </div>
@@ -73,12 +71,10 @@ export default function EditarGrupoLimpieza() {
         title="Editar grupo"
         description="Actualizá el nombre del grupo de limpieza."
         actions={
-          <Link to={`/limpieza/${grupo.idGrupoLimpieza}`}>
-            <Button variant="outline">
+          <ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">
               <Icon name="arrow" className="h-4 w-4 rotate-180" />
               Volver al grupo
-            </Button>
-          </Link>
+            </ButtonLink>
         }
       />
 
@@ -95,11 +91,9 @@ export default function EditarGrupoLimpieza() {
           }}
         />
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <Link to={`/limpieza/${grupo.idGrupoLimpieza}`}>
-            <Button type="button" variant="outline">
+          <ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">
               Cancelar
-            </Button>
-          </Link>
+            </ButtonLink>
           <Button type="submit">
             <Icon name="check" className="h-4 w-4" />
             Guardar cambios

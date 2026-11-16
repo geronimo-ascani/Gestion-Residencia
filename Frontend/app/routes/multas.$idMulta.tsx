@@ -3,7 +3,7 @@ import { hojaMulta, SeccionMulta } from "../Components/multa-form";
 import { extenderMes, importeMulta, TIPOS_MULTA } from "../lib/multas";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
-import { Button } from "../Components/ui/button";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { ConfirmDialog } from "../Components/ui/confirm-dialog";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
@@ -42,12 +42,10 @@ export default function MultaDetalle() {
           title="Sin resultados"
           description="Verificá la ruta o volvé al listado de multas."
           action={
-            <Link to="/multas">
-              <Button>
+            <ButtonLink to="/multas">
                 <Icon name="arrow" className="h-4 w-4 rotate-180" />
                 Volver a multas
-              </Button>
-            </Link>
+              </ButtonLink>
           }
         />
       </div>
@@ -60,13 +58,13 @@ export default function MultaDetalle() {
       registrarPagoMulta(multa.idMulta);
       toast({
         title: "Pago registrado",
-        description: `${formatARS(importeMulta(multa).total)} · ${multa.idMulta}`,
+        description: `${formatARS(importeMulta(multa, undefined, facturas).total)} · ${multa.idMulta}`,
       });
     } else if (confirmacion === "anular") {
       anularMulta(multa.idMulta);
       toast({
         title: "Multa cancelada",
-        description: `${formatARS(importeMulta(multa).total)} · ${multa.idMulta}`,
+        description: `${formatARS(importeMulta(multa, undefined, facturas).total)} · ${multa.idMulta}`,
       });
     }
   }
@@ -83,20 +81,16 @@ export default function MultaDetalle() {
           <div className="flex flex-wrap items-center gap-2">
             {multa.estado === "pendiente" && !factura ? (
               <>
-                <Link to={`/multas/${multa.idMulta}/editar`}>
-                  <Button variant="outline">Modificar</Button>
-                </Link>
+                <ButtonLink to={`/multas/${multa.idMulta}/editar`} variant="outline">Modificar</ButtonLink>
                 <Button variant="danger" onClick={() => setConfirmacion("anular")}>Cancelar multa</Button>
                 <Button variant="outline" onClick={() => { setMotivoProrroga(""); setProrrogaAbierta(true); }}>Extender pago un mes</Button>
                 <Button onClick={() => setConfirmacion("pago")}><Icon name="check" className="h-4 w-4" />Registrar pago</Button>
               </>
             ) : null}
-            <Link to="/multas">
-              <Button variant="outline">
+            <ButtonLink to="/multas" variant="outline">
                 <Icon name="arrow" className="h-4 w-4 rotate-180" />
                 Listado de multas
-              </Button>
-            </Link>
+              </ButtonLink>
           </div>
         }
       />
@@ -105,7 +99,7 @@ export default function MultaDetalle() {
 
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge estado={estado} />
-        <Badge variant="neutral">{formatARS(importeMulta(multa).total)}</Badge>
+        <Badge variant="neutral">{formatARS(importeMulta(multa, undefined, facturas).total)}</Badge>
       </div>
 
       <article className={hojaMulta}>
@@ -137,7 +131,7 @@ export default function MultaDetalle() {
             <div>
               <dt className="text-xs text-slate-500">Monto</dt>
               <dd className="mt-1 text-sm font-medium tabular-nums text-slate-900 dark:text-white">
-                {formatARS(importeMulta(multa).total)}
+                {formatARS(importeMulta(multa, undefined, facturas).total)}
               </dd>
             </div>
           </dl>
@@ -188,7 +182,7 @@ export default function MultaDetalle() {
         </SeccionMulta>
         <SeccionMulta titulo="Liquidación y condiciones de cobro">
           <p className="text-sm">Sanción: {formatARS(multa.montoSancion ?? multa.monto)} · Reparación o reposición: {formatARS(multa.montoDanios ?? 0)}</p>
-          <dl className="grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-slate-500">Período de incorporación</dt><dd>{multa.periodoDesde ?? "No registrado"}</dd></div><div><dt className="text-slate-500">Último período sin recargo</dt><dd>{multa.periodoHasta ?? "No registrado"}</dd></div><div><dt className="text-slate-500">Sanción + daños</dt><dd>{formatARS(multa.monto)}</dd></div><div><dt className="text-slate-500">Recargo único por mora (20%)</dt><dd>{formatARS(importeMulta(multa).recargo)}</dd></div><div><dt className="text-slate-500">{multa.estado === "pagada" ? "Total pagado" : "Total a pagar"}</dt><dd className="text-xl font-semibold">{formatARS(importeMulta(multa).total)}</dd></div></dl>
+          <dl className="grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-slate-500">Período de incorporación</dt><dd>{multa.periodoDesde ?? "No registrado"}</dd></div><div><dt className="text-slate-500">Último período sin recargo</dt><dd>{multa.periodoHasta ?? "No registrado"}</dd></div><div><dt className="text-slate-500">Sanción + daños</dt><dd>{formatARS(multa.monto)}</dd></div><div><dt className="text-slate-500">Recargo único por mora ({multa.recargoPorcentaje ?? 20}%)</dt><dd>{formatARS(importeMulta(multa, undefined, facturas).recargo)}</dd></div><div><dt className="text-slate-500">{multa.estado === "pagada" ? "Total pagado" : "Total a pagar"}</dt><dd className="text-xl font-semibold">{formatARS(importeMulta(multa, undefined, facturas).total)}</dd></div></dl>
           <p className="text-sm text-slate-500">La multa se agrega al cobro mensual del mes siguiente. Si se emite después del día 15, puede cancelarse hasta la segunda factura siguiente. El recargo se aplica una sola vez al importe de la multa al superar el vencimiento.</p>
         </SeccionMulta>
         <SeccionMulta titulo="Historial de modificaciones">
@@ -222,7 +216,7 @@ export default function MultaDetalle() {
         onClose={() => setConfirmacion(null)}
         onConfirm={confirmarCambio}
         title="Registrar pago"
-        description={`Se registrará el pago de ${formatARS(importeMulta(multa).total)} para esta multa.`}
+        description={`Se registrará el pago de ${formatARS(importeMulta(multa, undefined, facturas).total)} para esta multa.`}
         confirmLabel="Registrar pago"
         tone="brand"
       />

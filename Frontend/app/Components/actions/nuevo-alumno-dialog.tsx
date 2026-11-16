@@ -52,9 +52,7 @@ export function NuevoAlumnoDialog({
     if (!apellido.trim()) nuevosErrores.apellido = "Ingresá el apellido.";
     if (!documento.trim()) nuevosErrores.documento = "Ingresá el documento.";
     if (!telefono.trim()) nuevosErrores.telefono = "Ingresá el teléfono.";
-    if (!correo.trim()) {
-      nuevosErrores.correo = "Ingresá el correo.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+    if (correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
       nuevosErrores.correo = "Ingresá un correo válido.";
     }
 
@@ -63,13 +61,14 @@ export function NuevoAlumnoDialog({
       return;
     }
 
-    const idAlumno = crearAlumno({
+    let idAlumno: string;
+    try { idAlumno = crearAlumno({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
       documento: documento.trim(),
       telefono: telefono.trim(),
       correo: correo.trim(),
-    });
+    }); } catch (error) { setErrores({ documento: error instanceof Error ? error.message : "No se pudo crear el alumno." }); return; }
 
     toast({
       title: "Alumno creado",
@@ -139,10 +138,9 @@ export function NuevoAlumnoDialog({
           />
           <TextField
             id={`${idBase}-correo`}
-            label="Correo"
+            label="Correo (opcional)"
             type="email"
             value={correo}
-            required
             error={errores.correo}
             onChange={(event) => {
               setCorreo(event.target.value);

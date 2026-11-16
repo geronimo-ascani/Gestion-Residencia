@@ -1,6 +1,7 @@
+import { arancelesMulta } from "../lib/parametros";
 import { useId, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Link } from "react-router";
+
 import { useData } from "../lib/store";
 import type { DatosMultaInput } from "../lib/store";
 import type { Multa } from "../lib/types";
@@ -8,7 +9,7 @@ import { calendarioMulta, normalizarBusqueda, TIPOS_MULTA } from "../lib/multas"
 import { contratoVigente } from "../lib/domain";
 import { FECHA_REFERENCIA } from "../lib/config";
 import { formatARS, formatFecha } from "../lib/format";
-import { Button } from "./ui/button";
+import { Button, ButtonLink } from "./ui/button";
 import { TextField } from "./ui/text-field";
 import { SelectField } from "./ui/select-field";
 
@@ -22,7 +23,8 @@ export function MultaForm({ multa, alumnoInicial = "", onSave }: {
   multa?: Multa; alumnoInicial?: string;
   onSave: (datos: DatosMultaInput, alumnos: string[]) => void;
 }) {
-  const { alumnos, contratos } = useData();
+  const { alumnos, contratos, parametros } = useData();
+  const tiposMulta = arancelesMulta(TIPOS_MULTA, parametros);
   const id = useId();
   const [seleccion, setSeleccion] = useState<string[]>(multa ? [multa.idAlumno] : alumnos.some((a) => a.idAlumno === alumnoInicial) ? [alumnoInicial] : []);
   const [buscadorAbierto, setBuscadorAbierto] = useState(false);
@@ -35,8 +37,9 @@ export function MultaForm({ multa, alumnoInicial = "", onSave }: {
   const [extra, setExtra] = useState(multa?.tipo === "extraordinaria" ? String(multa.montoSancion ?? multa.monto) : "");
   const [danios, setDanios] = useState(multa?.montoDanios ? String(multa.montoDanios) : "");
   const [error, setError] = useState("");
-  const arancel = TIPOS_MULTA.find((t) => t.id === tipo);
-  const montoSancion = tipo === "extraordinaria" ? Number(extra) : arancel?.monto ?? 0;
+  const arancel = tiposMulta.find((t) => t.id === tipo);
+  const montoSancion = tipo === "extraordinaria" ? Number(extra) : multa?.tipo === tipo ? multa.montoSancion ?? multa.monto - (multa.montoDanios ?? 0) : arancel?.monto ?? 0;
+  const recargo = multa ? multa.recargoPorcentaje ?? 20 : parametros.recargoMulta;
   const montoDanios = huboDanios ? Number(danios) : 0;
   const total = montoSancion + montoDanios;
   const visibles = [...alumnos].sort((a, b) => a.apellido.localeCompare(b.apellido)).filter((a) => normalizarBusqueda(`${a.apellido} ${a.nombre} ${a.documento}`).includes(normalizarBusqueda(busqueda)));
@@ -64,7 +67,7 @@ export function MultaForm({ multa, alumnoInicial = "", onSave }: {
       </>}
     </SeccionMulta>
     <SeccionMulta titulo="2. Clasificación y motivo">
-      <SelectField id={`${id}-tipo`} label="Tipo de multa" value={tipo} required onChange={(e) => setTipo(e.target.value)}><option value="">Seleccionar</option>{TIPOS_MULTA.map((t) => <option key={t.id} value={t.id}>{t.nombre} · {t.id === "extraordinaria" ? "Importe manual" : formatARS(t.monto)}</option>)}</SelectField>
+      <SelectField id={`${id}-tipo`} label="Tipo de multa" value={tipo} required onChange={(e) => setTipo(e.target.value)}><option value="">Seleccionar</option>{tiposMulta.map((t) => <option key={t.id} value={t.id}>{t.nombre} · {t.id === "extraordinaria" ? "Importe manual" : formatARS(t.monto)}</option>)}</SelectField>
       <p className="text-sm text-slate-500">Importe establecido según el tipo de sanción.</p>
       {tipo === "extraordinaria" && <TextField id={`${id}-extra`} label="Importe de la multa extraordinaria (ARS)" type="number" min="0.01" step="0.01" required value={extra} onChange={(e) => setExtra(e.target.value)} />}
       <label className="block text-sm font-medium" htmlFor={`${id}-motivo`}>Motivo de la sanción *<textarea id={`${id}-motivo`} className={area} required maxLength={4000} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Describí los hechos y la razón de la multa." /></label>
@@ -85,10 +88,10 @@ export function MultaForm({ multa, alumnoInicial = "", onSave }: {
         {!seleccion.length && <p className="text-sm text-slate-500">Seleccioná alumnos para consultar sus fechas de cobro.</p>}
         {seleccion.map((alumno) => { const a = alumnos.find((a) => a.idAlumno === alumno); const calendario = multa ?? calendarioMulta(FECHA_REFERENCIA, contratoVigente(contratos, alumno)?.diaVencimientoPago); return <div key={alumno} className="space-y-3 border-b border-slate-200 pb-4 last:border-0 last:pb-0 dark:border-slate-700"><p className="text-sm font-medium">{a?.apellido}, {a?.nombre}</p><div className="grid gap-3 sm:grid-cols-3"><TextField id={`${id}-${alumno}-desde`} label="Primera factura" readOnly value={calendario.periodoDesde ?? "Sin informar"} /><TextField id={`${id}-${alumno}-hasta`} label="Última factura sin recargo" readOnly value={calendario.periodoHasta ?? "Sin informar"} /><TextField id={`${id}-${alumno}-vence`} label="Fecha límite de pago" readOnly value={formatFecha(calendario.fechaVence)} /></div></div>; })}
       </fieldset>
-      <div className="grid gap-4 sm:grid-cols-2"><TextField id={`${id}-recargo`} label="Recargo único si vence (20%)" readOnly value={arancel ? formatARS(Math.round(total * 20) / 100) : "Pendiente"} /><TextField id={`${id}-total-vencido`} label="Total por alumno después del vencimiento" readOnly value={arancel ? formatARS(Math.round(total * 120) / 100) : "Pendiente"} /></div>
+      <div className="grid gap-4 sm:grid-cols-2"><TextField id={`${id}-recargo`} label={`Recargo único si vence (${recargo}%)`} readOnly value={arancel ? formatARS(Math.round(total * recargo) / 100) : "Pendiente"} /><TextField id={`${id}-total-vencido`} label="Total por alumno después del vencimiento" readOnly value={arancel ? formatARS(Math.round(total * (100 + recargo)) / 100) : "Pendiente"} /></div>
       <p className="text-sm text-slate-500">El cobro comienza en la factura del mes siguiente. Las emisiones posteriores al día 15 pueden pagarse completas hasta la segunda factura. El vencimiento respeta el día de pago del contrato; si no está definido, se usa el día 10.</p>
     </SeccionMulta>
     {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-    <div className="flex flex-wrap justify-end gap-3"><Link to={multa ? `/multas/${multa.idMulta}` : "/multas"}><Button type="button" variant="outline">Cancelar</Button></Link><Button type="submit">{multa ? "Guardar cambios" : `Emitir ${seleccion.length === 1 ? "multa" : "multas"}`}</Button></div>
+    <div className="flex flex-wrap justify-end gap-3"><ButtonLink to={multa ? `/multas/${multa.idMulta}` : "/multas"} variant="outline">Cancelar</ButtonLink><Button type="submit">{multa ? "Guardar cambios" : `Emitir ${seleccion.length === 1 ? "multa" : "multas"}`}</Button></div>
   </form>;
 }

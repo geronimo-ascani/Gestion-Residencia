@@ -1,7 +1,8 @@
+import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
-import { Button } from "../Components/ui/button";
+import { useNavigate } from "react-router";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
 import { TextField } from "../Components/ui/text-field";
@@ -38,7 +39,7 @@ export default function NuevaTareaLimpieza() {
         eyebrow="Limpieza"
         title="Crear tarea de limpieza"
         description="Registrá una tarea adicional con sus actividades. Quedará fuera de la rotación semanal de los grupos."
-        actions={<Link to="/limpieza"><Button variant="outline"><Icon name="arrow" className="h-4 w-4 rotate-180" />Volver al listado</Button></Link>}
+        actions={<BackToList to="/limpieza" />}
       />
       <form onSubmit={guardar} className="max-w-2xl space-y-6 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <TextField id={`${id}-nombre`} label="Nombre de la tarea" required maxLength={150} value={nombre} onChange={(event) => setNombre(event.target.value)} placeholder="Ej.: Limpiar el lavadero" />
@@ -49,7 +50,7 @@ export default function NuevaTareaLimpieza() {
         </div>
         {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <Link to="/limpieza"><Button type="button" variant="outline">Cancelar</Button></Link>
+          <ButtonLink to="/limpieza" variant="outline">Cancelar</ButtonLink>
           <Button type="submit"><Icon name="plus" className="h-4 w-4" />Crear tarea</Button>
         </div>
       </form>

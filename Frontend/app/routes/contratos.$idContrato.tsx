@@ -1,10 +1,11 @@
-import { Link, useParams } from "react-router";
-import { Button } from "../Components/ui/button";
+import { AjustarContrato } from "../Components/ajustar-contrato";
+import { useParams } from "react-router";
+import { ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
-import { Badge, StatusBadge } from "../Components/ui/badge";
-import { asignacionActiva, diasHasta, estadoContrato } from "../lib/domain";
+
+import { asignacionActiva, estadoContrato } from "../lib/domain";
 import { formatFecha, formatARS } from "../lib/format";
 import { useData } from "../lib/store";
 
@@ -28,14 +29,12 @@ export default function ContratoDetalle() {
           title="Contrato no encontrado"
           description="El contrato solicitado no existe o fue eliminado."
           actions={
-            <Button variant="ghost">
-              <Link to="/contratos">
+            <ButtonLink to="/contratos" variant="ghost">
                 <span className="inline-flex items-center gap-2">
                   <Icon name="chevron" className="h-4 w-4 rotate-90" />
                   Volver a contratos
                 </span>
-              </Link>
-            </Button>
+              </ButtonLink>
           }
         />
         <EmptyState
@@ -43,9 +42,7 @@ export default function ContratoDetalle() {
           title="Contrato no encontrado"
           description="Verificá el enlace o volvé al listado de contratos."
           action={
-            <Button>
-              <Link to="/contratos"><span>Ir a contratos</span></Link>
-            </Button>
+            <ButtonLink to="/contratos"><span>Ir a contratos</span></ButtonLink>
           }
         />
       </div>
@@ -53,7 +50,6 @@ export default function ContratoDetalle() {
   }
 
   const estado = estadoContrato(contrato);
-  const dias = diasHasta(contrato.fechaHasta);
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,23 +59,19 @@ export default function ContratoDetalle() {
         description="Ficha formal con los datos y condiciones registrados para este contrato."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost">
-              <Link to="/contratos">
+            <ButtonLink to="/contratos" variant="ghost">
                 <span className="inline-flex items-center gap-2">
                   <Icon name="chevron" className="h-4 w-4 rotate-90" />
                   Volver a contratos
                 </span>
-              </Link>
-            </Button>
-            <Button>
-              <Link to={`/alumnos/${alumno.idAlumno}`}>
+              </ButtonLink>
+            <ButtonLink to={`/alumnos/${alumno.idAlumno}`}>
                 <span className="inline-flex items-center gap-2">
                   Ver ficha del alumno
                   <Icon name="chevron" className="h-4 w-4 rotate-[-90deg]" />
                 </span>
-              </Link>
-            </Button>
-            <Link to={`/facturacion/nueva?contrato=${contrato.idContrato}`}><Button variant="outline"><Icon name="payments" className="h-4 w-4" />Generar factura</Button></Link>
+              </ButtonLink>
+            <ButtonLink to={`/facturacion/nueva?contrato=${contrato.idContrato}`} variant="outline"><Icon name="payments" className="h-4 w-4" />Generar factura</ButtonLink>
           </div>
         }
       />
@@ -93,6 +85,7 @@ export default function ContratoDetalle() {
           </div>
         </header>
         <div className="space-y-8 px-6 py-7 sm:px-10">
+          <div className="flex justify-end"><AjustarContrato contrato={contrato} /></div>
           <section>
             <h3 className="border-b border-slate-200 pb-2 text-sm font-semibold uppercase tracking-wide text-slate-700 dark:border-slate-800 dark:text-slate-200">1. Datos del titular</h3>
             <dl className="mt-4 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">

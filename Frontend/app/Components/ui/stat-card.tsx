@@ -24,14 +24,15 @@ export function StatCard({
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
             {label}
           </p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+          <p className={cn("mt-1 text-2xl font-semibold tracking-tight tabular-nums", tone === "danger" ? "text-red-700 dark:text-red-400" : "text-slate-900 dark:text-white")}>
             {value}
           </p>
         </div>
         <span
           className={cn(
             "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md",
-            "bg-brand-600 text-white",
+            "text-white",
+            { brand: "bg-brand-600", success: "bg-emerald-700", warning: "bg-amber-600", danger: "bg-red-700", neutral: "bg-slate-500" }[tone],
           )}
         >
           <Icon name={icon} className="h-5 w-5" />

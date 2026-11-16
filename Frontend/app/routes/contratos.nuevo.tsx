@@ -1,6 +1,8 @@
+import { esFechaISO } from "../lib/gestiones";
+import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { Button } from "../Components/ui/button";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
@@ -20,22 +22,23 @@ export function meta() {
 const seccion = "rounded-xl border border-slate-300 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900";
 
 export default function NuevoContrato() {
-  const { alumnos, contratos, crearContrato } = useData();
+  const { alumnos, contratos, crearContrato, parametros } = useData();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const idBase = useId();
   const retorno = location.state as { contratoBorrador?: BorradorContrato } | null;
-  const desdeInicial = searchParams.get("desde") ?? FECHA_REFERENCIA;
+  const consultaDesde = searchParams.get("desde") ?? "";
+  const desdeInicial = esFechaISO(consultaDesde) ? consultaDesde : FECHA_REFERENCIA;
   const [datos, setDatos] = useState<BorradorContrato>(() => retorno?.contratoBorrador ?? {
     idAlumno: searchParams.get("alumno") ?? "",
     fechaDesde: desdeInicial,
-    fechaHasta: sumarDia(desdeInicial, 365),
+    fechaHasta: sumarDia(desdeInicial, parametros.duracionContrato - 1),
     fechaFirma: FECHA_REFERENCIA,
-    montoMensual: "",
-    depositoGarantia: "",
-    diaVencimientoPago: "10",
+    montoMensual: String(parametros.cuotaMensual),
+    depositoGarantia: String(parametros.deposito),
+    diaVencimientoPago: String(parametros.diaVencimiento),
     observaciones: "",
   });
   const [error, setError] = useState("");
@@ -54,21 +57,21 @@ export default function NuevoContrato() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!alumno) { setError("Seleccioná un alumno registrado."); return; }
-    if (!datos.fechaDesde || !datos.fechaHasta || datos.fechaHasta <= datos.fechaDesde) {
-      setError("La fecha hasta debe ser posterior a la fecha desde."); return;
+    if (!datos.fechaDesde || !datos.fechaHasta || datos.fechaHasta < datos.fechaDesde) {
+      setError("La fecha hasta no puede ser anterior a la fecha desde."); return;
     }
     if (!datos.fechaFirma || datos.fechaFirma > datos.fechaHasta) {
       setError("La fecha de firma no puede ser posterior al fin del contrato."); return;
     }
     if (!datos.montoMensual || !Number.isFinite(Number(datos.montoMensual)) || Number(datos.montoMensual) <= 0 ||
       (datos.depositoGarantia !== "" && (!Number.isFinite(Number(datos.depositoGarantia)) || Number(datos.depositoGarantia) < 0)) ||
-      !Number.isInteger(Number(datos.diaVencimientoPago)) || Number(datos.diaVencimientoPago) < 1 || Number(datos.diaVencimientoPago) > 28) {
+      !Number.isInteger(Number(datos.diaVencimientoPago)) || Number(datos.diaVencimientoPago) < 1 || Number(datos.diaVencimientoPago) > 31) {
       setError("Revisá el importe mensual, el depósito y el día de vencimiento del pago."); return;
     }
     if (contratosSuperpuestos(contratos, datos)) {
       setError("Las fechas se superponen con otro contrato del alumno."); return;
     }
-    crearContrato({
+    try { crearContrato({
       idAlumno: datos.idAlumno, fechaDesde: datos.fechaDesde, fechaHasta: datos.fechaHasta,
       fechaFirma: datos.fechaFirma, montoMensual: Number(datos.montoMensual),
       depositoGarantia: datos.depositoGarantia === "" ? undefined : Number(datos.depositoGarantia),
@@ -76,6 +79,7 @@ export default function NuevoContrato() {
     });
     toast({ title: "Contrato creado", description: `${alumno.apellido}, ${alumno.nombre} · ${formatFecha(datos.fechaDesde)} al ${formatFecha(datos.fechaHasta)}` });
     navigate("/contratos");
+    } catch (err) { setError(err instanceof Error ? err.message : "No se pudo crear el contrato."); }
   }
 
   return (
@@ -83,12 +87,7 @@ export default function NuevoContrato() {
       <PageHeader eyebrow="Contratos" title="Nuevo contrato"
         description="Completá los datos del contrato de residencia. Los campos con asterisco son obligatorios."
         actions={
-          <Link to="/contratos">
-            <Button variant="outline">
-              <Icon name="arrow" className="h-4 w-4 rotate-180" />
-              Volver al listado
-            </Button>
-          </Link>
+          <BackToList to="/contratos" />
         }
       />
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -119,7 +118,7 @@ export default function NuevoContrato() {
           <div className="grid gap-5 sm:grid-cols-3">
             <TextField id={`${idBase}-firma`} label="Fecha de firma" type="date" required value={datos.fechaFirma} onChange={(event) => actualizar("fechaFirma", event.target.value)} />
             <TextField id={`${idBase}-desde`} label="Desde" type="date" required value={datos.fechaDesde} onChange={(event) => actualizar("fechaDesde", event.target.value)} />
-            <TextField id={`${idBase}-hasta`} label="Hasta" type="date" required min={datos.fechaDesde ? sumarDia(datos.fechaDesde) : undefined} value={datos.fechaHasta} onChange={(event) => actualizar("fechaHasta", event.target.value)} />
+            <TextField id={`${idBase}-hasta`} label="Hasta" type="date" required min={datos.fechaDesde || undefined} value={datos.fechaHasta} onChange={(event) => actualizar("fechaHasta", event.target.value)} />
           </div>
         </section>
         <section className={seccion}>
@@ -128,7 +127,7 @@ export default function NuevoContrato() {
           <div className="grid gap-5 sm:grid-cols-3">
             <TextField id={`${idBase}-monto`} label="Importe mensual (ARS)" type="number" min="0.01" step="0.01" required value={datos.montoMensual} onChange={(event) => actualizar("montoMensual", event.target.value)} />
             <TextField id={`${idBase}-deposito`} label="Depósito de garantía (ARS)" type="number" min="0" step="0.01" hint="Opcional. Ingresá 0 si no corresponde." value={datos.depositoGarantia} onChange={(event) => actualizar("depositoGarantia", event.target.value)} />
-            <TextField id={`${idBase}-dia`} label="Día de vencimiento del pago" type="number" min="1" max="28" step="1" required hint="Entre el 1 y el 28 de cada mes." value={datos.diaVencimientoPago} onChange={(event) => actualizar("diaVencimientoPago", event.target.value)} />
+            <TextField id={`${idBase}-dia`} label="Día de vencimiento del pago" type="number" min="1" max="31" step="1" required hint="Entre el 1 y el 31 de cada mes." value={datos.diaVencimientoPago} onChange={(event) => actualizar("diaVencimientoPago", event.target.value)} />
           </div>
         </section>
         <section className={seccion}>

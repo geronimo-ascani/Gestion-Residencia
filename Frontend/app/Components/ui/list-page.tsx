@@ -43,7 +43,7 @@ export function ListToolbar({ title, count, search, onSearch, placeholder, searc
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
-        <p aria-live="polite" className="text-sm text-slate-500 dark:text-slate-400">{count} resultados</p>
+        <p aria-live="polite" className="text-sm text-slate-500 dark:text-slate-400">{count} {count === 1 ? "resultado" : "resultados"}</p>
       </div>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full lg:max-w-sm">

@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
-import { Button } from "../Components/ui/button";
+import { useLocation, useNavigate } from "react-router";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
 import { SelectField } from "../Components/ui/select-field";
@@ -56,9 +56,7 @@ export default function NuevoAlumno() {
     if (!apellido.trim()) nuevosErrores.apellido = "Ingresá el apellido.";
     if (!documento.trim()) nuevosErrores.documento = "Ingresá el documento.";
     if (!telefono.trim()) nuevosErrores.telefono = "Ingresá el teléfono.";
-    if (!correo.trim()) {
-      nuevosErrores.correo = "Ingresá el correo.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+    if (correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
       nuevosErrores.correo = "Ingresá un correo válido.";
     }
 
@@ -81,7 +79,8 @@ export default function NuevoAlumno() {
       setErrorIngreso("Completá la carrera, la cantidad de materias cursadas y los datos de cada contacto de emergencia.");
       return;
     }
-    const idAlumno = crearAlumno({
+    let idAlumno: string;
+    try { idAlumno = crearAlumno({
       ...datosIngreso,
       cantidadMateriasCursadas: Number(datosIngreso.cantidadMateriasCursadas),
       contactosEmergencia: contactos.map(({ nombre, vinculo, telefono }) => ({ nombre: nombre.trim(), vinculo, telefono: telefono.trim() })),
@@ -90,7 +89,7 @@ export default function NuevoAlumno() {
       documento: documento.trim(),
       telefono: telefono.trim(),
       correo: correo.trim(),
-    });
+    }); } catch (err) { setErrorIngreso(err instanceof Error ? err.message : "No se pudo crear el alumno."); return; }
 
     toast({
       title: "Alumno ingresado",
@@ -110,12 +109,10 @@ export default function NuevoAlumno() {
         title="Ingresar alumno"
         description="Completá la ficha de ingreso del alumno. Los campos con asterisco son obligatorios."
         actions={
-          <Link to={destinoVolver} state={contratoBorrador ? { contratoBorrador } : undefined}>
-            <Button variant="outline">
+          <ButtonLink to={destinoVolver} state={contratoBorrador ? { contratoBorrador } : undefined} variant="outline">
               <Icon name="arrow" className="h-4 w-4 rotate-180" />
               {contratoBorrador ? "Volver al contrato" : "Volver al listado"}
-            </Button>
-          </Link>
+            </ButtonLink>
         }
       />
 
@@ -176,10 +173,9 @@ export default function NuevoAlumno() {
           />
           <TextField
             id={`${idBase}-correo`}
-            label="Correo electrónico"
+            label="Correo electrónico (opcional)"
             type="email"
             value={correo}
-            required
             autoComplete="email"
             error={errores.correo}
             onChange={(event) => {
@@ -239,11 +235,9 @@ export default function NuevoAlumno() {
         <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">Al guardar se crea la ficha del alumno. El contrato y la habitación se gestionan después; el alumno figurará como pendiente de ingreso hasta tener un contrato vigente.</p>
         {errorIngreso ? <p role="alert" className="text-sm text-red-600">{errorIngreso}</p> : null}
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <Link to={destinoVolver} state={contratoBorrador ? { contratoBorrador } : undefined}>
-            <Button type="button" variant="outline">
+          <ButtonLink to={destinoVolver} state={contratoBorrador ? { contratoBorrador } : undefined} variant="outline">
               Cancelar
-            </Button>
-          </Link>
+            </ButtonLink>
           <Button type="submit">
             <Icon name="plus" className="h-4 w-4" />
             {contratoBorrador ? "Guardar alumno y continuar contrato" : "Ingresar alumno"}

@@ -1,9 +1,10 @@
+import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { EmptyState } from "../Components/ui/empty-state";
 import type { TareaLimpieza } from "../lib/types";
-import { Button } from "../Components/ui/button";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
 import { TextField } from "../Components/ui/text-field";
@@ -18,7 +19,7 @@ export default function EditarTareaLimpieza() {
   const { numero } = useParams();
   const { tareasLimpieza } = useData();
   const tarea = tareasLimpieza.find((item) => String(item.numero) === numero);
-  if (!tarea) return <EmptyState icon="cleaning" title="Tarea no encontrada" description="No existe la tarea solicitada." action={<Link to="/limpieza"><Button><Icon name="arrow" className="h-4 w-4 rotate-180" />Volver al listado</Button></Link>} />;
+  if (!tarea) return <EmptyState icon="cleaning" title="Tarea no encontrada" description="No existe la tarea solicitada." action={<BackToList to="/limpieza" />} />;
   return <FormularioEditarTarea key={tarea.numero} tarea={tarea} />;
 }
 
@@ -48,7 +49,7 @@ function FormularioEditarTarea({ tarea }: { tarea: TareaLimpieza }) {
         eyebrow="Limpieza"
         title="Modificar tarea de limpieza"
         description="Actualizá el nombre y las actividades de esta tarea."
-        actions={<Link to={`/limpieza/tareas/${tarea.numero}`}><Button variant="outline"><Icon name="arrow" className="h-4 w-4 rotate-180" />Volver al detalle</Button></Link>}
+        actions={<ButtonLink to={`/limpieza/tareas/${tarea.numero}`} variant="outline"><Icon name="arrow" className="h-4 w-4 rotate-180" />Volver al detalle</ButtonLink>}
       />
       <form onSubmit={guardar} className="w-full space-y-6 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <TextField id={`${id}-nombre`} label="Nombre de la tarea" required maxLength={150} value={nombre} onChange={(event) => setNombre(event.target.value)} placeholder="Ej.: Limpiar el lavadero" />
@@ -59,7 +60,7 @@ function FormularioEditarTarea({ tarea }: { tarea: TareaLimpieza }) {
         </div>
         {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <Link to={`/limpieza/tareas/${tarea.numero}`}><Button type="button" variant="outline">Cancelar</Button></Link>
+          <ButtonLink to={`/limpieza/tareas/${tarea.numero}`} variant="outline">Cancelar</ButtonLink>
           <Button type="submit"><Icon name="check" className="h-4 w-4" />Guardar cambios</Button>
         </div>
       </form>

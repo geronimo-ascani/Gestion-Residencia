@@ -1,10 +1,11 @@
+import { AlumnoCuenta } from "../Components/alumno-cuenta";
 import { importeMulta } from "../lib/multas";
 import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { AlumnoContratos } from "../Components/alumno-contratos";
 import { AsignarHabitacionDialog } from "../Components/actions/asignar-habitacion-dialog";
 import { FECHA_REFERENCIA } from "../lib/config";
-import { Button } from "../Components/ui/button";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { ConfirmDialog } from "../Components/ui/confirm-dialog";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
@@ -16,7 +17,7 @@ import { useToast } from "../Components/ui/toast";
 import { asignacionActiva, contratoVigente, diasHasta, estadoContrato, estadoMultaVisual, sumarDia } from "../lib/domain";
 import { formatARS, formatFecha } from "../lib/format";
 import { useData } from "../lib/store";
-import type { Contrato, Multa } from "../lib/types";
+import type { Multa } from "../lib/types";
 
 export function meta() {
   return [{ title: "Ficha de alumno · Gestión de Residencia" }];
@@ -68,12 +69,10 @@ export default function AlumnoDetalle() {
           title="Sin resultados"
           description="Verificá la ruta o volvé al listado."
           action={
-            <Link to={volver}>
-              <Button>
+            <ButtonLink to={volver}>
                 <Icon name="arrow" className="h-4 w-4 rotate-180" />
                 Volver a alumnos
-              </Button>
-            </Link>
+              </ButtonLink>
           }
         />
       </div>
@@ -110,22 +109,18 @@ export default function AlumnoDetalle() {
       <PageHeader
         eyebrow="Alumnos"
         title={`${alumno.apellido}, ${alumno.nombre}`}
-        description={`DNI ${alumno.documento} · ${alumno.correo} · ${alumno.telefono}`}
+        description={`DNI ${alumno.documento} · ${alumno.correo || "Sin correo"} · ${alumno.telefono}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link to={`/facturacion?alumno=${alumno.idAlumno}`}><Button variant="outline"><Icon name="payments" className="h-4 w-4" />Facturas y saldos</Button></Link>
-            <Link to={volver}>
-              <Button variant="outline">
+            <ButtonLink to={`/facturacion?alumno=${alumno.idAlumno}`} variant="outline"><Icon name="payments" className="h-4 w-4" />Facturas y saldos</ButtonLink>
+            <ButtonLink to={volver} variant="outline">
                 <Icon name="arrow" className="h-4 w-4 rotate-180" />
                 Volver a alumnos
-              </Button>
-            </Link>
-            <Link to={`/multas/nueva?alumno=${encodeURIComponent(alumno.idAlumno)}`}>
-              <Button>
+              </ButtonLink>
+            <ButtonLink to={`/multas/nueva?alumno=${encodeURIComponent(alumno.idAlumno)}`}>
                 <Icon name="fines" className="h-4 w-4" />
                 Emitir multa
-              </Button>
-            </Link>
+              </ButtonLink>
           </div>
         }
       />
@@ -143,18 +138,16 @@ export default function AlumnoDetalle() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link to={`/contratos/nuevo?alumno=${encodeURIComponent(alumno.idAlumno)}&desde=${contrato ? sumarDia(contrato.fechaHasta) : FECHA_REFERENCIA}`}>
-              <Button>{contrato ? "Renovar contrato" : contratosAlumno.length ? "Registrar reingreso" : "Crear primer contrato"}</Button>
-            </Link>
+            <ButtonLink to={`/contratos/nuevo?alumno=${encodeURIComponent(alumno.idAlumno)}&desde=${contrato ? sumarDia(contrato.fechaHasta) : FECHA_REFERENCIA}`}>{contrato ? "Renovar contrato" : contratosAlumno.length ? "Registrar reingreso" : "Crear primer contrato"}</ButtonLink>
             {contrato ? (
-              <Link to={`/contratos/${contrato.idContrato}/baja`}>
-                <Button variant="outline">Registrar baja</Button>
-              </Link>
+              <ButtonLink to={`/contratos/${contrato.idContrato}/baja`} variant="outline">Registrar baja</ButtonLink>
             ) : null}
           </div>
         </div>
         {contrato && proximoContrato ? <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">Próximo contrato confirmado: {formatFecha(proximoContrato.fechaDesde)} al {formatFecha(proximoContrato.fechaHasta)}.</p> : null}
       </section>
+
+      <AlumnoCuenta key={alumno.idAlumno} alumno={alumno} />
 
       <Tabs items={tabs} value={tab} onChange={setTab} label="Secciones del alumno" className="flex-wrap self-start" />
 
@@ -173,7 +166,7 @@ export default function AlumnoDetalle() {
               </div>
               <div>
                 <dt className="text-xs text-slate-500">Correo</dt>
-                <dd className="mt-1 text-sm text-slate-900 dark:text-white">{alumno.correo}</dd>
+                <dd className="mt-1 text-sm text-slate-900 dark:text-white">{alumno.correo || "Sin registrar"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-slate-500">Teléfono</dt>
@@ -308,7 +301,7 @@ export default function AlumnoDetalle() {
                       </TD>
                       <TD className="text-right tabular-nums">{formatARS(importeMulta(multa).total)}</TD>
                       <TD className="text-right">
-                        {facturas.some((f) => f.detalles.some((d) => d.idMulta === multa.idMulta)) ? <Link to={`/facturacion/${facturas.find((f) => f.detalles.some((d) => d.idMulta === multa.idMulta))!.idFactura}`}><Button size="sm" variant="outline">Ver factura</Button></Link> : multa.estado === "pendiente" ? (
+                        {facturas.some((f) => f.detalles.some((d) => d.idMulta === multa.idMulta)) ? <ButtonLink to={`/facturacion/${facturas.find((f) => f.detalles.some((d) => d.idMulta === multa.idMulta))!.idFactura}`} size="sm" variant="outline">Ver factura</ButtonLink> : multa.estado === "pendiente" ? (
                           <div className="flex justify-end gap-1">
                             <Button size="sm" variant="outline" onClick={() => pagarMulta(multa)}>
                               Pagar

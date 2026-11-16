@@ -1,4 +1,6 @@
-import { useEffect, useId, useState } from "react";
+import { Navigate } from "react-router";
+import { StudentShell } from "./student-shell";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   Link,
   NavLink,
@@ -7,7 +9,8 @@ import {
   useNavigate,
 } from "react-router";
 import { cn } from "../../lib/cn";
-import { usuarioActual } from "../../lib/session";
+import { usuarioActual as sesionActual, cerrarSesion as finalizarSesion } from "../../lib/session";
+import { useData } from "../../lib/store";
 import { BrandMark } from "../brand";
 import { Avatar } from "../ui/avatar";
 import { Icon, type IconName } from "../ui/icons";
@@ -22,6 +25,7 @@ const GRUPOS_NAV: Array<{
     id: "residentes", label: "Residentes", icon: "users",
     items: [
       { to: "/alumnos", label: "Alumnos", icon: "users" },
+      { to: "/reclamos", label: "Reclamos", icon: "contracts" },
       { to: "/contratos", label: "Contratos", icon: "contracts" },
     ],
   },
@@ -32,6 +36,10 @@ const GRUPOS_NAV: Array<{
       { to: "/ambientes", label: "Ambientes", icon: "building" },
       { to: "/limpieza", label: "Limpieza", icon: "cleaning" },
     ],
+  },
+  {
+    id: "administracion", label: "Administración", icon: "settings",
+    items: [{ to: "/administracion/administradores", label: "Administradores", icon: "users" }, { to: "/administracion/configuracion-sistema", label: "Configuración del Sistema", icon: "settings" }],
   },
   {
     id: "finanzas", label: "Facturación y pagos", icon: "payments",
@@ -50,6 +58,17 @@ function grupoDeRuta(pathname: string) {
 }
 
 const ETIQUETAS: Record<string, string> = {
+  estudiante: "Mi residencia",
+  reclamos: "Reclamos",
+  habitacion: "Mi habitación",
+  facturas: "Facturas y pagos",
+  perfil: "Mi perfil",
+  avisos: "Avisos",
+  administracion: "Administración",
+  administradores: "Administradores",
+  parametros: "Configuración del Sistema",
+  nuevo: "Nuevo",
+  cuenta: "Cuenta de acceso",
   alumnos: "Alumnos",
   habitaciones: "Habitaciones",
   ambientes: "Ambientes",
@@ -60,13 +79,14 @@ const ETIQUETAS: Record<string, string> = {
   registrar: "Registrar cobro",
   multas: "Multas",
   limpieza: "Limpieza",
-  configuracion: "Configuración",
 };
 
 export function AppShell() {
   const [menuMovil, setMenuMovil] = useState(false);
   const [colapsado, setColapsado] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const { usuarioAutenticado } = useData();
 
   useEffect(() => {
     setMenuMovil(false);
@@ -74,17 +94,33 @@ export function AppShell() {
 
   useEffect(() => {
     if (!menuMovil) return;
+    const focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMenuMovil(false);
+      if (event.key === "Tab") {
+        const elementos = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]') ?? []).filter((e) => e.getClientRects().length > 0);
+        const primero = elementos[0], ultimo = elementos.at(-1);
+        if (event.shiftKey && (document.activeElement === primero || document.activeElement === menuRef.current)) { event.preventDefault(); ultimo?.focus(); }
+        else if (!event.shiftKey && (document.activeElement === ultimo || document.activeElement === menuRef.current)) { event.preventDefault(); primero?.focus(); }
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     const overflowPrevio = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    menuRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = overflowPrevio;
+      if (focoAnterior?.isConnected) focoAnterior.focus();
     };
   }, [menuMovil]);
+
+  if (!usuarioAutenticado) return <Navigate to="/login" replace />;
+  const esAlumno = usuarioAutenticado.rol === "alumno";
+  const rutaAlumno = location.pathname === "/estudiante" || location.pathname.startsWith("/estudiante/");
+  if (esAlumno && !rutaAlumno) return <Navigate to="/estudiante" replace />;
+  if (!esAlumno && rutaAlumno) return <Navigate to="/" replace />;
+  if (esAlumno) return <StudentShell />;
 
   return (
     <div className="min-h-dvh bg-[#e7eeeb] dark:bg-slate-950">
@@ -112,7 +148,8 @@ export function AppShell() {
             onClick={() => setMenuMovil(false)}
             aria-hidden="true"
           />
-          <div className="absolute inset-y-0 left-0 w-[280px] shadow-xl">
+          <div ref={menuRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Navegación principal" className="absolute inset-y-0 left-0 w-[280px] shadow-xl outline-none">
+            <button type="button" aria-label="Cerrar menú" onClick={() => setMenuMovil(false)} className="absolute top-4 right-3 z-10 rounded-md p-2 text-white hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white"><Icon name="close" className="h-5 w-5" /></button>
             <SidebarContent onNavigate={() => setMenuMovil(false)} />
           </div>
         </div>
@@ -150,6 +187,10 @@ function SidebarContent({
   onNavigate?: () => void;
   onExpand?: () => void;
 }) {
+  const { usuarios } = useData();
+  const usuarioActual = usuarios.find((u) => u.idUsuario === sesionActual.idUsuario) ?? sesionActual;
+  const esAlumno = sesionActual.rol === "alumno";
+  const perfil = esAlumno ? "/estudiante/perfil" : `/administracion/administradores/${usuarioActual.idUsuario}`;
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const idBase = useId();
@@ -161,6 +202,7 @@ function SidebarContent({
   }, [pathname]);
 
   function cerrarSesion() {
+    finalizarSesion();
     onNavigate?.();
     navigate("/login");
   }
@@ -177,7 +219,7 @@ function SidebarContent({
         {!colapsado ? (
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">Gestión de Residencia</p>
-            <p className="text-xs text-slate-400">Administración</p>
+            <p className="text-xs text-slate-400">{esAlumno ? "Portal del alumno" : "Administración"}</p>
           </div>
         ) : null}
       </div>
@@ -191,7 +233,7 @@ function SidebarContent({
       >
         <div className="space-y-1">
           <NavLink
-            to="/"
+            to={esAlumno ? "/estudiante" : "/"}
             end
             onClick={onNavigate}
             title={colapsado ? "Panel" : undefined}
@@ -203,7 +245,7 @@ function SidebarContent({
             )}
           >
             <Icon name="dashboard" className="h-5 w-5 shrink-0" />
-            {!colapsado ? <span>Panel</span> : null}
+            {!colapsado ? <span>{esAlumno ? "Inicio" : "Panel"}</span> : null}
           </NavLink>
           {GRUPOS_NAV.map((grupo) => {
             const abierto = !colapsado && grupoAbierto === grupo.id;
@@ -261,40 +303,10 @@ function SidebarContent({
           colapsado ? "p-2" : "p-3",
         )}
       >
-        <NavLink
-          to="/configuracion"
-          onClick={onNavigate}
-          title={colapsado ? "Configuración" : undefined}
-          aria-label={colapsado ? "Configuración" : undefined}
-          className={({ isActive }) =>
-            cn(
-              "group relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
-              colapsado && "justify-center px-0",
-              isActive
-                ? "bg-white/10 text-white"
-                : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
-            )
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <Icon
-                name="settings"
-                className={cn(
-                  "h-5 w-5 shrink-0",
-                  isActive ? "text-slate-100" : "text-slate-500",
-                )}
-              />
-              {!colapsado ? <span>Configuración</span> : null}
-            </>
-          )}
-        </NavLink>
-
         {colapsado ? (
           <div className="mt-2 flex flex-col items-center gap-1 border-t border-white/10 pt-2">
-            <span title={`${usuarioActual.nombre} · Administradora`}>
-              <Avatar nombre={usuarioActual.nombre} size="sm" />
+            <span title={`${usuarioActual.nombre} · ${esAlumno ? "Alumno" : "Administración"}`}>
+              <Link to={perfil} aria-label="Ver mi perfil"><Avatar nombre={usuarioActual.nombre} size="sm" /></Link>
             </span>
             <button
               type="button"
@@ -308,12 +320,12 @@ function SidebarContent({
           </div>
         ) : (
           <div className="mt-2 flex items-center gap-3 rounded-md border border-white/10 bg-white/[0.04] p-2">
-            <Avatar nombre={usuarioActual.nombre} size="sm" />
+            <Link to={perfil} aria-label="Ver mi perfil"><Avatar nombre={usuarioActual.nombre} size="sm" /></Link>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-white">
                 {usuarioActual.nombre}
               </p>
-              <p className="truncate text-xs text-slate-400">Administradora</p>
+              <p className="truncate text-xs text-slate-400">{esAlumno ? "Alumno" : "Administración"}</p>
             </div>
             <button
               type="button"
@@ -341,7 +353,7 @@ function Topbar({
   onOpenMenu: () => void;
 }) {
   const location = useLocation();
-  const navigate = useNavigate();
+  const esAlumno = sesionActual.rol === "alumno";
   const segmentos = location.pathname.split("/").filter(Boolean);
 
   return (
@@ -385,7 +397,7 @@ function Topbar({
           ) : (
             <>
               <Link
-                to="/"
+                to={esAlumno ? "/estudiante" : "/"}
                 className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
               >
                 Panel

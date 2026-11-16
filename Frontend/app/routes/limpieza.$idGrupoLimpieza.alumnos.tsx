@@ -1,8 +1,9 @@
+import { BackToList } from "../Components/ui/back-to-list";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { LimpiezaIntegrantes } from "../Components/limpieza-integrantes";
-import { Button } from "../Components/ui/button";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { PageHeader } from "../Components/ui/page-header";
 import { useToast } from "../Components/ui/toast";
@@ -15,7 +16,7 @@ export default function AlumnosGrupoLimpieza() {
   const [ids, setIds] = useState(() => grupoAlumnos.filter((a) => a.idGrupoLimpieza === idGrupoLimpieza).map((a) => a.idAlumno));
   const navigate = useNavigate();
   const { toast } = useToast();
-  if (!grupo) return <EmptyState icon="cleaning" title="Grupo no encontrado" description="No existe el grupo solicitado." action={<Link to="/limpieza"><Button>Volver al listado</Button></Link>} />;
+  if (!grupo) return <EmptyState icon="cleaning" title="Grupo no encontrado" description="No existe el grupo solicitado." action={<BackToList to="/limpieza" />} />;
   function guardar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!grupo) return;
@@ -24,7 +25,7 @@ export default function AlumnosGrupoLimpieza() {
     navigate(`/limpieza/${grupo.idGrupoLimpieza}`);
   }
   return <div className="flex flex-col gap-6">
-    <PageHeader eyebrow="Limpieza" title={`Integrantes · ${grupo.nombreDelGrupo}`} description="Asigná por habitación o elegí alumnos individualmente. Los cambios se aplican al guardar." actions={<Link to={`/limpieza/${grupo.idGrupoLimpieza}`}><Button variant="outline">Volver al grupo</Button></Link>} />
-    <form onSubmit={guardar} className="space-y-6"><LimpiezaIntegrantes seleccionados={ids} onChange={setIds} idGrupo={grupo.idGrupoLimpieza} /><div className="flex justify-end gap-2"><Link to={`/limpieza/${grupo.idGrupoLimpieza}`}><Button type="button" variant="outline">Cancelar</Button></Link><Button type="submit">Guardar integrantes</Button></div></form>
+    <PageHeader eyebrow="Limpieza" title={`Integrantes · ${grupo.nombreDelGrupo}`} description="Asigná por habitación o elegí alumnos individualmente. Los cambios se aplican al guardar." actions={<ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">Volver al grupo</ButtonLink>} />
+    <form onSubmit={guardar} className="space-y-6"><LimpiezaIntegrantes seleccionados={ids} onChange={setIds} idGrupo={grupo.idGrupoLimpieza} /><div className="flex justify-end gap-2"><ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">Cancelar</ButtonLink><Button type="submit">Guardar integrantes</Button></div></form>
   </div>;
 }

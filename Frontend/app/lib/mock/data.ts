@@ -1,6 +1,7 @@
+import { PARAMETROS_INICIALES } from "../parametros";
 import { TAREAS_LIMPIEZA } from "../domain";
 import type { Alumno, Ambiente, Contrato, DataState, Habitacion, HabitacionAlumno } from "../types";
-import { usuarioActual } from "../session";
+import { USUARIO_ADMIN_INICIAL } from "../session";
 
 const CAPACIDADES = [2, 2, 4, 4, 5] as const;
 
@@ -160,6 +161,7 @@ export function createInitialData(): DataState {
   );
 
   return {
+    reclamos: [],
     facturas: alumnos.flatMap((alumno, indice) => ["2026-09", "2026-10"].map((periodo) => ({
       idFactura: `F-${alumno.idAlumno}-${periodo}`, idContrato: contratos[indice].idContrato,
       idAlumno: alumno.idAlumno, titular: `${alumno.apellido}, ${alumno.nombre}`, documento: alumno.documento,
@@ -212,11 +214,15 @@ export function createInitialData(): DataState {
       tareas: "Barrer, limpiar el piso, ordenar los espacios compartidos y retirar los residuos.",
     })), ...AMBIENTES_COMUNES],
     grupoAmbientes: [],
+    parametros: { ...PARAMETROS_INICIALES },
+    historialAdministrativo: [],
     usuarios: [
-      { ...usuarioActual },
-      ...alumnos.map((alumno, indice) => ({
+      { ...USUARIO_ADMIN_INICIAL },
+      ...alumnos.filter((alumno) => alumno.correo).map((alumno, indice) => ({
         idUsuario: `U${indice + 2}`,
         idAlumno: alumno.idAlumno,
+        apellido: alumno.apellido,
+        documento: alumno.documento,
         nombre: `${alumno.nombre} ${alumno.apellido}`,
         correo: alumno.correo,
         rol: "alumno" as const,

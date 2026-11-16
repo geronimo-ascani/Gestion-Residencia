@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import { Button } from "../Components/ui/button";
+import { useNavigate, useParams } from "react-router";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
@@ -82,12 +82,10 @@ export default function NuevoAmbienteGrupo() {
         title="Asignar ambiente"
         description={`Elegí un ambiente libre para ${grupo.nombreDelGrupo}.`}
         actions={
-          <Link to={`/limpieza/${grupo.idGrupoLimpieza}`}>
-            <Button variant="outline">
+          <ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">
               <Icon name="arrow" className="h-4 w-4 rotate-180" />
               Volver al grupo
-            </Button>
-          </Link>
+            </ButtonLink>
         }
       />
 
@@ -97,9 +95,7 @@ export default function NuevoAmbienteGrupo() {
           title="No hay ambientes disponibles"
           description="Todos los ambientes tienen una asignación que se superpone con esta fecha."
           action={
-            <Link to={`/limpieza/${grupo.idGrupoLimpieza}`}>
-              <Button variant="outline">Volver al grupo</Button>
-            </Link>
+            <ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">Volver al grupo</ButtonLink>
           }
         />
       ) : (
@@ -140,11 +136,9 @@ export default function NuevoAmbienteGrupo() {
             La asignación queda vigente hasta que se libere; el historial conserva las fechas.
           </p>
           <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-            <Link to={`/limpieza/${grupo.idGrupoLimpieza}`}>
-              <Button type="button" variant="outline">
+            <ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">
                 Cancelar
-              </Button>
-            </Link>
+              </ButtonLink>
             <Button type="submit">
               <Icon name="check" className="h-4 w-4" />
               Asignar ambiente

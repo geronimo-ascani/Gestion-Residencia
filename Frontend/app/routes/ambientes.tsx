@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+
 import { Badge } from "../Components/ui/badge";
-import { Button } from "../Components/ui/button";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { ListSummary, ListToolbar } from "../Components/ui/list-page";
@@ -42,18 +42,14 @@ export default function Ambientes() {
         description="Consultá los espacios comunes y el equipamiento de cada uno."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link to="/ambientes/nuevo">
-              <Button>
+            <ButtonLink to="/ambientes/nuevo">
                 <Icon name="plus" className="h-4 w-4" />
                 Nuevo ambiente
-              </Button>
-            </Link>
-            <Link to="/limpieza">
-              <Button variant="ghost">
+              </ButtonLink>
+            <ButtonLink to="/limpieza" variant="ghost">
                 <Icon name="cleaning" className="h-4 w-4" />
                 Ver grupos de limpieza
-              </Button>
-            </Link>
+              </ButtonLink>
           </div>
         }
       />
@@ -102,9 +98,7 @@ export default function Ambientes() {
                     </ul>
                   </TD>
                   <TD className="text-right align-top">
-                    <Link to={`/ambientes/${ambiente.idAmbiente}`} aria-label={`Ver detalle de ${ambiente.ambiente}`}>
-                      <Button size="sm" variant="outline">Ver detalle<Icon name="arrow" className="h-3.5 w-3.5" /></Button>
-                    </Link>
+                    <ButtonLink to={`/ambientes/${ambiente.idAmbiente}`} aria-label={`Ver detalle de ${ambiente.ambiente}`} size="sm" variant="outline">Ver detalle<Icon name="arrow" className="h-3.5 w-3.5" /></ButtonLink>
                   </TD>
                 </TR>
               ))}

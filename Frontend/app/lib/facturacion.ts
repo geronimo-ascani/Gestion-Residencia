@@ -48,7 +48,7 @@ export function prepararFactura(state: DataState, idContrato: string, periodo: s
     periodo, fechaEmision: FECHA_REFERENCIA, fechaVence,
     detalles: [
       { concepto: `Alojamiento mensual · ${periodo}`, monto: contrato.montoMensual! },
-      ...multas.map((m) => ({ idMulta: m.idMulta, concepto: `Multa ${m.idMulta} · ${m.motivo || "Sanción de residencia"}${importeMulta(m).recargo ? " (incluye recargo del 20%)" : ""}`, monto: importeMulta(m).total })),
+      ...multas.map((m) => ({ idMulta: m.idMulta, concepto: `Multa ${m.idMulta} · ${m.motivo || "Sanción de residencia"}${importeMulta(m).recargo ? ` (incluye recargo del ${m.recargoPorcentaje ?? 20}%)` : ""}`, monto: importeMulta(m).total })),
     ],
   };
 }

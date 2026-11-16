@@ -1,7 +1,8 @@
+import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { FacturaDetalle } from "../Components/factura-detalle";
-import { Button } from "../Components/ui/button";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
@@ -33,7 +34,7 @@ export default function NuevaFactura() {
     catch (e) { errorVista = e instanceof Error ? e.message : "Verificá los datos."; }
   }
   return <div className="flex flex-col gap-6">
-    <PageHeader eyebrow="Facturación" title="Generar factura" description="Seleccioná el contrato y el mes. Las multas pendientes habilitadas para el período se incorporan automáticamente." actions={<Link to="/facturacion"><Button variant="outline"><Icon name="arrow" className="h-4 w-4 rotate-180" />Volver al listado</Button></Link>} />
+    <PageHeader eyebrow="Facturación" title="Generar factura" description="Seleccioná el contrato y el mes. Las multas pendientes habilitadas para el período se incorporan automáticamente." actions={<BackToList to="/facturacion" />} />
     <form className="flex flex-col gap-6" onSubmit={(event) => {
       event.preventDefault();
       if (enviando.current) return;
@@ -48,7 +49,7 @@ export default function NuevaFactura() {
       </CardContent></Card>
       {error || errorVista ? <p role="alert" className="rounded-md border border-red-200 bg-white p-4 text-sm text-red-700 dark:bg-slate-900">{error || errorVista}</p> : null}
       {factura ? <Card><CardHeader><div><CardTitle>Vista previa · {factura.periodo}</CardTitle><p className="mt-1 text-sm text-slate-500">{factura.titular} · DNI {factura.documento} · Vence {formatFecha(factura.fechaVence)}</p></div></CardHeader><CardContent><FacturaDetalle factura={factura} /><p className="mt-4 text-sm text-slate-500">{factura.detalles.length === 1 ? "No hay multas pendientes para incluir en esta factura." : "Las multas se incluyen una sola vez. Los importes quedan registrados al emitir la factura."}</p></CardContent></Card> : null}
-      <div className="flex justify-end gap-3"><Link to="/facturacion"><Button type="button" variant="outline">Cancelar</Button></Link><Button type="submit" disabled={!factura}><Icon name="plus" className="h-4 w-4" />Generar factura</Button></div>
+      <div className="flex justify-end gap-3"><ButtonLink to="/facturacion" variant="outline">Cancelar</ButtonLink><Button type="submit" disabled={!factura}><Icon name="plus" className="h-4 w-4" />Generar factura</Button></div>
     </form>
   </div>;
 }

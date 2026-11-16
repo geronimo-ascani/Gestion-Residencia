@@ -1,6 +1,7 @@
+import { BackToList } from "../Components/ui/back-to-list";
 import { Link, useParams } from "react-router";
 import { EstadoFacturaBadge, FacturaDetalle } from "../Components/factura-detalle";
-import { Button } from "../Components/ui/button";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
@@ -15,12 +16,12 @@ export default function FacturaDetallePagina() {
   const { idFactura } = useParams();
   const { facturas, pagos } = useData();
   const factura = facturas.find((f) => f.idFactura === idFactura);
-  const volver = <Link to="/facturacion"><Button variant="outline"><Icon name="arrow" className="h-4 w-4 rotate-180" />Volver al listado</Button></Link>;
+  const volver = <BackToList to="/facturacion" />;
   if (!factura) return <div className="flex flex-col gap-6"><PageHeader eyebrow="Facturación" title="Factura no encontrada" description="No existe una factura con el identificador solicitado." actions={volver} /><EmptyState icon="contracts" title="Factura no encontrada" description="Verificá el enlace o volvé al listado de facturas." /></div>;
   const movimientos = pagos.filter((p) => p.idFactura === factura.idFactura).sort((a, b) => b.fecha.localeCompare(a.fecha));
   const saldo = saldoFactura(factura, pagos);
   return <div className="flex flex-col gap-6">
-    <PageHeader eyebrow="Facturación" title={`Factura ${factura.idFactura}`} description="Detalle de alojamiento, multas y pagos asociados." actions={<div className="flex flex-wrap gap-2">{volver}<Button variant="outline" onClick={() => window.print()}>Imprimir factura</Button>{saldo > 0 ? <Link to={`/cobros/registrar?factura=${factura.idFactura}`}><Button><Icon name="payments" className="h-4 w-4" />Registrar cobro</Button></Link> : null}</div>} />
+    <PageHeader eyebrow="Facturación" title={`Factura ${factura.idFactura}`} description="Detalle de alojamiento, multas y pagos asociados." actions={<div className="flex flex-wrap gap-2">{volver}<Button variant="outline" onClick={() => window.print()}>Imprimir factura</Button>{saldo > 0 ? <ButtonLink to={`/cobros/registrar?factura=${factura.idFactura}`}><Icon name="payments" className="h-4 w-4" />Registrar cobro</ButtonLink> : null}</div>} />
     <article className="factura-imprimible mx-auto w-full max-w-5xl overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
       <header className="border-b-2 border-brand-700 bg-slate-50 px-6 py-6 dark:bg-slate-900 sm:px-10"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Gestión de Residencia · Alojamiento estudiantil</p><div className="mt-2 flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-bold">Factura de alojamiento</h2><EstadoFacturaBadge factura={factura} pagos={pagos} /></div><p className="mt-2 text-sm text-slate-500">{factura.idFactura} · Período {factura.periodo}</p></header>
       <div className="space-y-7 px-6 py-7 sm:px-10">

@@ -1,7 +1,8 @@
+import { BackToList } from "../Components/ui/back-to-list";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { AsignarHabitacionDialog } from "../Components/actions/asignar-habitacion-dialog";
-import { Button } from "../Components/ui/button";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { ConfirmDialog } from "../Components/ui/confirm-dialog";
 import { EmptyState } from "../Components/ui/empty-state";
 import { Icon } from "../Components/ui/icons";
@@ -60,12 +61,7 @@ export default function HabitacionDetalle() {
           title="Sin resultados"
           description="Verificá la ruta o volvé al listado de habitaciones."
           action={
-            <Link to="/habitaciones">
-              <Button>
-                <Icon name="arrow" className="h-4 w-4 rotate-180" />
-                Volver a habitaciones
-              </Button>
-            </Link>
+            <BackToList to="/habitaciones" />
           }
         />
       </div>
@@ -105,12 +101,10 @@ export default function HabitacionDetalle() {
         description={habitacion.descripcion}
         actions={
           <>
-            <Link to="/habitaciones">
-              <Button variant="outline">
+            <ButtonLink to="/habitaciones" variant="outline">
                 <Icon name="arrow" className="h-4 w-4 rotate-180" />
                 Habitaciones
-              </Button>
-            </Link>
+              </ButtonLink>
             <Button
               onClick={() => setDialogoAsignacionAbierto(true)}
               disabled={cuposDisponibles === 0}

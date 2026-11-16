@@ -40,8 +40,16 @@ export function Dialog({
   useEffect(() => {
     if (!open) return;
 
+    const focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCloseRef.current();
+      if (event.key === "Tab") {
+        const elementos = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]') ?? []).filter((e) => e.getClientRects().length > 0);
+        const primero = elementos[0], ultimo = elementos.at(-1);
+        if (!primero) { event.preventDefault(); panelRef.current?.focus(); }
+        else if (event.shiftKey && (document.activeElement === primero || document.activeElement === panelRef.current)) { event.preventDefault(); ultimo?.focus(); }
+        else if (!event.shiftKey && (document.activeElement === ultimo || document.activeElement === panelRef.current)) { event.preventDefault(); primero.focus(); }
+      }
     };
 
     document.addEventListener("keydown", onKeyDown);
@@ -53,6 +61,7 @@ export function Dialog({
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = overflowPrevio;
       window.clearTimeout(timer);
+      if (focoAnterior?.isConnected) focoAnterior.focus();
     };
   }, [open]);
 
