@@ -1,0 +1,113 @@
+import { z } from "zod";
+
+export const TIPOS_RECLAMO_VALIDOS = ["reclamo", "solicitud", "problema"];
+export const CATEGORIAS_RECLAMO_VALIDAS = [
+  "mantenimiento",
+  "limpieza",
+  "convivencia",
+  "administracion",
+  "otro",
+];
+export const ESTADOS_RECLAMO_VALIDOS = [
+  "pendiente",
+  "en_revision",
+  "resuelto",
+  "rechazado",
+  "cancelado",
+];
+export const PRIORIDADES_RECLAMO_VALIDAS = ["normal", "alta"];
+
+/**
+ * Esquema para la creación de una nueva presentación o reclamo.
+ */
+export const createReclamoSchema = z.object({
+  idAlumno: z.coerce
+    .number({ required_error: "El ID del alumno es obligatorio" })
+    .int("El ID del alumno debe ser un entero")
+    .positive("El ID del alumno debe ser positivo"),
+  tipo: z
+    .enum(["reclamo", "solicitud", "problema"], {
+      errorMap: () => ({ message: "Elegí el tipo de presentación: reclamo, solicitud o problema" }),
+    })
+    .default("reclamo"),
+  categoria: z
+    .enum(["mantenimiento", "limpieza", "convivencia", "administracion", "otro"], {
+      errorMap: () => ({ message: "Elegí una categoría válida" }),
+    })
+    .default("mantenimiento"),
+  asunto: z
+    .string({ required_error: "El asunto es obligatorio" })
+    .trim()
+    .min(5, "El asunto debe tener entre 5 y 100 caracteres")
+    .max(100, "El asunto no puede superar los 100 caracteres"),
+  descripcion: z
+    .string({ required_error: "La descripción es obligatoria" })
+    .trim()
+    .min(20, "La descripción debe tener entre 20 y 3000 caracteres")
+    .max(3000, "La descripción no puede superar los 3000 caracteres"),
+  ubicacion: z
+    .string({ required_error: "La ubicación es obligatoria" })
+    .trim()
+    .min(2, "Elegí una ubicación válida"),
+  detalleUbicacion: z
+    .string()
+    .trim()
+    .max(120, "El detalle de ubicación no puede superar los 120 caracteres")
+    .optional()
+    .default(""),
+  prioridad: z
+    .enum(["normal", "alta"], {
+      errorMap: () => ({ message: "La prioridad debe ser normal o alta" }),
+    })
+    .default("normal"),
+  autor: z.string().trim().optional(),
+  idAutor: z.coerce.number().int().positive().optional(),
+});
+
+/**
+ * Esquema para responder o actualizar el estado de un reclamo.
+ */
+export const responderReclamoSchema = z.object({
+  mensaje: z
+    .string({ required_error: "El mensaje es obligatorio" })
+    .trim()
+    .min(5, "Escribí un mensaje de entre 5 y 2000 caracteres")
+    .max(2000, "El mensaje no puede superar los 2000 caracteres"),
+  estado: z
+    .enum(["pendiente", "en_revision", "resuelto", "rechazado", "cancelado"])
+    .optional(),
+  autor: z.string().trim().optional(),
+  idAutor: z.coerce.number().int().positive().optional(),
+  rol: z
+    .enum(["administrador", "alumno"], {
+      errorMap: () => ({ message: "El rol debe ser 'administrador' o 'alumno'" }),
+    })
+    .default("administrador"),
+});
+
+/**
+ * Esquema para validar el parámetro ID de Reclamo.
+ */
+export const reclamoIdParamSchema = z.object({
+  id: z.coerce
+    .number({ invalid_type_error: "El ID del reclamo debe ser un entero positivo" })
+    .int("El ID debe ser un entero")
+    .positive("El ID debe ser positivo"),
+});
+
+/**
+ * Esquema para listado, filtrado y paginación de reclamos.
+ */
+export const queryReclamoSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(10),
+  idAlumno: z.coerce.number().int().positive().optional(),
+  vista: z.enum(["abiertos", "cerrados", "todos"]).optional(),
+  estado: z.string().trim().optional(),
+  categoria: z.string().trim().optional(),
+  prioridad: z.string().trim().optional(),
+  tipo: z.string().trim().optional(),
+  search: z.string().trim().optional(),
+  busqueda: z.string().trim().optional(),
+  orden: z.enum(["recientes", "antiguos", "prioridad"]).default("recientes"),
+});
