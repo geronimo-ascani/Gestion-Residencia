@@ -1,0 +1,280 @@
+classDiagram
+    direction LR
+
+    class Alumno {
+        idAlumno: ID PK
+        nombre: Texto
+        apellido: Texto
+        documento: Texto único
+        telefono: Texto
+        correoContacto: Texto [0..1]
+        estado: EstadoAlumno
+        fechaNacimiento: Fecha [0..1]
+        nacionalidad: Texto [0..1]
+        domicilio: Texto [0..1]
+        localidad: Texto [0..1]
+        provincia: Texto [0..1]
+        codigoPostal: Texto [0..1]
+        institucion: Texto [0..1]
+        carrera: Texto [0..1]
+        anioCursado: Texto [0..1]
+        cantidadMateriasCursadas: Entero [0..1]
+        legajo: Texto [0..1]
+        observaciones: Texto [0..1]
+    }
+
+    class ContactoEmergencia {
+        idContacto: ID PK
+        idAlumno: ID FK
+        nombre: Texto
+        vinculo: Texto
+        telefono: Texto
+        orden: Entero
+    }
+
+    class Contrato {
+        idContrato: ID PK
+        idAlumno: ID FK
+        fechaDesde: Fecha
+        fechaHasta: Fecha
+        fechaFirma: Fecha [0..1]
+        montoMensual: Decimal
+        depositoGarantia: Decimal
+        diaVencimientoPago: Entero
+        observaciones: Texto [0..1]
+        fechaCancelacion: Fecha [0..1]
+        motivoCancelacion: Texto [0..1]
+    }
+
+    class HabitacionAlumno {
+        idAsignacion: ID PK
+        idAlumno: ID FK
+        idHabitacion: ID FK
+        fechaDesde: Fecha
+        fechaHasta: Fecha [0..1]
+    }
+
+    class Habitacion {
+        idHabitacion: ID PK
+        numeroHabitacion: Entero único
+        pisoHabitacion: Entero [0..1]
+        capacidadMaxima: Entero
+        descripcion: Texto
+    }
+
+    class Factura {
+        idFactura: ID PK
+        idContrato: ID FK
+        periodo: AñoMes
+        fechaEmision: Fecha
+        fechaVence: Fecha
+        titular: Texto
+        documento: Texto
+    }
+
+    class DetalleFactura {
+        idDetalle: ID PK
+        idFactura: ID FK
+        idMulta: ID FK [0..1] único
+        concepto: Texto
+        monto: Decimal
+        orden: Entero
+    }
+
+    class Pago {
+        idPago: ID PK
+        idAlumno: ID FK
+        idFactura: ID FK [0..1]
+        monto: Decimal
+        fecha: Fecha
+        concepto: Texto
+        medio: MedioPago [0..1]
+        referencia: Texto [0..1]
+    }
+
+    class Multa {
+        idMulta: ID PK
+        idAlumno: ID FK
+        idEmision: ID [0..1]
+        tipo: TipoMulta
+        motivo: Texto
+        observaciones: Texto [0..1]
+        huboDanios: Booleano
+        detalleDanios: Texto [0..1]
+        montoSancion: Decimal
+        montoDanios: Decimal
+        recargoPorcentaje: Decimal
+        fechaEmision: Fecha
+        fechaVence: Fecha
+        periodoDesde: AñoMes
+        periodoHasta: AñoMes
+        estado: EstadoMulta
+        fechaPago: Fecha [0..1]
+        montoPagado: Decimal [0..1]
+    }
+
+    class CambioMulta {
+        idCambio: ID PK
+        idMulta: ID FK
+        fecha: Instante
+        accion: AccionMulta
+        motivo: Texto [0..1]
+        cambios: CambioCampo [1..*]
+    }
+
+    class GrupoLimpiezaAlumno {
+        idAlumno: ID PK, FK
+        idGrupoLimpieza: ID FK
+    }
+
+    class GrupoDeLimpieza {
+        idGrupoLimpieza: ID PK
+        nombreDelGrupo: Texto único
+        posicionInicial: Entero único
+    }
+
+    class EquipamientoAmbiente {
+        idEquipamiento: ID PK
+        idAmbiente: ID FK
+        nombre: Texto
+        cantidad: Entero
+    }
+
+    class Ambiente {
+        idAmbiente: ID PK
+        nombre: Texto único
+        tipo: TipoAmbiente [0..1]
+        ubicacion: Texto [0..1]
+        descripcion: Texto [0..1]
+        tareas: Texto [0..1]
+    }
+
+    class GrupoLimpiezaAmbiente {
+        idAsignacion: ID PK
+        idGrupoLimpieza: ID FK
+        idAmbiente: ID FK
+        fechaDesde: Fecha
+        fechaHasta: Fecha [0..1]
+    }
+
+    class TareaLimpieza {
+        numero: Entero PK
+        nombre: Texto único
+        enRotacion: Booleano
+        actividades: Texto [1..*] ordenadas
+    }
+
+    class Reclamo {
+        idReclamo: ID PK
+        idAlumno: ID FK
+        tipo: TipoReclamo
+        categoria: CategoriaReclamo
+        asunto: Texto
+        descripcion: Texto
+        ubicacion: Texto
+        detalleUbicacion: Texto [0..1]
+        prioridad: Prioridad
+        estado: EstadoReclamo
+        fechaCreacion: Instante
+        fechaActualizacion: Instante
+    }
+
+    class SeguimientoReclamo {
+        idSeguimiento: ID PK
+        idReclamo: ID FK
+        idAutor: ID FK [0..1] ?
+        autor: Texto
+        rol: Rol
+        tipo: TipoSeguimiento
+        mensaje: Texto
+        estado: EstadoReclamo [0..1]
+        fecha: Instante
+    }
+
+    class Usuario {
+        idUsuario: ID PK
+        idAlumno: ID FK [0..1] único
+        correo: Texto único
+        rol: Rol
+        estado: EstadoCuenta
+        passwordHash: Texto
+        gestionaAdministradores: Booleano
+        fechaAlta: Instante
+        nombre: Texto [0..1]
+        apellido: Texto [0..1]
+        documento: Texto [0..1]
+        telefono: Texto [0..1]
+    }
+
+    class Sesion {
+        <<Propuesta>>
+        idSesion: ID PK
+        idUsuario: ID FK
+        tokenHash: Texto único
+        creadaEn: Instante
+        expiraEn: Instante
+        revocadaEn: Instante [0..1]
+    }
+
+    class TokenRestablecimiento {
+        <<Propuesta>>
+        idToken: ID PK
+        idUsuario: ID FK
+        tokenHash: Texto único
+        creadoEn: Instante
+        expiraEn: Instante
+        usadoEn: Instante [0..1]
+    }
+
+    class Notificacion {
+        <<Propuesta>>
+        idNotificacion: ID PK
+        idUsuario: ID FK
+        claveEvento: Texto
+        tipo: TipoAviso
+        titulo: Texto
+        detalle: Texto
+        destino: Texto
+        creadaEn: Instante
+        leidaEn: Instante [0..1]
+    }
+
+    class CambioAdministrativo {
+        idCambio: ID PK
+        idActor: ID FK
+        fecha: Instante
+        seccion: Texto
+        accion: Texto
+        referencia: Texto [0..1]
+        detalle: Texto
+    }
+
+    class ParametroSistema {
+        clave: ClaveParametro PK
+        valor: Decimal
+    }
+
+    Alumno "1" -- "0..*" ContactoEmergencia : contactos
+    Alumno "1" -- "0..*" Contrato : contratos
+    Alumno "1" -- "0..*" HabitacionAlumno : estadías por habitación
+    Habitacion "1" -- "0..*" HabitacionAlumno : ocupaciones
+    Contrato "1" -- "0..*" Factura : cuotas
+    Factura "1" -- "1..*" DetalleFactura : renglones
+    Factura "0..1" -- "0..*" Pago : cobros
+    Alumno "1" -- "0..*" Pago : pagos del alumno
+    Alumno "1" -- "0..*" Multa : sanciones
+    Multa "0..1" -- "0..1" DetalleFactura : cargo facturado
+    Multa "1" -- "0..*" CambioMulta : ediciones y prórrogas
+    Alumno "1" -- "0..1" GrupoLimpiezaAlumno : pertenencia actual
+    GrupoDeLimpieza "1" -- "0..*" GrupoLimpiezaAlumno : integrantes
+    GrupoDeLimpieza "1" -- "0..*" GrupoLimpiezaAmbiente : ambientes asignados
+    Ambiente "1" -- "0..*" GrupoLimpiezaAmbiente : asignaciones históricas
+    Ambiente "1" -- "0..*" EquipamientoAmbiente : inventario
+    Alumno "1" -- "0..*" Reclamo : presentaciones
+    Reclamo "1" -- "1..*" SeguimientoReclamo : historial
+    Usuario "0..1" -- "0..*" SeguimientoReclamo : autoría ?
+    Alumno "0..1" -- "0..1" Usuario : cuenta de acceso
+    Usuario "1" -- "0..*" Sesion : sesiones ?
+    Usuario "1" -- "0..*" TokenRestablecimiento : recuperación ?
+    Usuario "1" -- "0..*" Notificacion : avisos ?
+    Usuario "1" -- "0..*" CambioAdministrativo : actor

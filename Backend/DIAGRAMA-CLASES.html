@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestión de Residencia · Modelo de datos UML</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f6f8fb; color: #15253b; font: 16px/1.5 system-ui, sans-serif; }
+  main { width: min(1850px, 100% - 3rem); margin: 3rem auto 5rem; }
+  h1 { font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1.15; margin: 0 0 .75rem; }
+  h2 { margin: 0 0 .8rem; font-size: 1.45rem; }
+  p { margin: .65rem 0; max-width: 80ch; }
+  a { color: #1e5184; }
+  nav { display: flex; flex-wrap: wrap; gap: .6rem 1.15rem; margin: 1.4rem 0; }
+  section { margin-top: 2.5rem; scroll-margin-top: 1rem; }
+  .legend { color: #3d5067; font-size: .91rem; }
+  .canvas { overflow-x: auto; border: 1px solid #d7e1ec; background: #fdfefe; border-radius: 12px; }
+  svg { display: block; margin-inline: auto; }
+  .card-title { font-size: 15px; font-weight: 700; }
+  .attribute { fill: #243950; font: 13px Consolas, monospace; }
+  .reference { fill: #215882; font-size: 13px; text-decoration: underline; }
+  .multiplicity { fill: #334960; stroke: #fdfefe; stroke-width: 4px; paint-order: stroke; font: 600 13px Consolas, monospace; }
+  .proposed { font-weight: 700; }
+  @media (max-width: 600px) { main { width: calc(100% - 1.5rem); margin-top: 1.5rem; } }
+  @media print {
+    main { width: 100%; margin: 0; }
+    section { break-before: page; }
+    .canvas { overflow: visible; }
+    svg { max-width: 100%; height: auto; }
+  }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Gestión de Residencia · Modelo de datos UML</h1>
+  <p>24 clases para el backend, a partir de las pantallas y las reglas del frontend.</p>
+  <nav aria-label="Vistas del modelo">
+    <a href="#alojamiento">Alojamiento</a>
+    <a href="#facturacion">Facturación, cobros y multas</a>
+    <a href="#limpieza">Limpieza y ambientes</a>
+    <a href="#reclamos">Reclamos y solicitudes</a>
+    <a href="#administracion">Acceso, avisos y administración</a>
+  </nav>
+  <p class="legend"><b>PK</b> clave primaria. <b>FK</b> clave foránea. <b>[0..1]</b> campo opcional. <b>?</b> propuesta para el servidor. Las referencias con enlace llevan a la definición de la clase.</p>
+  <p><a href="MODELO-DATOS.md">Reglas de persistencia y fuente Mermaid</a></p>
+</header>
+<section id="alojamiento" aria-labelledby="alojamiento-titulo">
+  <h2 id="alojamiento-titulo">Alojamiento</h2>
+  <div class="canvas" tabindex="0" aria-label="Diagrama de Alojamiento">
+    <svg xmlns="http://www.w3.org/2000/svg" width="1402" height="821" viewBox="27 77 1402 821" role="group" aria-labelledby="alojamiento-titulo">
+      <g><title>contactos</title>
+<line x1="547.9" y1="325" x2="305" y2="325" stroke="#607088" stroke-width="1.8"/>
+<text x="506.60699999999997" y="314" class="multiplicity" text-anchor="middle">1</text>
+<text x="346.293" y="314" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>contratos</title>
+<line x1="892.0999999999999" y1="325" x2="1119.1" y2="325" stroke="#607088" stroke-width="1.8"/>
+<text x="930.6899999999999" y="314" class="multiplicity" text-anchor="middle">1</text>
+<text x="1080.51" y="314" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>estadías por habitación</title>
+<line x1="720" y1="545" x2="720" y2="710" stroke="#607088" stroke-width="1.8"/>
+<text x="744" y="576.05" class="multiplicity" text-anchor="middle">1</text>
+<text x="744" y="684.95" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>ocupaciones</title>
+<line x1="1123" y1="790" x2="845" y2="790" stroke="#607088" stroke-width="1.8"/>
+<text x="1075.74" y="779" class="multiplicity" text-anchor="middle">1</text>
+<text x="892.26" y="779" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><rect x="547.9" y="105" width="344.2" height="440" rx="9" fill="#ffffff" stroke="#215882" stroke-opacity=".5"/>
+<rect x="548.9" y="106" width="342.2" height="36" rx="8" fill="#e8f3fd"/>
+<text x="561.9" y="129" class="card-title" fill="#215882">Alumno</text>
+<text x="561.9" y="163" class="attribute">idAlumno: ID PK</text>
+<text x="561.9" y="183" class="attribute">nombre: Texto</text>
+<text x="561.9" y="203" class="attribute">apellido: Texto</text>
+<text x="561.9" y="223" class="attribute">documento: Texto único</text>
+<text x="561.9" y="243" class="attribute">telefono: Texto</text>
+<text x="561.9" y="263" class="attribute">correoContacto: Texto [0..1]</text>
+<text x="561.9" y="283" class="attribute">estado: EstadoAlumno</text>
+<text x="561.9" y="303" class="attribute">fechaNacimiento: Fecha [0..1]</text>
+<text x="561.9" y="323" class="attribute">nacionalidad: Texto [0..1]</text>
+<text x="561.9" y="343" class="attribute">domicilio: Texto [0..1]</text>
+<text x="561.9" y="363" class="attribute">localidad: Texto [0..1]</text>
+<text x="561.9" y="383" class="attribute">provincia: Texto [0..1]</text>
+<text x="561.9" y="403" class="attribute">codigoPostal: Texto [0..1]</text>
+<text x="561.9" y="423" class="attribute">institucion: Texto [0..1]</text>
+<text x="561.9" y="443" class="attribute">carrera: Texto [0..1]</text>
+<text x="561.9" y="463" class="attribute">anioCursado: Texto [0..1]</text>
+<text x="561.9" y="483" class="attribute">cantidadMateriasCursadas: Entero [0..1]</text>
+<text x="561.9" y="503" class="attribute">legajo: Texto [0..1]</text>
+<text x="561.9" y="523" class="attribute">observaciones: Texto [0..1]</text></g>
+<g><rect x="55" y="235" width="250" height="180" rx="9" fill="#ffffff" stroke="#215882" stroke-opacity=".5"/>
+<rect x="56" y="236" width="248" height="36" rx="8" fill="#e8f3fd"/>
+<text x="69" y="259" class="card-title" fill="#215882">ContactoEmergencia</text>
+<text x="69" y="293" class="attribute">idContacto: ID PK</text>
+<text x="69" y="313" class="attribute">idAlumno: ID FK</text>
+<text x="69" y="333" class="attribute">nombre: Texto</text>
+<text x="69" y="353" class="attribute">vinculo: Texto</text>
+<text x="69" y="373" class="attribute">telefono: Texto</text>
+<text x="69" y="393" class="attribute">orden: Entero</text></g>
+<g><rect x="1119.1" y="185" width="281.79999999999995" height="280" rx="9" fill="#ffffff" stroke="#215882" stroke-opacity=".5"/>
+<rect x="1120.1" y="186" width="279.79999999999995" height="36" rx="8" fill="#e8f3fd"/>
+<text x="1133.1" y="209" class="card-title" fill="#215882">Contrato</text>
+<text x="1133.1" y="243" class="attribute">idContrato: ID PK</text>
+<text x="1133.1" y="263" class="attribute">idAlumno: ID FK</text>
+<text x="1133.1" y="283" class="attribute">fechaDesde: Fecha</text>
+<text x="1133.1" y="303" class="attribute">fechaHasta: Fecha</text>
+<text x="1133.1" y="323" class="attribute">fechaFirma: Fecha [0..1]</text>
+<text x="1133.1" y="343" class="attribute">montoMensual: Decimal</text>
+<text x="1133.1" y="363" class="attribute">depositoGarantia: Decimal</text>
+<text x="1133.1" y="383" class="attribute">diaVencimientoPago: Entero</text>
+<text x="1133.1" y="403" class="attribute">observaciones: Texto [0..1]</text>
+<text x="1133.1" y="423" class="attribute">fechaCancelacion: Fecha [0..1]</text>
+<text x="1133.1" y="443" class="attribute">motivoCancelacion: Texto [0..1]</text></g>
+<g><rect x="595" y="710" width="250" height="160" rx="9" fill="#ffffff" stroke="#215882" stroke-opacity=".5"/>
+<rect x="596" y="711" width="248" height="36" rx="8" fill="#e8f3fd"/>
+<text x="609" y="734" class="card-title" fill="#215882">HabitacionAlumno</text>
+<text x="609" y="768" class="attribute">idAsignacion: ID PK</text>
+<text x="609" y="788" class="attribute">idAlumno: ID FK</text>
+<text x="609" y="808" class="attribute">idHabitacion: ID FK</text>
+<text x="609" y="828" class="attribute">fechaDesde: Fecha</text>
+<text x="609" y="848" class="attribute">fechaHasta: Fecha [0..1]</text></g>
+<g><rect x="1123" y="710" width="274" height="160" rx="9" fill="#ffffff" stroke="#215882" stroke-opacity=".5"/>
+<rect x="1124" y="711" width="272" height="36" rx="8" fill="#e8f3fd"/>
+<text x="1137" y="734" class="card-title" fill="#215882">Habitacion</text>
+<text x="1137" y="768" class="attribute">idHabitacion: ID PK</text>
+<text x="1137" y="788" class="attribute">numeroHabitacion: Entero único</text>
+<text x="1137" y="808" class="attribute">pisoHabitacion: Entero [0..1]</text>
+<text x="1137" y="828" class="attribute">capacidadMaxima: Entero</text>
+<text x="1137" y="848" class="attribute">descripcion: Texto</text></g>
+    </svg>
+  </div>
+</section>
+<section id="facturacion" aria-labelledby="facturacion-titulo">
+  <h2 id="facturacion-titulo">Facturación, cobros y multas</h2>
+  <div class="canvas" tabindex="0" aria-label="Diagrama de Facturación, cobros y multas">
+    <svg xmlns="http://www.w3.org/2000/svg" width="1736" height="1196" viewBox="47 52 1736 1196" role="group" aria-labelledby="facturacion-titulo">
+      <g><title>contratos</title>
+<line x1="225" y1="580" x2="795" y2="182" stroke="#607088" stroke-width="1.8"/>
+<text x="321.9" y="501.34000000000003" class="multiplicity" text-anchor="middle">1</text>
+<text x="698.0999999999999" y="238.66000000000003" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>cuotas</title>
+<line x1="1045" y1="170" x2="1630" y2="520" stroke="#607088" stroke-width="1.8"/>
+<text x="1144.45" y="218.5" class="multiplicity" text-anchor="middle">1</text>
+<text x="1530.55" y="449.5" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>renglones</title>
+<line x1="1505" y1="620" x2="1265.3" y2="620" stroke="#607088" stroke-width="1.8"/>
+<text x="1464.251" y="609" class="multiplicity" text-anchor="middle">1</text>
+<text x="1306.049" y="609" class="multiplicity" text-anchor="middle">1..*</text>
+</g>
+<g><title>cobros</title>
+<line x1="1630" y1="720" x2="1045" y2="1110" stroke="#607088" stroke-width="1.8"/>
+<text x="1530.55" y="775.3" class="multiplicity" text-anchor="middle">0..1</text>
+<text x="1144.45" y="1032.7" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>pagos del alumno</title>
+<line x1="200" y1="660" x2="795" y2="1110" stroke="#607088" stroke-width="1.8"/>
+<text x="301.15" y="725.5" class="multiplicity" text-anchor="middle">1</text>
+<text x="693.8499999999999" y="1022.5" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>sanciones</title>
+<line x1="325" y1="620" x2="534.7" y2="620" stroke="#607088" stroke-width="1.8"/>
+<text x="360.649" y="609" class="multiplicity" text-anchor="middle">1</text>
+<text x="499.05100000000004" y="609" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>cargo facturado</title>
+<line x1="785.3000000000001" y1="620" x2="1014.7" y2="620" stroke="#607088" stroke-width="1.8"/>
+<text x="824.2980000000001" y="609" class="multiplicity" text-anchor="middle">0..1</text>
+<text x="975.702" y="609" class="multiplicity" text-anchor="middle">0..1</text>
+</g>
+<g><title>ediciones y prórrogas</title>
+<line x1="660" y1="410" x2="515.3" y2="170" stroke="#607088" stroke-width="1.8"/>
+<text x="635.401" y="358.2" class="multiplicity" text-anchor="middle">1</text>
+<text x="539.899" y="199.8" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<a href="#alojamiento" aria-label="Ver Alojamiento"><rect x="75" y="580" width="250" height="80" rx="9" fill="#ffffff" stroke="#22614b" stroke-opacity=".5"/>
+<rect x="76" y="581" width="248" height="36" rx="8" fill="#ecf5f0"/>
+<text x="89" y="604" class="card-title" fill="#22614b">Alumno</text>
+<text x="89" y="638" class="reference">Ver Alojamiento</text></a>
+<a href="#alojamiento" aria-label="Ver Alojamiento"><rect x="795" y="130" width="250" height="80" rx="9" fill="#ffffff" stroke="#22614b" stroke-opacity=".5"/>
+<rect x="796" y="131" width="248" height="36" rx="8" fill="#ecf5f0"/>
+<text x="809" y="154" class="card-title" fill="#22614b">Contrato</text>
+<text x="809" y="188" class="reference">Ver Alojamiento</text></a>
+<g><rect x="1505" y="520" width="250" height="200" rx="9" fill="#ffffff" stroke="#22614b" stroke-opacity=".5"/>
+<rect x="1506" y="521" width="248" height="36" rx="8" fill="#ecf5f0"/>
+<text x="1519" y="544" class="card-title" fill="#22614b">Factura</text>
+<text x="1519" y="578" class="attribute">idFactura: ID PK</text>
+<text x="1519" y="598" class="attribute">idContrato: ID FK</text>
+<text x="1519" y="618" class="attribute">periodo: AñoMes</text>
+<text x="1519" y="638" class="attribute">fechaEmision: Fecha</text>
+<text x="1519" y="658" class="attribute">fechaVence: Fecha</text>
+<text x="1519" y="678" class="attribute">titular: Texto</text>
+<text x="1519" y="698" class="attribute">documento: Texto</text></g>
+<g><rect x="1014.7" y="530" width="250.6" height="180" rx="9" fill="#ffffff" stroke="#22614b" stroke-opacity=".5"/>
+<rect x="1015.7" y="531" width="248.6" height="36" rx="8" fill="#ecf5f0"/>
+<text x="1028.7" y="554" class="card-title" fill="#22614b">DetalleFactura</text>
+<text x="1028.7" y="588" class="attribute">idDetalle: ID PK</text>
+<text x="1028.7" y="608" class="attribute">idFactura: ID FK</text>
+<text x="1028.7" y="628" class="attribute">idMulta: ID FK [0..1] único</text>
+<text x="1028.7" y="648" class="attribute">concepto: Texto</text>
+<text x="1028.7" y="668" class="attribute">monto: Decimal</text>
+<text x="1028.7" y="688" class="attribute">orden: Entero</text></g>
+<g><rect x="795" y="1000" width="250" height="220" rx="9" fill="#ffffff" stroke="#22614b" stroke-opacity=".5"/>
+<rect x="796" y="1001" width="248" height="36" rx="8" fill="#ecf5f0"/>
+<text x="809" y="1024" class="card-title" fill="#22614b">Pago</text>
+<text x="809" y="1058" class="attribute">idPago: ID PK</text>
+<text x="809" y="1078" class="attribute">idAlumno: ID FK</text>
+<text x="809" y="1098" class="attribute">idFactura: ID FK [0..1]</text>
+<text x="809" y="1118" class="attribute">monto: Decimal</text>
+<text x="809" y="1138" class="attribute">fecha: Fecha</text>
+<text x="809" y="1158" class="attribute">concepto: Texto</text>
+<text x="809" y="1178" class="attribute">medio: MedioPago [0..1]</text>
+<text x="809" y="1198" class="attribute">referencia: Texto [0..1]</text></g>
+<g><rect x="534.7" y="410" width="250.6" height="420" rx="9" fill="#ffffff" stroke="#22614b" stroke-opacity=".5"/>
+<rect x="535.7" y="411" width="248.6" height="36" rx="8" fill="#ecf5f0"/>
+<text x="548.7" y="434" class="card-title" fill="#22614b">Multa</text>
+<text x="548.7" y="468" class="attribute">idMulta: ID PK</text>
+<text x="548.7" y="488" class="attribute">idAlumno: ID FK</text>
+<text x="548.7" y="508" class="attribute">idEmision: ID [0..1]</text>
+<text x="548.7" y="528" class="attribute">tipo: TipoMulta</text>
+<text x="548.7" y="548" class="attribute">motivo: Texto</text>
+<text x="548.7" y="568" class="attribute">observaciones: Texto [0..1]</text>
+<text x="548.7" y="588" class="attribute">huboDanios: Booleano</text>
+<text x="548.7" y="608" class="attribute">detalleDanios: Texto [0..1]</text>
+<text x="548.7" y="628" class="attribute">montoSancion: Decimal</text>
+<text x="548.7" y="648" class="attribute">montoDanios: Decimal</text>
+<text x="548.7" y="668" class="attribute">recargoPorcentaje: Decimal</text>
+<text x="548.7" y="688" class="attribute">fechaEmision: Fecha</text>
+<text x="548.7" y="708" class="attribute">fechaVence: Fecha</text>
+<text x="548.7" y="728" class="attribute">periodoDesde: AñoMes</text>
+<text x="548.7" y="748" class="attribute">periodoHasta: AñoMes</text>
+<text x="548.7" y="768" class="attribute">estado: EstadoMulta</text>
+<text x="548.7" y="788" class="attribute">fechaPago: Fecha [0..1]</text>
+<text x="548.7" y="808" class="attribute">montoPagado: Decimal [0..1]</text></g>
+<g><rect x="264.7" y="80" width="250.6" height="180" rx="9" fill="#ffffff" stroke="#22614b" stroke-opacity=".5"/>
+<rect x="265.7" y="81" width="248.6" height="36" rx="8" fill="#ecf5f0"/>
+<text x="278.7" y="104" class="card-title" fill="#22614b">CambioMulta</text>
+<text x="278.7" y="138" class="attribute">idCambio: ID PK</text>
+<text x="278.7" y="158" class="attribute">idMulta: ID FK</text>
+<text x="278.7" y="178" class="attribute">fecha: Instante</text>
+<text x="278.7" y="198" class="attribute">accion: AccionMulta</text>
+<text x="278.7" y="218" class="attribute">motivo: Texto [0..1]</text>
+<text x="278.7" y="238" class="attribute">cambios: CambioCampo [1..*]</text></g>
+    </svg>
+  </div>
+</section>
+<section id="limpieza" aria-labelledby="limpieza-titulo">
+  <h2 id="limpieza-titulo">Limpieza y ambientes</h2>
+  <div class="canvas" tabindex="0" aria-label="Diagrama de Limpieza y ambientes">
+    <svg xmlns="http://www.w3.org/2000/svg" width="1375" height="1001" viewBox="27 87 1375 1001" role="group" aria-labelledby="limpieza-titulo">
+      <g><title>pertenencia actual</title>
+<line x1="305" y1="175" x2="585" y2="175" stroke="#607088" stroke-width="1.8"/>
+<text x="352.6" y="164" class="multiplicity" text-anchor="middle">1</text>
+<text x="537.4" y="164" class="multiplicity" text-anchor="middle">0..1</text>
+</g>
+<g><title>integrantes</title>
+<line x1="1106.9" y1="175" x2="835" y2="175" stroke="#607088" stroke-width="1.8"/>
+<text x="1060.6770000000001" y="164" class="multiplicity" text-anchor="middle">1</text>
+<text x="881.223" y="164" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>ambientes asignados</title>
+<line x1="1240" y1="235" x2="1240" y2="525" stroke="#607088" stroke-width="1.8"/>
+<text x="1264" y="287.3" class="multiplicity" text-anchor="middle">1</text>
+<text x="1264" y="478.7" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>asignaciones históricas</title>
+<line x1="835" y1="605" x2="1115" y2="605" stroke="#607088" stroke-width="1.8"/>
+<text x="882.6" y="594" class="multiplicity" text-anchor="middle">1</text>
+<text x="1067.4" y="594" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>inventario</title>
+<line x1="585" y1="605" x2="305" y2="605" stroke="#607088" stroke-width="1.8"/>
+<text x="537.4" y="594" class="multiplicity" text-anchor="middle">1</text>
+<text x="352.6" y="594" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<a href="#alojamiento" aria-label="Ver Alojamiento"><rect x="55" y="135" width="250" height="80" rx="9" fill="#ffffff" stroke="#85520c" stroke-opacity=".5"/>
+<rect x="56" y="136" width="248" height="36" rx="8" fill="#fff3df"/>
+<text x="69" y="159" class="card-title" fill="#85520c">Alumno</text>
+<text x="69" y="193" class="reference">Ver Alojamiento</text></a>
+<g><rect x="585" y="125" width="250" height="100" rx="9" fill="#ffffff" stroke="#85520c" stroke-opacity=".5"/>
+<rect x="586" y="126" width="248" height="36" rx="8" fill="#fff3df"/>
+<text x="599" y="149" class="card-title" fill="#85520c">GrupoLimpiezaAlumno</text>
+<text x="599" y="183" class="attribute">idAlumno: ID PK, FK</text>
+<text x="599" y="203" class="attribute">idGrupoLimpieza: ID FK</text></g>
+<g><rect x="1106.9" y="115" width="266.2" height="120" rx="9" fill="#ffffff" stroke="#85520c" stroke-opacity=".5"/>
+<rect x="1107.9" y="116" width="264.2" height="36" rx="8" fill="#fff3df"/>
+<text x="1120.9" y="139" class="card-title" fill="#85520c">GrupoDeLimpieza</text>
+<text x="1120.9" y="173" class="attribute">idGrupoLimpieza: ID PK</text>
+<text x="1120.9" y="193" class="attribute">nombreDelGrupo: Texto único</text>
+<text x="1120.9" y="213" class="attribute">posicionInicial: Entero único</text></g>
+<g><rect x="55" y="535" width="250" height="140" rx="9" fill="#ffffff" stroke="#85520c" stroke-opacity=".5"/>
+<rect x="56" y="536" width="248" height="36" rx="8" fill="#fff3df"/>
+<text x="69" y="559" class="card-title" fill="#85520c">EquipamientoAmbiente</text>
+<text x="69" y="593" class="attribute">idEquipamiento: ID PK</text>
+<text x="69" y="613" class="attribute">idAmbiente: ID FK</text>
+<text x="69" y="633" class="attribute">nombre: Texto</text>
+<text x="69" y="653" class="attribute">cantidad: Entero</text></g>
+<g><rect x="585" y="515" width="250" height="180" rx="9" fill="#ffffff" stroke="#85520c" stroke-opacity=".5"/>
+<rect x="586" y="516" width="248" height="36" rx="8" fill="#fff3df"/>
+<text x="599" y="539" class="card-title" fill="#85520c">Ambiente</text>
+<text x="599" y="573" class="attribute">idAmbiente: ID PK</text>
+<text x="599" y="593" class="attribute">nombre: Texto único</text>
+<text x="599" y="613" class="attribute">tipo: TipoAmbiente [0..1]</text>
+<text x="599" y="633" class="attribute">ubicacion: Texto [0..1]</text>
+<text x="599" y="653" class="attribute">descripcion: Texto [0..1]</text>
+<text x="599" y="673" class="attribute">tareas: Texto [0..1]</text></g>
+<g><rect x="1115" y="525" width="250" height="160" rx="9" fill="#ffffff" stroke="#85520c" stroke-opacity=".5"/>
+<rect x="1116" y="526" width="248" height="36" rx="8" fill="#fff3df"/>
+<text x="1129" y="549" class="card-title" fill="#85520c">GrupoLimpiezaAmbiente</text>
+<text x="1129" y="583" class="attribute">idAsignacion: ID PK</text>
+<text x="1129" y="603" class="attribute">idGrupoLimpieza: ID FK</text>
+<text x="1129" y="623" class="attribute">idAmbiente: ID FK</text>
+<text x="1129" y="643" class="attribute">fechaDesde: Fecha</text>
+<text x="1129" y="663" class="attribute">fechaHasta: Fecha [0..1]</text></g>
+<g><rect x="553.5" y="920" width="313" height="140" rx="9" fill="#ffffff" stroke="#85520c" stroke-opacity=".5"/>
+<rect x="554.5" y="921" width="311" height="36" rx="8" fill="#fff3df"/>
+<text x="567.5" y="944" class="card-title" fill="#85520c">TareaLimpieza</text>
+<text x="567.5" y="978" class="attribute">numero: Entero PK</text>
+<text x="567.5" y="998" class="attribute">nombre: Texto único</text>
+<text x="567.5" y="1018" class="attribute">enRotacion: Booleano</text>
+<text x="567.5" y="1038" class="attribute">actividades: Texto [1..*] ordenadas</text></g>
+    </svg>
+  </div>
+</section>
+<section id="reclamos" aria-labelledby="reclamos-titulo">
+  <h2 id="reclamos-titulo">Reclamos y solicitudes</h2>
+  <div class="canvas" tabindex="0" aria-label="Diagrama de Reclamos y solicitudes">
+    <svg xmlns="http://www.w3.org/2000/svg" width="1898" height="356" viewBox="27 142 1898 356" role="group" aria-labelledby="reclamos-titulo">
+      <g><title>presentaciones</title>
+<line x1="305" y1="320" x2="563" y2="320" stroke="#607088" stroke-width="1.8"/>
+<text x="348.86" y="309" class="multiplicity" text-anchor="middle">1</text>
+<text x="519.14" y="309" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>historial</title>
+<line x1="837" y1="320" x2="1090.8" y2="320" stroke="#607088" stroke-width="1.8"/>
+<text x="880.146" y="309" class="multiplicity" text-anchor="middle">1</text>
+<text x="1047.654" y="309" class="multiplicity" text-anchor="middle">1..*</text>
+</g>
+<g><title>autoría ?</title>
+<line x1="1583.5" y1="320" x2="1349.1999999999998" y2="320" stroke="#607088" stroke-width="1.8"/>
+<text x="1543.6689999999999" y="309" class="multiplicity" text-anchor="middle">0..1 ?</text>
+<text x="1389.031" y="309" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<a href="#alojamiento" aria-label="Ver Alojamiento"><rect x="55" y="280" width="250" height="80" rx="9" fill="#ffffff" stroke="#6c448d" stroke-opacity=".5"/>
+<rect x="56" y="281" width="248" height="36" rx="8" fill="#f6eefd"/>
+<text x="69" y="304" class="card-title" fill="#6c448d">Alumno</text>
+<text x="69" y="338" class="reference">Ver Alojamiento</text></a>
+<g><rect x="563" y="170" width="274" height="300" rx="9" fill="#ffffff" stroke="#6c448d" stroke-opacity=".5"/>
+<rect x="564" y="171" width="272" height="36" rx="8" fill="#f6eefd"/>
+<text x="577" y="194" class="card-title" fill="#6c448d">Reclamo</text>
+<text x="577" y="228" class="attribute">idReclamo: ID PK</text>
+<text x="577" y="248" class="attribute">idAlumno: ID FK</text>
+<text x="577" y="268" class="attribute">tipo: TipoReclamo</text>
+<text x="577" y="288" class="attribute">categoria: CategoriaReclamo</text>
+<text x="577" y="308" class="attribute">asunto: Texto</text>
+<text x="577" y="328" class="attribute">descripcion: Texto</text>
+<text x="577" y="348" class="attribute">ubicacion: Texto</text>
+<text x="577" y="368" class="attribute">detalleUbicacion: Texto [0..1]</text>
+<text x="577" y="388" class="attribute">prioridad: Prioridad</text>
+<text x="577" y="408" class="attribute">estado: EstadoReclamo</text>
+<text x="577" y="428" class="attribute">fechaCreacion: Instante</text>
+<text x="577" y="448" class="attribute">fechaActualizacion: Instante</text></g>
+<g><rect x="1090.8" y="200" width="258.4" height="240" rx="9" fill="#ffffff" stroke="#6c448d" stroke-opacity=".5"/>
+<rect x="1091.8" y="201" width="256.4" height="36" rx="8" fill="#f6eefd"/>
+<text x="1104.8" y="224" class="card-title" fill="#6c448d">SeguimientoReclamo</text>
+<text x="1104.8" y="258" class="attribute">idSeguimiento: ID PK</text>
+<text x="1104.8" y="278" class="attribute">idReclamo: ID FK</text>
+<text x="1104.8" y="298" class="attribute">idAutor: ID FK [0..1] ?</text>
+<text x="1104.8" y="318" class="attribute">autor: Texto</text>
+<text x="1104.8" y="338" class="attribute">rol: Rol</text>
+<text x="1104.8" y="358" class="attribute">tipo: TipoSeguimiento</text>
+<text x="1104.8" y="378" class="attribute">mensaje: Texto</text>
+<text x="1104.8" y="398" class="attribute">estado: EstadoReclamo [0..1]</text>
+<text x="1104.8" y="418" class="attribute">fecha: Instante</text></g>
+<a href="#administracion" aria-label="Ver Acceso, avisos y administración"><rect x="1583.5" y="280" width="313" height="80" rx="9" fill="#ffffff" stroke="#6c448d" stroke-opacity=".5"/>
+<rect x="1584.5" y="281" width="311" height="36" rx="8" fill="#f6eefd"/>
+<text x="1597.5" y="304" class="card-title" fill="#6c448d">Usuario</text>
+<text x="1597.5" y="338" class="reference">Ver Acceso, avisos y administración</text></a>
+    </svg>
+  </div>
+</section>
+<section id="administracion" aria-labelledby="administracion-titulo">
+  <h2 id="administracion-titulo">Acceso, avisos y administración</h2>
+  <div class="canvas" tabindex="0" aria-label="Diagrama de Acceso, avisos y administración">
+    <svg xmlns="http://www.w3.org/2000/svg" width="1496" height="1131" viewBox="27 7 1496 1131" role="group" aria-labelledby="administracion-titulo">
+      <g><title>cuenta de acceso</title>
+<line x1="305" y1="565" x2="621.3" y2="565" stroke="#607088" stroke-width="1.8"/>
+<text x="358.771" y="554" class="multiplicity" text-anchor="middle">0..1</text>
+<text x="567.529" y="554" class="multiplicity" text-anchor="middle">0..1</text>
+</g>
+<g><title>sesiones ?</title>
+<line x1="770" y1="415" x2="770" y2="215" stroke="#607088" stroke-width="1.8"/>
+<text x="794" y="384" class="multiplicity" text-anchor="middle">1 ?</text>
+<text x="794" y="252" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>recuperación ?</title>
+<line x1="918.6999999999999" y1="463" x2="1245" y2="291" stroke="#607088" stroke-width="1.8"/>
+<text x="974.1709999999999" y="422.76" class="multiplicity" text-anchor="middle">1 ?</text>
+<text x="1189.529" y="309.24" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>avisos ?</title>
+<line x1="918.6999999999999" y1="604" x2="1245" y2="600" stroke="#607088" stroke-width="1.8"/>
+<text x="974.1709999999999" y="592.32" class="multiplicity" text-anchor="middle">1 ?</text>
+<text x="1189.529" y="589.68" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<g><title>actor</title>
+<line x1="770" y1="715" x2="770" y2="910" stroke="#607088" stroke-width="1.8"/>
+<text x="794" y="751.15" class="multiplicity" text-anchor="middle">1</text>
+<text x="794" y="879.85" class="multiplicity" text-anchor="middle">0..*</text>
+</g>
+<a href="#alojamiento" aria-label="Ver Alojamiento"><rect x="55" y="525" width="250" height="80" rx="9" fill="#ffffff" stroke="#344f89" stroke-opacity=".5"/>
+<rect x="56" y="526" width="248" height="36" rx="8" fill="#e9effa"/>
+<text x="69" y="549" class="card-title" fill="#344f89">Alumno</text>
+<text x="69" y="583" class="reference">Ver Alojamiento</text></a>
+<g><rect x="621.3" y="415" width="297.4" height="300" rx="9" fill="#ffffff" stroke="#344f89" stroke-opacity=".5"/>
+<rect x="622.3" y="416" width="295.4" height="36" rx="8" fill="#e9effa"/>
+<text x="635.3" y="439" class="card-title" fill="#344f89">Usuario</text>
+<text x="635.3" y="473" class="attribute">idUsuario: ID PK</text>
+<text x="635.3" y="493" class="attribute">idAlumno: ID FK [0..1] único</text>
+<text x="635.3" y="513" class="attribute">correo: Texto único</text>
+<text x="635.3" y="533" class="attribute">rol: Rol</text>
+<text x="635.3" y="553" class="attribute">estado: EstadoCuenta</text>
+<text x="635.3" y="573" class="attribute">passwordHash: Texto</text>
+<text x="635.3" y="593" class="attribute">gestionaAdministradores: Booleano</text>
+<text x="635.3" y="613" class="attribute">fechaAlta: Instante</text>
+<text x="635.3" y="633" class="attribute">nombre: Texto [0..1]</text>
+<text x="635.3" y="653" class="attribute">apellido: Texto [0..1]</text>
+<text x="635.3" y="673" class="attribute">documento: Texto [0..1]</text>
+<text x="635.3" y="693" class="attribute">telefono: Texto [0..1]</text></g>
+<g><rect x="644.7" y="35" width="250.6" height="180" rx="9" fill="#ffffff" stroke="#344f89" stroke-opacity=".5"/>
+<rect x="645.7" y="36" width="248.6" height="36" rx="8" fill="#e9effa"/>
+<text x="658.7" y="59" class="card-title" fill="#344f89">Sesion <tspan class="proposed">?</tspan></text>
+<text x="658.7" y="93" class="attribute">idSesion: ID PK</text>
+<text x="658.7" y="113" class="attribute">idUsuario: ID FK</text>
+<text x="658.7" y="133" class="attribute">tokenHash: Texto único</text>
+<text x="658.7" y="153" class="attribute">creadaEn: Instante</text>
+<text x="658.7" y="173" class="attribute">expiraEn: Instante</text>
+<text x="658.7" y="193" class="attribute">revocadaEn: Instante [0..1]</text></g>
+<g><rect x="1245" y="165" width="250" height="180" rx="9" fill="#ffffff" stroke="#344f89" stroke-opacity=".5"/>
+<rect x="1246" y="166" width="248" height="36" rx="8" fill="#e9effa"/>
+<text x="1259" y="189" class="card-title" fill="#344f89">TokenRestablecimiento <tspan class="proposed">?</tspan></text>
+<text x="1259" y="223" class="attribute">idToken: ID PK</text>
+<text x="1259" y="243" class="attribute">idUsuario: ID FK</text>
+<text x="1259" y="263" class="attribute">tokenHash: Texto único</text>
+<text x="1259" y="283" class="attribute">creadoEn: Instante</text>
+<text x="1259" y="303" class="attribute">expiraEn: Instante</text>
+<text x="1259" y="323" class="attribute">usadoEn: Instante [0..1]</text></g>
+<g><rect x="1245" y="480" width="250" height="240" rx="9" fill="#ffffff" stroke="#344f89" stroke-opacity=".5"/>
+<rect x="1246" y="481" width="248" height="36" rx="8" fill="#e9effa"/>
+<text x="1259" y="504" class="card-title" fill="#344f89">Notificacion <tspan class="proposed">?</tspan></text>
+<text x="1259" y="538" class="attribute">idNotificacion: ID PK</text>
+<text x="1259" y="558" class="attribute">idUsuario: ID FK</text>
+<text x="1259" y="578" class="attribute">claveEvento: Texto</text>
+<text x="1259" y="598" class="attribute">tipo: TipoAviso</text>
+<text x="1259" y="618" class="attribute">titulo: Texto</text>
+<text x="1259" y="638" class="attribute">detalle: Texto</text>
+<text x="1259" y="658" class="attribute">destino: Texto</text>
+<text x="1259" y="678" class="attribute">creadaEn: Instante</text>
+<text x="1259" y="698" class="attribute">leidaEn: Instante [0..1]</text></g>
+<g><rect x="645" y="910" width="250" height="200" rx="9" fill="#ffffff" stroke="#344f89" stroke-opacity=".5"/>
+<rect x="646" y="911" width="248" height="36" rx="8" fill="#e9effa"/>
+<text x="659" y="934" class="card-title" fill="#344f89">CambioAdministrativo</text>
+<text x="659" y="968" class="attribute">idCambio: ID PK</text>
+<text x="659" y="988" class="attribute">idActor: ID FK</text>
+<text x="659" y="1008" class="attribute">fecha: Instante</text>
+<text x="659" y="1028" class="attribute">seccion: Texto</text>
+<text x="659" y="1048" class="attribute">accion: Texto</text>
+<text x="659" y="1068" class="attribute">referencia: Texto [0..1]</text>
+<text x="659" y="1088" class="attribute">detalle: Texto</text></g>
+<g><rect x="55" y="900" width="250" height="100" rx="9" fill="#ffffff" stroke="#344f89" stroke-opacity=".5"/>
+<rect x="56" y="901" width="248" height="36" rx="8" fill="#e9effa"/>
+<text x="69" y="924" class="card-title" fill="#344f89">ParametroSistema</text>
+<text x="69" y="958" class="attribute">clave: ClaveParametro PK</text>
+<text x="69" y="978" class="attribute">valor: Decimal</text></g>
+    </svg>
+  </div>
+</section>
+</main>
+</body>
+</html>
