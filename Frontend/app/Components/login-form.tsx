@@ -163,13 +163,7 @@ export function LoginForm() {
       </form>
 
       <p className="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
-        ¿No tienes una cuenta?{" "}
-        <Link
-          to="/register"
-          className="font-medium text-brand-700 hover:underline dark:text-brand-400"
-        >
-          Regístrate
-        </Link>
+        Para solicitar acceso, contactá a la administración de la residencia.
       </p>
     </>
   );

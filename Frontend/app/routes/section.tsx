@@ -1,0 +1,3 @@
+import { Link, useParams } from "react-router";
+import { sections } from "../config/navigation";
+export default function Section() { const { role, section } = useParams(); const item = sections.find(item => item.slug === section) ?? (role === "admin" && section === "alumnos" ? { label: "Alumnos" } : undefined); if (!item) throw new Response("Página no encontrada", { status: 404 }); return <><p className="eyebrow">PRÓXIMA ETAPA</p><h1>{item.label}</h1><section className="panel"><h2>Pantalla pendiente de desarrollo</h2><p>La ruta y la navegación están preparadas. Los formularios, listados y acciones se implementarán en los siguientes pasos.</p><Link to={`/${role}`}>Volver al inicio →</Link></section></>; }

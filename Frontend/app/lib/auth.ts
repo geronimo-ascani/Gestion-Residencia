@@ -1,3 +1,7 @@
+import { cargarDatosGuardados, DATOS_KEY } from "./persistence";
+import { claveInicial, hashClave } from "./credenciales";
+import { estadoAcceso } from "./administracion";
+import { guardarSesion } from "./session";
 export interface AuthResult {
   error?: string;
 }
@@ -30,6 +34,7 @@ async function post(
       return { error: data?.message ?? fallbackMessage };
     }
 
+    if (!response.headers.get("content-type")?.includes("application/json")) return { error: "Este servicio todavía no está disponible. Contactá a la administración." };
     return {};
   } catch {
     return { error: "No se pudo conectar con el servicio. Inténtalo de nuevo." };
@@ -42,16 +47,18 @@ export interface SignInCredentials {
   remember?: boolean;
 }
 
-export function signInWithEmail(credentials: SignInCredentials): Promise<AuthResult> {
-  return post(
-    "/api/auth/sign-in/email",
-    {
-      email: credentials.email,
-      password: credentials.password,
-      rememberMe: credentials.remember ?? false,
-    },
-    "El correo electrónico o la contraseña no son correctos.",
-  );
+export async function signInWithEmail(credentials: SignInCredentials): Promise<AuthResult> {
+  try {
+    const datos = cargarDatosGuardados(localStorage.getItem(DATOS_KEY));
+    const u = datos.usuarios.find((u) => u.correo.toLowerCase() === credentials.email.trim().toLowerCase());
+    if (!u || estadoAcceso(u, datos) !== "activo") return { error: "Credenciales incorrectas o cuenta sin acceso habilitado." };
+    const esperado = u.passwordHash ?? await hashClave(claveInicial(u.apellido ?? "", u.documento ?? ""));
+    if (await hashClave(credentials.password) !== esperado) return { error: "El correo o la contraseña no son correctos." };
+    guardarSesion(u, credentials.remember);
+    return {};
+  } catch {
+    return { error: "No se pudo iniciar sesión ni leer los datos guardados. Comprobá que el navegador permita guardar datos o contactá a administración." };
+  }
 }
 
 export interface SignUpCredentials {

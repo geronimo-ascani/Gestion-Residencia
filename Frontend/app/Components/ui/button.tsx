@@ -1,7 +1,8 @@
 import type { ComponentProps } from "react";
+import { Link, type LinkProps } from "react-router";
 import { cn } from "../../lib/cn";
 
-export type ButtonVariant = "solid" | "outline" | "ghost";
+export type ButtonVariant = "solid" | "outline" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 export interface ButtonProps extends ComponentProps<"button"> {
@@ -11,19 +12,20 @@ export interface ButtonProps extends ComponentProps<"button"> {
 }
 
 const base =
-  "inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg font-medium " +
+  "inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-medium " +
   "select-none transition-colors duration-150 " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 " +
   "disabled:pointer-events-none disabled:opacity-60";
 
 const variants: Record<ButtonVariant, string> = {
-  solid: "bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800",
+  solid: "border border-brand-700 shadow-sm bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800",
   outline:
-    "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100 " +
-    "dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800",
+    "border border-brand-400 bg-brand-100 shadow-sm text-brand-700 hover:bg-brand-100 active:bg-brand-200/70 " +
+    "dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-200 dark:hover:bg-brand-900/50",
   ghost:
-    "text-slate-600 hover:bg-slate-100 hover:text-slate-900 " +
-    "dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
+    "text-brand-700 hover:bg-brand-50 hover:text-brand-800 " +
+    "dark:text-brand-300 dark:hover:bg-brand-900/30 dark:hover:text-brand-200",
+  danger: "border border-red-800 shadow-sm bg-red-700 text-white hover:bg-red-800 active:bg-red-900",
 };
 
 const sizes: Record<ButtonSize, string> = {
@@ -31,6 +33,11 @@ const sizes: Record<ButtonSize, string> = {
   md: "h-11 px-4 text-sm",
   lg: "h-12 px-6 text-base",
 };
+
+/** Un enlace de navegación con la apariencia de un botón y un solo foco. */
+export function ButtonLink({ variant = "solid", size = "md", className, ...props }: LinkProps & { variant?: ButtonVariant; size?: ButtonSize }) {
+  return <Link className={cn(base, variants[variant], sizes[size], className)} {...props} />;
+}
 
 export function Button({
   variant = "solid",
