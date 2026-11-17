@@ -42,7 +42,7 @@ export const registerSchema = z
     apellido: z.string().trim().optional(),
     documento: z.string().trim().optional(),
     telefono: z.string().trim().optional(),
-    rol: z.enum(["ADMINISTRADOR", "ALUMNO"]).default("ALUMNO"),
+    rol: z.enum(["ADMINISTRADOR", "ALUMNO", "administrador", "alumno"]).default("ALUMNO"),
   })
   .refine((data) => data.correo || data.email, {
     message: "El correo electrónico es obligatorio",
@@ -54,7 +54,6 @@ export const registerSchema = z
   })
   .transform((data) => {
     const fullName = (data.nombre || data.name || "").trim();
-    // Si viene solo un nombre completo (ej: "Ana Pérez"), separar en nombre y apellido
     let nombreFinal = fullName;
     let apellidoFinal = data.apellido || "";
 
@@ -71,7 +70,7 @@ export const registerSchema = z
       apellido: apellidoFinal,
       documento: data.documento,
       telefono: data.telefono,
-      rol: data.rol || "ALUMNO",
+      rol: (data.rol || "ALUMNO").toUpperCase(),
     };
   });
 
@@ -85,3 +84,38 @@ export const changePasswordSchema = z.object({
     .min(6, "La nueva contraseña debe tener al menos 6 caracteres"),
 });
 
+/**
+ * Esquema para solicitud de restablecimiento de contraseña (olvido de clave).
+ */
+export const forgetPasswordSchema = z
+  .object({
+    correo: z.string().trim().email("Formato de correo electrónico inválido").toLowerCase().optional(),
+    email: z.string().trim().email("Formato de correo electrónico inválido").toLowerCase().optional(),
+    redirectTo: z.string().optional(),
+  })
+  .refine((data) => data.correo || data.email, {
+    message: "El correo electrónico es obligatorio",
+    path: ["email"],
+  })
+  .transform((data) => ({
+    correo: (data.correo || data.email).toLowerCase().trim(),
+    redirectTo: data.redirectTo || "/reset-password",
+  }));
+
+/**
+ * Esquema para restablecer contraseña con token.
+ */
+export const resetPasswordSchema = z
+  .object({
+    token: z.string({ required_error: "El token de restablecimiento es obligatorio" }).min(1),
+    newPassword: z.string().min(6, "La nueva contraseña debe tener al menos 6 caracteres").optional(),
+    nuevaContrasena: z.string().min(6, "La nueva contraseña debe tener al menos 6 caracteres").optional(),
+  })
+  .refine((data) => data.newPassword || data.nuevaContrasena, {
+    message: "La nueva contraseña es obligatoria",
+    path: ["newPassword"],
+  })
+  .transform((data) => ({
+    token: data.token.trim(),
+    nuevaContrasena: data.newPassword || data.nuevaContrasena,
+  }));

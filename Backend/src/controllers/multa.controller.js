@@ -3,25 +3,27 @@ import { successResponse } from "../utils/apiResponse.js";
 
 /**
  * Capa de Controlador: Multa
- * Maneja las solicitudes HTTP para emisión, seguimiento y cobro de multas.
+ * Maneja las solicitudes HTTP para emisión, seguimiento, prórroga y cobro de sanciones.
  */
 class MultaController {
   /**
    * POST /api/multas
    */
-  create = async (req, res, next) => {
+  emitir = async (req, res, next) => {
     try {
-      const nuevaMulta = await multaService.create(req.body);
+      const multas = await multaService.emitir(req.body);
       return successResponse(
         res,
-        nuevaMulta,
-        "Multa registrada exitosamente",
+        multas,
+        "Multa(s) registrada(s) exitosamente",
         201
       );
     } catch (error) {
       return next(error);
     }
   };
+
+  create = this.emitir;
 
   /**
    * GET /api/multas
@@ -78,18 +80,63 @@ class MultaController {
   };
 
   /**
-   * PATCH /api/multas/:id/estado
+   * POST /api/multas/:id/prorrogar
    */
-  cambiarEstado = async (req, res, next) => {
+  prorrogar = async (req, res, next) => {
     try {
-      const multaActualizada = await multaService.cambiarEstado(
+      const multaProrrogada = await multaService.prorrogar(
         req.params.id,
-        req.body.estadoMulta
+        req.body
       );
       return successResponse(
         res,
-        multaActualizada,
-        `Estado de la multa actualizado a '${req.body.estadoMulta}' con éxito`,
+        multaProrrogada,
+        "Prórroga de vencimiento aplicada exitosamente",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * POST /api/multas/:id/anular
+   */
+  anular = async (req, res, next) => {
+    try {
+      const multaAnulada = await multaService.anular(
+        req.params.id,
+        req.body
+      );
+      return successResponse(
+        res,
+        multaAnulada,
+        "Multa anulada exitosamente",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * PATCH /api/multas/:id/estado (compatibilidad)
+   */
+  cambiarEstado = async (req, res, next) => {
+    try {
+      const estado = (req.body.estadoMulta || req.body.estado || "").toUpperCase();
+      let resultado;
+      if (estado === "PAGADA") {
+        resultado = await multaService.registrarPago(req.params.id, req.body);
+      } else if (estado === "ANULADA") {
+        resultado = await multaService.anular(req.params.id, { motivo: req.body.motivo });
+      } else {
+        resultado = await multaService.update(req.params.id, { estadoMulta: estado });
+      }
+      return successResponse(
+        res,
+        resultado,
+        `Estado de la multa actualizado a '${estado}' con éxito`,
         200
       );
     } catch (error) {
@@ -102,7 +149,7 @@ class MultaController {
    */
   registrarPago = async (req, res, next) => {
     try {
-      const multaPagada = await multaService.registrarPago(req.params.id);
+      const multaPagada = await multaService.registrarPago(req.params.id, req.body);
       return successResponse(
         res,
         multaPagada,
@@ -134,4 +181,3 @@ class MultaController {
 
 export const multaController = new MultaController();
 export default multaController;
-

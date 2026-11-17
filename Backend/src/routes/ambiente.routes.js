@@ -5,14 +5,16 @@ import {
   createAmbienteSchema,
   updateAmbienteSchema,
   ambienteIdParamSchema,
-  queryLimpiezaSchema,
+  agregarEquipamientoSchema,
+  equipamientoIdParamSchema,
+  queryAmbienteSchema,
 } from "../schemas/limpieza.schema.js";
 
 const router = Router();
 
 /**
  * @route   POST /api/ambientes
- * @desc    Registrar un nuevo ambiente
+ * @desc    Crear un nuevo ambiente común con inventario opcional
  */
 router.post(
   "/",
@@ -22,17 +24,17 @@ router.post(
 
 /**
  * @route   GET /api/ambientes
- * @desc    Listar todos los ambientes con el grupo que lo tiene asignado
+ * @desc    Listar ambientes comunes con filtro por tipo, búsqueda e inventario
  */
 router.get(
   "/",
-  validate({ query: queryLimpiezaSchema }),
+  validate({ query: queryAmbienteSchema }),
   ambienteController.getAll
 );
 
 /**
  * @route   GET /api/ambientes/:id
- * @desc    Obtener detalle de un ambiente con historial de grupos asignados
+ * @desc    Obtener detalle de un ambiente por su ID con equipamiento e historial
  */
 router.get(
   "/:id",
@@ -42,7 +44,7 @@ router.get(
 
 /**
  * @route   PUT /api/ambientes/:id
- * @desc    Actualizar datos o tareas de un ambiente
+ * @desc    Actualizar metadatos de un ambiente (nombre, tipo, tareas, descripción)
  */
 router.put(
   "/:id",
@@ -55,7 +57,7 @@ router.put(
 
 /**
  * @route   DELETE /api/ambientes/:id
- * @desc    Eliminar un ambiente
+ * @desc    Eliminar un ambiente y su equipamiento
  */
 router.delete(
   "/:id",
@@ -63,5 +65,43 @@ router.delete(
   ambienteController.delete
 );
 
-export default router;
+/**
+ * ==========================================
+ * RUTAS DE EQUIPAMIENTO DEL AMBIENTE
+ * ==========================================
+ */
 
+/**
+ * @route   POST /api/ambientes/:id/equipamiento
+ * @desc    Agregar equipamiento al ambiente (si ya existe, acumula la cantidad)
+ */
+router.post(
+  "/:id/equipamiento",
+  validate({
+    params: ambienteIdParamSchema,
+    body: agregarEquipamientoSchema,
+  }),
+  ambienteController.agregarEquipamiento
+);
+
+/**
+ * @route   PUT /api/ambientes/:id/equipamiento/:idEquipamiento
+ * @desc    Modificar un objeto de equipamiento en el ambiente
+ */
+router.put(
+  "/:id/equipamiento/:idEquipamiento",
+  validate({ params: equipamientoIdParamSchema }),
+  ambienteController.updateEquipamiento
+);
+
+/**
+ * @route   DELETE /api/ambientes/:id/equipamiento/:idEquipamiento
+ * @desc    Eliminar un objeto de equipamiento del ambiente
+ */
+router.delete(
+  "/:id/equipamiento/:idEquipamiento",
+  validate({ params: equipamientoIdParamSchema }),
+  ambienteController.deleteEquipamiento
+);
+
+export default router;

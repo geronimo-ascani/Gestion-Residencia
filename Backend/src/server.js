@@ -11,7 +11,9 @@ const server = app.listen(env.PORT, () => {
   console.log(`👤 Alumnos:       http://localhost:${env.PORT}/api/alumnos`);
   console.log(`🛏️  Habitaciones:  http://localhost:${env.PORT}/api/habitaciones`);
   console.log(`📄 Contratos:     http://localhost:${env.PORT}/api/contratos`);
-  console.log(`💳 Cuotas:        http://localhost:${env.PORT}/api/cuotas`);
+  console.log(`🧾 Facturas:      http://localhost:${env.PORT}/api/facturas`);
+  console.log(`💵 Pagos/Cobros:  http://localhost:${env.PORT}/api/cobros`);
+  console.log(`💳 Cuotas (leg):  http://localhost:${env.PORT}/api/cuotas`);
   console.log(`⚠️  Multas:        http://localhost:${env.PORT}/api/multas`);
   console.log(`🧹 Limpieza:      http://localhost:${env.PORT}/api/grupos-limpieza`);
   console.log(`🏡 Ambientes:     http://localhost:${env.PORT}/api/ambientes`);

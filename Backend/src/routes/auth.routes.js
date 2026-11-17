@@ -6,6 +6,8 @@ import {
   registerSchema,
   loginSchema,
   changePasswordSchema,
+  forgetPasswordSchema,
+  resetPasswordSchema,
 } from "../schemas/auth.schema.js";
 
 const router = Router();
@@ -59,10 +61,51 @@ router.put(
 
 /**
  * @route   POST /api/auth/logout (y /api/auth/sign-out)
- * @desc    Cerrar sesión
+ * @desc    Cerrar sesión revocando la sesión activa
  */
 router.post("/logout", authController.logout);
 router.post("/sign-out", authController.logout);
 
-export default router;
+/**
+ * @route   GET /api/auth/sesiones
+ * @desc    Listar sesiones del usuario autenticado
+ */
+router.get("/sesiones", authenticate, authController.listarSesiones);
 
+/**
+ * @route   DELETE /api/auth/sesiones/:idSesion
+ * @desc    Revocar una sesión activa del usuario
+ */
+router.delete("/sesiones/:idSesion", authenticate, authController.revocarSesion);
+
+/**
+ * @route   POST /api/auth/forget-password (y /api/auth/recuperar-clave)
+ * @desc    Solicitar token de recuperación de contraseña
+ */
+router.post(
+  "/forget-password",
+  validate({ body: forgetPasswordSchema }),
+  authController.forgetPassword
+);
+router.post(
+  "/recuperar-clave",
+  validate({ body: forgetPasswordSchema }),
+  authController.forgetPassword
+);
+
+/**
+ * @route   POST /api/auth/reset-password (y /api/auth/restablecer-clave)
+ * @desc    Restablecer contraseña utilizando un token válido
+ */
+router.post(
+  "/reset-password",
+  validate({ body: resetPasswordSchema }),
+  authController.resetPassword
+);
+router.post(
+  "/restablecer-clave",
+  validate({ body: resetPasswordSchema }),
+  authController.resetPassword
+);
+
+export default router;

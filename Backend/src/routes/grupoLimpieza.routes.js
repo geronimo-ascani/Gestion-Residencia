@@ -5,19 +5,90 @@ import {
   createGrupoSchema,
   updateGrupoSchema,
   grupoIdParamSchema,
+  guardarIntegrantesSchema,
   agregarAlumnoGrupoSchema,
   grupoAlumnoParamsSchema,
   asignarAmbienteGrupoSchema,
   finalizarAsignacionAmbienteSchema,
   grupoAmbienteParamsSchema,
+  createTareaLimpiezaSchema,
+  updateTareaLimpiezaSchema,
+  tareaNumeroParamSchema,
   queryLimpiezaSchema,
 } from "../schemas/limpieza.schema.js";
 
 const router = Router();
 
 /**
+ * ==========================================
+ * RUTAS DE CRONOGRAMA Y TAREAS DE LIMPIEZA
+ * ==========================================
+ */
+
+/**
+ * @route   GET /api/grupos-limpieza/cronograma
+ * @desc    Obtener cronograma consolidado con rotación automática de tareas
+ */
+router.get("/cronograma", grupoLimpiezaController.getCronograma);
+
+/**
+ * @route   GET /api/grupos-limpieza/tareas
+ * @desc    Listar tareas de limpieza estándar y adicionales
+ */
+router.get("/tareas", grupoLimpiezaController.getAllTareas);
+
+/**
+ * @route   POST /api/grupos-limpieza/tareas
+ * @desc    Crear una nueva tarea de limpieza
+ */
+router.post(
+  "/tareas",
+  validate({ body: createTareaLimpiezaSchema }),
+  grupoLimpiezaController.createTarea
+);
+
+/**
+ * @route   GET /api/grupos-limpieza/tareas/:numero
+ * @desc    Obtener una tarea de limpieza por su número
+ */
+router.get(
+  "/tareas/:numero",
+  validate({ params: tareaNumeroParamSchema }),
+  grupoLimpiezaController.getTareaByNumero
+);
+
+/**
+ * @route   PUT /api/grupos-limpieza/tareas/:numero
+ * @desc    Modificar una tarea de limpieza (nombre, estado de rotación o actividades)
+ */
+router.put(
+  "/tareas/:numero",
+  validate({
+    params: tareaNumeroParamSchema,
+    body: updateTareaLimpiezaSchema,
+  }),
+  grupoLimpiezaController.updateTarea
+);
+
+/**
+ * @route   DELETE /api/grupos-limpieza/tareas/:numero
+ * @desc    Eliminar una tarea de limpieza
+ */
+router.delete(
+  "/tareas/:numero",
+  validate({ params: tareaNumeroParamSchema }),
+  grupoLimpiezaController.deleteTarea
+);
+
+/**
+ * ==========================================
+ * RUTAS DE GRUPOS DE LIMPIEZA
+ * ==========================================
+ */
+
+/**
  * @route   POST /api/grupos-limpieza
- * @desc    Crear un nuevo grupo de limpieza
+ * @desc    Crear un nuevo grupo de limpieza (máximo 4, tarea inicial 1-4 única)
  */
 router.post(
   "/",
@@ -27,7 +98,7 @@ router.post(
 
 /**
  * @route   GET /api/grupos-limpieza
- * @desc    Listar grupos de limpieza con miembros y asignaciones activas
+ * @desc    Obtener lista de grupos de limpieza con integrantes y tareas asignadas
  */
 router.get(
   "/",
@@ -36,14 +107,8 @@ router.get(
 );
 
 /**
- * @route   GET /api/grupos-limpieza/cronograma
- * @desc    Cronograma consolidado de limpieza actual por ambientes
- */
-router.get("/cronograma", grupoLimpiezaController.getCronograma);
-
-/**
  * @route   GET /api/grupos-limpieza/:id
- * @desc    Obtener detalle de un grupo con historial de turnos
+ * @desc    Obtener detalle del grupo de limpieza por ID
  */
 router.get(
   "/:id",
@@ -53,7 +118,7 @@ router.get(
 
 /**
  * @route   PUT /api/grupos-limpieza/:id
- * @desc    Actualizar nombre de un grupo de limpieza
+ * @desc    Actualizar nombre o tarea inicial del grupo
  */
 router.put(
   "/:id",
@@ -66,7 +131,7 @@ router.put(
 
 /**
  * @route   DELETE /api/grupos-limpieza/:id
- * @desc    Eliminar un grupo de limpieza
+ * @desc    Eliminar grupo de limpieza
  */
 router.delete(
   "/:id",
@@ -75,8 +140,40 @@ router.delete(
 );
 
 /**
+ * ==========================================
+ * RUTAS DE GESTIÓN DE INTEGRANTES
+ * ==========================================
+ */
+
+/**
+ * @route   PUT /api/grupos-limpieza/:id/alumnos
+ * @desc    Reemplazar de forma atómica la nómina completa de integrantes del grupo (con traslado automático)
+ */
+router.put(
+  "/:id/alumnos",
+  validate({
+    params: grupoIdParamSchema,
+    body: guardarIntegrantesSchema,
+  }),
+  grupoLimpiezaController.guardarIntegrantes
+);
+
+/**
+ * @route   POST /api/grupos-limpieza/:id/integrantes
+ * @desc    Alias para reemplazo de integrantes
+ */
+router.post(
+  "/:id/integrantes",
+  validate({
+    params: grupoIdParamSchema,
+    body: guardarIntegrantesSchema,
+  }),
+  grupoLimpiezaController.guardarIntegrantes
+);
+
+/**
  * @route   POST /api/grupos-limpieza/:id/alumnos
- * @desc    Añadir un alumno al grupo de limpieza
+ * @desc    Añadir o trasladar un alumno a un grupo de limpieza
  */
 router.post(
   "/:id/alumnos",
@@ -98,8 +195,14 @@ router.delete(
 );
 
 /**
+ * ==========================================
+ * RUTAS DE AMBIENTES ASIGNADOS AL GRUPO
+ * ==========================================
+ */
+
+/**
  * @route   POST /api/grupos-limpieza/:id/ambientes
- * @desc    Asignar un ambiente al grupo (rango de fechas de turno)
+ * @desc    Asignar un ambiente común al grupo de limpieza
  */
 router.post(
   "/:id/ambientes",
@@ -112,7 +215,7 @@ router.post(
 
 /**
  * @route   PUT /api/grupos-limpieza/:id/ambientes/:idAmbiente/finalizar
- * @desc    Finalizar turno de un ambiente para el grupo
+ * @desc    Finalizar turno de aseo de un ambiente para el grupo
  */
 router.put(
   "/:id/ambientes/:idAmbiente/finalizar",
@@ -124,4 +227,3 @@ router.put(
 );
 
 export default router;
-

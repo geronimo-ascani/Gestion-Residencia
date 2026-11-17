@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/database.js";
@@ -10,8 +11,7 @@ import {
 } from "../utils/customErrors.js";
 
 /**
- * Capa de Servicio: Autenticación y Autorización
- * Gestiona el ciclo de vida de credenciales, contraseñas hash, roles y tokens JWT.
+ * Capa de Servicio: Autenticación, Sesiones y Recuperación de Acceso
  */
 class AuthService {
   /**
@@ -31,8 +31,24 @@ class AuthService {
   }
 
   /**
-   * Registra un nuevo usuario en el sistema.
-   * Si se proporcionan datos de nombre o documento, crea simultáneamente el perfil de Alumno asociado.
+   * Registra una sesión activa en la base de datos vinculada al token JWT emitido.
+   */
+  async #registrarSesion(idUsuario, token, remember = false) {
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const duracionMs = remember ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const expiraEn = new Date(Date.now() + duracionMs);
+
+    return await prisma.sesion.create({
+      data: {
+        idUsuario,
+        tokenHash,
+        expiraEn,
+      },
+    });
+  }
+
+  /**
+   * Registra un nuevo usuario en el sistema y crea su sesión inicial.
    */
   async register(data) {
     const { correo, contrasena, nombre, apellido, documento, telefono, rol } = data;
@@ -79,6 +95,10 @@ class AuthService {
           correo,
           contrasenaHash,
           idRol: rolRegistro.idRol,
+          nombre: nombre || null,
+          apellido: apellido || null,
+          documento: documento || null,
+          telefono: telefono || null,
         },
       });
 
@@ -87,21 +107,26 @@ class AuthService {
       if (nombre || documento) {
         perfilAlumno = await tx.alumno.create({
           data: {
-            idUsuario: nuevoUsuario.idUsuario,
             nombre: nombre || "Nombre",
             apellido: apellido || "Apellido",
             documento: documento || `DOC-${nuevoUsuario.idUsuario}`,
             telefono: telefono || null,
-            estado: "ACTIVO",
+            estado: "activo",
           },
+        });
+
+        await tx.usuario.update({
+          where: { idUsuario: nuevoUsuario.idUsuario },
+          data: { idAlumno: perfilAlumno.idAlumno },
         });
       }
 
       return { nuevoUsuario, perfilAlumno };
     });
 
-    // 6. Generar token JWT
+    // 6. Generar token JWT y registrar sesión
     const token = this.#generarToken(resultado.nuevoUsuario, rolRegistro.rol);
+    await this.#registrarSesion(resultado.nuevoUsuario.idUsuario, token, false);
 
     return {
       token,
@@ -115,7 +140,7 @@ class AuthService {
   }
 
   /**
-   * Inicia sesión con correo y contraseña.
+   * Inicia sesión con correo y contraseña, registrando la sesión activa en BD.
    */
   async login({ correo, contrasena, remember }) {
     // 1. Buscar usuario con su rol y perfil de alumno
@@ -140,6 +165,10 @@ class AuthService {
       throw new UnauthorizedError("El correo electrónico o la contraseña no son correctos");
     }
 
+    if (usuario.estado === "suspendido" || usuario.estado === "inactivo") {
+      throw new UnauthorizedError("Tu cuenta se encuentra suspendida o inactiva. Contactá a administración.");
+    }
+
     // 2. Comparar hash de contraseña
     const passwordValida = await bcrypt.compare(contrasena, usuario.contrasenaHash);
 
@@ -147,8 +176,9 @@ class AuthService {
       throw new UnauthorizedError("El correo electrónico o la contraseña no son correctos");
     }
 
-    // 3. Generar token JWT
+    // 3. Generar token JWT y persistir sesión
     const token = this.#generarToken(usuario, usuario.rol.rol, remember);
+    await this.#registrarSesion(usuario.idUsuario, token, remember);
 
     return {
       token,
@@ -156,8 +186,148 @@ class AuthService {
         idUsuario: usuario.idUsuario,
         correo: usuario.correo,
         rol: usuario.rol.rol,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
         alumno: usuario.alumno,
       },
+    };
+  }
+
+  /**
+   * Cierra sesión revocando el token activo en la base de datos.
+   */
+  async logout(tokenString) {
+    if (tokenString) {
+      const raw = tokenString.startsWith("Bearer ") ? tokenString.slice(7) : tokenString;
+      const tokenHash = crypto.createHash("sha256").update(raw.trim()).digest("hex");
+
+      await prisma.sesion.updateMany({
+        where: { tokenHash, revocadaEn: null },
+        data: { revocadaEn: new Date() },
+      });
+    }
+
+    return { ok: true, message: "Sesión cerrada exitosamente" };
+  }
+
+  /**
+   * Lista las sesiones registradas del usuario.
+   */
+  async listarSesiones(idUsuario) {
+    const ahora = new Date();
+    const sesiones = await prisma.sesion.findMany({
+      where: { idUsuario: Number(idUsuario) },
+      orderBy: { creadaEn: "desc" },
+    });
+
+    return sesiones.map((s) => ({
+      idSesion: s.idSesion,
+      creadaEn: s.creadaEn.toISOString(),
+      expiraEn: s.expiraEn.toISOString(),
+      revocadaEn: s.revocadaEn ? s.revocadaEn.toISOString() : null,
+      activa: !s.revocadaEn && s.expiraEn > ahora,
+    }));
+  }
+
+  /**
+   * Revoca una sesión específica.
+   */
+  async revocarSesion(idSesion, idUsuario) {
+    const sesion = await prisma.sesion.findUnique({
+      where: { idSesion: Number(idSesion) },
+    });
+
+    if (!sesion || sesion.idUsuario !== Number(idUsuario)) {
+      throw new NotFoundError("Sesión no encontrada o no autorizada.");
+    }
+
+    return await prisma.sesion.update({
+      where: { idSesion: Number(idSesion) },
+      data: { revocadaEn: new Date() },
+    });
+  }
+
+  /**
+   * Solicita el restablecimiento de contraseña generando un token temporal.
+   */
+  async solicitarRestablecimiento({ correo }) {
+    const usuario = await prisma.usuario.findUnique({
+      where: { correo: correo.toLowerCase().trim() },
+    });
+
+    // Respuesta neutra por prevención de enumeración de cuentas
+    if (!usuario) {
+      return {
+        ok: true,
+        message: "Si el correo está registrado, se enviará un enlace de recuperación.",
+      };
+    }
+
+    // Generar token criptográfico seguro
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const expiraEn = new Date(Date.now() + 60 * 60 * 1000); // 1 hora de validez
+
+    await prisma.tokenRestablecimiento.create({
+      data: {
+        idUsuario: usuario.idUsuario,
+        tokenHash,
+        expiraEn,
+      },
+    });
+
+    return {
+      ok: true,
+      message: "Si el correo está registrado, se enviará un enlace de recuperación.",
+      resetToken: rawToken, // Facilita pruebas y entornos de desarrollo/demo
+    };
+  }
+
+  /**
+   * Restablece la contraseña utilizando un token válido.
+   */
+  async restablecerContrasena({ token, nuevaContrasena }) {
+    const tokenHash = crypto.createHash("sha256").update(token.trim()).digest("hex");
+    const ahora = new Date();
+
+    const registroToken = await prisma.tokenRestablecimiento.findFirst({
+      where: {
+        tokenHash,
+        usadoEn: null,
+        expiraEn: { gt: ahora },
+      },
+    });
+
+    if (!registroToken) {
+      throw new BadRequestError("El enlace o código de recuperación es inválido o ha expirado.");
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const nuevaHash = await bcrypt.hash(nuevaContrasena, salt);
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Actualizar contraseña del usuario
+      await tx.usuario.update({
+        where: { idUsuario: registroToken.idUsuario },
+        data: { contrasenaHash: nuevaHash },
+      });
+
+      // 2. Marcar token como consumido
+      await tx.tokenRestablecimiento.update({
+        where: { idToken: registroToken.idToken },
+        data: { usadoEn: ahora },
+      });
+
+      // 3. Revocar sesiones activas por seguridad
+      await tx.sesion.updateMany({
+        where: { idUsuario: registroToken.idUsuario, revocadaEn: null },
+        data: { revocadaEn: ahora },
+      });
+    });
+
+    return {
+      ok: true,
+      message: "Contraseña restablecida exitosamente. Ya podés iniciar sesión con tu nueva clave.",
     };
   }
 
@@ -170,6 +340,13 @@ class AuthService {
       select: {
         idUsuario: true,
         correo: true,
+        nombre: true,
+        apellido: true,
+        documento: true,
+        telefono: true,
+        estado: true,
+        gestionaAdministradores: true,
+        fechaAlta: true,
         rol: {
           select: {
             idRol: true,
@@ -230,4 +407,3 @@ class AuthService {
 
 export const authService = new AuthService();
 export default authService;
-

@@ -2,8 +2,10 @@ import { Router } from "express";
 import { multaController } from "../controllers/multa.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
-  createMultaSchema,
+  emitirMultaSchema,
   updateMultaSchema,
+  prorrogarMultaSchema,
+  anularMultaSchema,
   cambiarEstadoMultaSchema,
   multaIdParamSchema,
   queryMultaSchema,
@@ -13,17 +15,17 @@ const router = Router();
 
 /**
  * @route   POST /api/multas
- * @desc    Registrar una nueva multa
+ * @desc    Emitir una o varias multas disciplinarias (lote o individual)
  */
 router.post(
   "/",
-  validate({ body: createMultaSchema }),
-  multaController.create
+  validate({ body: emitirMultaSchema }),
+  multaController.emitir
 );
 
 /**
  * @route   GET /api/multas
- * @desc    Obtener lista de multas con filtros y métricas financieras
+ * @desc    Obtener lista de multas con filtros, métricas financieras y estados enriquecidos
  */
 router.get(
   "/",
@@ -33,7 +35,7 @@ router.get(
 
 /**
  * @route   GET /api/multas/:id
- * @desc    Obtener detalle de una multa por su ID
+ * @desc    Obtener detalle de una multa por su ID con auditoría CambioMulta
  */
 router.get(
   "/:id",
@@ -43,7 +45,7 @@ router.get(
 
 /**
  * @route   PUT /api/multas/:id
- * @desc    Actualizar monto o fecha de vencimiento de una multa
+ * @desc    Actualizar datos de una multa y registrar automáticamente la auditoría de cambios
  */
 router.put(
   "/:id",
@@ -55,8 +57,34 @@ router.put(
 );
 
 /**
+ * @route   POST /api/multas/:id/prorrogar
+ * @desc    Prorrogar o aplazar la fecha de vencimiento de una multa registrando auditoría
+ */
+router.post(
+  "/:id/prorrogar",
+  validate({
+    params: multaIdParamSchema,
+    body: prorrogarMultaSchema,
+  }),
+  multaController.prorrogar
+);
+
+/**
+ * @route   POST /api/multas/:id/anular
+ * @desc    Anular una multa pendiente registrando el motivo en auditoría
+ */
+router.post(
+  "/:id/anular",
+  validate({
+    params: multaIdParamSchema,
+    body: anularMultaSchema,
+  }),
+  multaController.anular
+);
+
+/**
  * @route   PATCH /api/multas/:id/estado
- * @desc    Cambiar estado de una multa (PENDIENTE, PAGADA, ANULADA)
+ * @desc    Cambiar estado de una multa (compatibilidad)
  */
 router.patch(
   "/:id/estado",
@@ -69,7 +97,7 @@ router.patch(
 
 /**
  * @route   POST /api/multas/:id/pagar
- * @desc    Registrar el pago de una multa
+ * @desc    Registrar el cobro directo de una multa
  */
 router.post(
   "/:id/pagar",
@@ -79,7 +107,7 @@ router.post(
 
 /**
  * @route   DELETE /api/multas/:id
- * @desc    Eliminar una multa por su ID
+ * @desc    Eliminar una multa por su ID (si no está facturada ni pagada)
  */
 router.delete(
   "/:id",
@@ -88,4 +116,3 @@ router.delete(
 );
 
 export default router;
-

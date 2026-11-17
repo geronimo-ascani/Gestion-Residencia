@@ -2,8 +2,7 @@ import { limpiezaService } from "../services/limpieza.service.js";
 import { successResponse } from "../utils/apiResponse.js";
 
 /**
- * Capa de Controlador: Grupos de Limpieza
- * Maneja las solicitudes HTTP para grupos de aseo, miembros y turnos.
+ * Capa de Controlador: Grupos de Limpieza y Tareas Rotativas
  */
 class GrupoLimpiezaController {
   /**
@@ -45,7 +44,7 @@ class GrupoLimpiezaController {
    */
   getCronograma = async (req, res, next) => {
     try {
-      const cronograma = await limpiezaService.getCronograma();
+      const cronograma = await limpiezaService.getCronograma(req.query?.fecha);
       return successResponse(
         res,
         cronograma,
@@ -62,7 +61,7 @@ class GrupoLimpiezaController {
    */
   getById = async (req, res, next) => {
     try {
-      const grupo = await limpiezaService.getGrupoById(req.params.id);
+      const grupo = await limpiezaService.getGrupoById(req.params.id, req.query?.fecha);
       return successResponse(
         res,
         grupo,
@@ -104,6 +103,27 @@ class GrupoLimpiezaController {
         res,
         grupoEliminado,
         "Grupo de limpieza eliminado exitosamente",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * PUT /api/grupos-limpieza/:id/alumnos o POST /api/grupos-limpieza/:id/integrantes
+   * Reemplaza de forma atómica los integrantes del grupo (con reubicación).
+   */
+  guardarIntegrantes = async (req, res, next) => {
+    try {
+      const resultado = await limpiezaService.guardarIntegrantes(
+        req.params.id,
+        req.body.idAlumnos
+      );
+      return successResponse(
+        res,
+        resultado,
+        "Nómina de integrantes actualizada con éxito",
         200
       );
     } catch (error) {
@@ -191,8 +211,83 @@ class GrupoLimpiezaController {
       return next(error);
     }
   };
+
+  /**
+   * ==========================================
+   * MÉTODOS PARA TAREAS DE LIMPIEZA
+   * ==========================================
+   */
+
+  getAllTareas = async (req, res, next) => {
+    try {
+      const tareas = await limpiezaService.getAllTareas();
+      return successResponse(
+        res,
+        tareas,
+        "Listado de tareas de limpieza obtenido con éxito",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  getTareaByNumero = async (req, res, next) => {
+    try {
+      const tarea = await limpiezaService.getTareaByNumero(req.params.numero);
+      return successResponse(
+        res,
+        tarea,
+        "Detalle de la tarea de limpieza obtenido con éxito",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  createTarea = async (req, res, next) => {
+    try {
+      const tarea = await limpiezaService.createTarea(req.body);
+      return successResponse(
+        res,
+        tarea,
+        "Tarea de limpieza creada exitosamente",
+        201
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  updateTarea = async (req, res, next) => {
+    try {
+      const tarea = await limpiezaService.updateTarea(req.params.numero, req.body);
+      return successResponse(
+        res,
+        tarea,
+        "Tarea de limpieza actualizada exitosamente",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  deleteTarea = async (req, res, next) => {
+    try {
+      const eliminada = await limpiezaService.deleteTarea(req.params.numero);
+      return successResponse(
+        res,
+        eliminada,
+        "Tarea de limpieza eliminada exitosamente",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
 }
 
 export const grupoLimpiezaController = new GrupoLimpiezaController();
 export default grupoLimpiezaController;
-

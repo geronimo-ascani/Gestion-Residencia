@@ -1,93 +1,135 @@
 import { z } from "zod";
 
-export const ESTADOS_MULTA = ["PENDIENTE", "PAGADA", "ANULADA"];
+export const TIPOS_MULTA_VALIDOS = ["leve", "moderada", "grave", "extraordinaria"];
+export const ESTADOS_MULTA = ["PENDIENTE", "PAGADA", "ANULADA", "pendiente", "pagada", "anulada", "vencida"];
 
 /**
- * Esquema de validación para la creación de una Multa.
+ * Esquema para la emisión de multas (individual o por lote de alumnos).
  */
-export const createMultaSchema = z
+export const emitirMultaSchema = z
   .object({
-    idAlumno: z.coerce
-      .number({
-        required_error: "El ID del alumno es obligatorio",
-        invalid_type_error: "El ID del alumno debe ser un entero",
-      })
-      .int("El ID del alumno debe ser un entero")
-      .positive("El ID del alumno debe ser positivo"),
-    monto: z.coerce
-      .number({
-        required_error: "El monto de la multa es obligatorio",
-        invalid_type_error: "El monto debe ser un número válido",
-      })
-      .positive("El monto de la multa debe ser mayor a 0"),
-    fechaEmision: z.coerce
-      .date({ invalid_type_error: "La fecha de emisión debe ser una fecha válida" })
-      .default(() => new Date()),
-    fechaVence: z.coerce.date({
-      required_error: "La fecha de vencimiento es obligatoria",
-      invalid_type_error: "La fecha de vencimiento debe ser una fecha válida",
+    idAlumno: z.coerce.number().int().positive().optional(),
+    idAlumnos: z.array(z.coerce.number().int().positive()).optional(),
+    tipo: z.enum(["leve", "moderada", "grave", "extraordinaria"], {
+      errorMap: () => ({ message: "El tipo de multa debe ser leve, moderada, grave o extraordinaria" }),
     }),
-    estadoMulta: z
-      .enum(ESTADOS_MULTA, {
-        errorMap: () => ({
-          message: `El estado debe ser uno de: ${ESTADOS_MULTA.join(", ")}`,
-        }),
-      })
-      .default("PENDIENTE"),
+    motivo: z
+      .string({ required_error: "El motivo de la sanción es obligatorio" })
+      .trim()
+      .min(3, "El motivo debe tener al menos 3 caracteres")
+      .max(4000, "El motivo no puede exceder 4000 caracteres"),
+    observaciones: z.string().trim().max(4000).optional().default(""),
+    huboDanios: z.boolean().default(false),
+    detalleDanios: z.string().trim().max(4000).optional().default(""),
+    montoSancion: z.coerce
+      .number({ required_error: "El importe de la sanción es obligatorio" })
+      .positive("El importe de la sanción debe ser mayor a 0"),
+    montoDanios: z.coerce.number().min(0, "El importe de daños no puede ser negativo").optional().default(0),
+    recargoPorcentaje: z.coerce.number().min(0).max(100).optional().default(20),
+    fechaEmision: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    fechaVence: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    periodoDesde: z.string().trim().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional(),
+    periodoHasta: z.string().trim().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional(),
   })
-  .refine((data) => data.fechaVence >= data.fechaEmision, {
-    message: "La fecha de vencimiento no puede ser anterior a la fecha de emisión",
-    path: ["fechaVence"],
-  });
+  .refine(
+    (data) => (data.idAlumno !== undefined && data.idAlumno > 0) || (Array.isArray(data.idAlumnos) && data.idAlumnos.length > 0),
+    {
+      message: "Debe especificar 'idAlumno' o una lista de 'idAlumnos'",
+      path: ["idAlumno"],
+    }
+  )
+  .refine(
+    (data) => !data.huboDanios || (data.detalleDanios && data.detalleDanios.trim().length > 0),
+    {
+      message: "Debe detallar el bien y daño ocasionado si se registraron daños",
+      path: ["detalleDanios"],
+    }
+  )
+  .refine(
+    (data) => !data.huboDanios || (Number(data.montoDanios) > 0),
+    {
+      message: "El importe de daños debe ser mayor a cero si se declararon daños",
+      path: ["montoDanios"],
+    }
+  );
+
+export const createMultaSchema = emitirMultaSchema;
 
 /**
- * Esquema de validación para actualización parcial de una Multa.
+ * Esquema para actualización parcial de una multa.
  */
 export const updateMultaSchema = z
   .object({
-    monto: z.coerce.number().positive("El monto debe ser mayor a 0").optional(),
-    fechaVence: z.coerce.date().optional(),
-    estadoMulta: z
-      .enum(ESTADOS_MULTA, {
-        errorMap: () => ({
-          message: `El estado debe ser uno de: ${ESTADOS_MULTA.join(", ")}`,
-        }),
-      })
-      .optional(),
+    tipo: z.enum(["leve", "moderada", "grave", "extraordinaria"]).optional(),
+    motivo: z.string().trim().min(3).max(4000).optional(),
+    observaciones: z.string().trim().max(4000).optional(),
+    huboDanios: z.boolean().optional(),
+    detalleDanios: z.string().trim().max(4000).optional(),
+    montoSancion: z.coerce.number().positive().optional(),
+    montoDanios: z.coerce.number().min(0).optional(),
+    monto: z.coerce.number().positive().optional(),
+    recargoPorcentaje: z.coerce.number().min(0).max(100).optional(),
+    fechaVence: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    periodoHasta: z.string().trim().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional(),
+    estadoMulta: z.enum(["PENDIENTE", "PAGADA", "ANULADA", "pendiente", "pagada", "anulada"]).optional(),
+    motivoCambio: z.string().trim().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "Debe proporcionar al menos un campo para actualizar",
   });
 
 /**
- * Esquema de validación para cambio rápido de estado de una Multa.
+ * Esquema para solicitud de prórroga o extensión de plazo de una multa.
  */
-export const cambiarEstadoMultaSchema = z.object({
-  estadoMulta: z.enum(ESTADOS_MULTA, {
-    errorMap: () => ({
-      message: `El estado debe ser uno de: ${ESTADOS_MULTA.join(", ")}`,
-    }),
-  }),
+export const prorrogarMultaSchema = z.object({
+  motivo: z
+    .string({ required_error: "El motivo de la prórroga es obligatorio" })
+    .trim()
+    .min(3, "El motivo debe tener al menos 3 caracteres")
+    .max(500, "El motivo no puede exceder 500 caracteres"),
+  dias: z.coerce.number().int().positive().optional(),
+  nuevaFechaVence: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 /**
- * Esquema de validación para parámetros de ruta con ID de Multa.
+ * Esquema para anulación de una multa.
+ */
+export const anularMultaSchema = z.object({
+  motivo: z
+    .string({ required_error: "El motivo de la anulación es obligatorio" })
+    .trim()
+    .min(3, "El motivo debe tener al menos 3 caracteres")
+    .max(500, "El motivo no puede exceder 500 caracteres"),
+});
+
+/**
+ * Esquema para cambio de estado tradicional.
+ */
+export const cambiarEstadoMultaSchema = z.object({
+  estadoMulta: z.enum(["PENDIENTE", "PAGADA", "ANULADA", "pendiente", "pagada", "anulada"]),
+  motivo: z.string().trim().optional(),
+});
+
+/**
+ * Esquema para validar el parámetro ID de Multa.
  */
 export const multaIdParamSchema = z.object({
   id: z.coerce
-    .number({ invalid_type_error: "El ID debe ser un número entero válido" })
-    .int("El ID debe ser un número entero")
-    .positive("El ID debe ser un número positivo"),
+    .number({ invalid_type_error: "El ID de multa debe ser un entero positivo" })
+    .int("El ID debe ser un entero")
+    .positive("El ID debe ser positivo"),
 });
 
 /**
- * Esquema de validación para filtros y paginación en listado de Multas.
+ * Esquema para filtrado y paginación en listado de Multas.
  */
 export const queryMultaSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10),
   idAlumno: z.coerce.number().int().positive().optional(),
-  estadoMulta: z.enum(ESTADOS_MULTA).optional(),
+  estado: z.string().trim().optional(),
+  estadoMulta: z.string().trim().optional(),
+  tipo: z.string().trim().optional(),
   search: z.string().trim().optional(),
   soloVencidas: z
     .preprocess((val) => {
@@ -99,4 +141,3 @@ export const queryMultaSchema = z.object({
     }, z.boolean())
     .optional(),
 });
-

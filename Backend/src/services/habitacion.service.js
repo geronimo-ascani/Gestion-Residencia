@@ -404,11 +404,7 @@ class HabitacionService {
 
     return await prisma.habitacionAlumno.update({
       where: {
-        idHabitacion_idAlumno_fechaDesde: {
-          idHabitacion: asignacion.idHabitacion,
-          idAlumno: asignacion.idAlumno,
-          fechaDesde: asignacion.fechaDesde,
-        },
+        idAsignacion: asignacion.idAsignacion,
       },
       data: {
         fechaHasta: fechaSalida,
