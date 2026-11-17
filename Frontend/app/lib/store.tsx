@@ -118,6 +118,7 @@ export interface DataContextValue extends DataState {
   asignarHabitacion: (idAlumno: string, idHabitacion: string) => void;
   liberarHabitacion: (idAlumno: string) => void;
   crearAlumno: (input: NuevoAlumnoInput) => string;
+  actualizarAlumno: (idAlumno: string, input: Partial<NuevoAlumnoInput>) => void;
   crearHabitacion: (input: NuevaHabitacionInput) => string;
   actualizarTareaLimpieza: (numero: number, input: NuevaTareaLimpiezaInput) => void;
   crearTareaLimpieza: (input: NuevaTareaLimpiezaInput) => void;
@@ -424,6 +425,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
           alumnos: [...previo.alumnos, { ...input, idAlumno, estado: "activo" }],
         }));
         return idAlumno;
+      },
+
+      actualizarAlumno(idAlumno, input) {
+        exigirAdministrador(state);
+        const alumno = alumnoPorId.get(idAlumno);
+        if (!alumno) throw new Error("El alumno no existe.");
+        if (input.nombre !== undefined || input.apellido !== undefined || input.documento !== undefined ||
+          input.telefono !== undefined || input.correo !== undefined) {
+          validarAltaAlumno(state, { ...alumno, ...input }, idAlumno);
+        }
+        setState((previo) => ({
+          ...previo,
+          alumnos: previo.alumnos.map((alumno) => alumno.idAlumno === idAlumno ? { ...alumno, ...input } : alumno),
+        }));
       },
 
       crearHabitacion(input) {

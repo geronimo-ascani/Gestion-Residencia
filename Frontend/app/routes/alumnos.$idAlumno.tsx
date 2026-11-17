@@ -1,3 +1,5 @@
+import { AlumnoFichaModulo, DatosModulo } from "../Components/alumno-ficha-modulo";
+import { contactosDeAlumno } from "../lib/modulos-alumno";
 import { AlumnoCuenta } from "../Components/alumno-cuenta";
 import { importeMulta } from "../lib/multas";
 import { useMemo, useState } from "react";
@@ -96,6 +98,9 @@ export default function AlumnoDetalle() {
     });
   }
 
+  const contactos = contactosDeAlumno(alumno);
+  const search = params.toString();
+
   const tabs = [
     { id: "resumen", label: "Ficha general" },
     { id: "contrato", label: "Contratos", count: contratosAlumno.length },
@@ -153,27 +158,16 @@ export default function AlumnoDetalle() {
 
       {tab === "resumen" ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-lg border border-slate-300 bg-white shadow-sm p-5 dark:border-slate-800 dark:bg-slate-900">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Datos personales</h3>
-            <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div>
-                <dt className="text-xs text-slate-500">Nombre completo</dt>
-                <dd className="mt-1 text-sm text-slate-900 dark:text-white">{alumno.apellido}, {alumno.nombre}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-slate-500">Documento</dt>
-                <dd className="mt-1 text-sm text-slate-900 dark:text-white">{alumno.documento}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-slate-500">Correo</dt>
-                <dd className="mt-1 text-sm text-slate-900 dark:text-white">{alumno.correo || "Sin registrar"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-slate-500">Teléfono</dt>
-                <dd className="mt-1 text-sm text-slate-900 dark:text-white">{alumno.telefono}</dd>
-              </div>
-            </dl>
-          </div>
+          <AlumnoFichaModulo modulo="personales" search={search}>
+            <DatosModulo campos={[
+              ["Nombre completo", alumno.apellido + ", " + alumno.nombre],
+              ["Documento", alumno.documento],
+              ["Correo", alumno.correo],
+              ["Teléfono", alumno.telefono],
+              ["Fecha de nacimiento", alumno.fechaNacimiento ? formatFecha(alumno.fechaNacimiento) : undefined],
+              ["Nacionalidad", alumno.nacionalidad],
+            ]} />
+          </AlumnoFichaModulo>
           <div className="rounded-lg border border-slate-300 bg-white shadow-sm p-5 dark:border-slate-800 dark:bg-slate-900">
             <h3 className="text-base font-semibold text-slate-900 dark:text-white">Estado actual</h3>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -199,9 +193,41 @@ export default function AlumnoDetalle() {
         </div>
       ) : null}
 
-      {tab === "resumen" ? <section className="rounded-xl border border-slate-300 bg-white shadow-sm p-5 dark:border-slate-800 dark:bg-slate-900"><h2 className="text-base font-semibold">Datos de ingreso</h2><dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{alumno.fechaNacimiento ? <div><dt className="text-xs text-slate-500">Fecha de nacimiento</dt><dd className="mt-1 break-words text-sm">{formatFecha(alumno.fechaNacimiento)}</dd></div> : null}{alumno.nacionalidad ? <div><dt className="text-xs text-slate-500">Nacionalidad</dt><dd className="mt-1 break-words text-sm">{alumno.nacionalidad}</dd></div> : null}{alumno.domicilio ? <div><dt className="text-xs text-slate-500">Domicilio de origen</dt><dd className="mt-1 break-words text-sm">{alumno.domicilio}</dd></div> : null}{alumno.localidad ? <div><dt className="text-xs text-slate-500">Localidad</dt><dd className="mt-1 break-words text-sm">{alumno.localidad}</dd></div> : null}{alumno.provincia ? <div><dt className="text-xs text-slate-500">Provincia</dt><dd className="mt-1 break-words text-sm">{alumno.provincia}</dd></div> : null}{alumno.codigoPostal ? <div><dt className="text-xs text-slate-500">Código postal</dt><dd className="mt-1 break-words text-sm">{alumno.codigoPostal}</dd></div> : null}{alumno.cantidadMateriasCursadas !== undefined ? <div><dt className="text-xs text-slate-500">Cantidad de materias cursadas</dt><dd className="mt-1 text-sm">{alumno.cantidadMateriasCursadas}</dd></div> : null}{alumno.carrera ? <div><dt className="text-xs text-slate-500">Carrera</dt><dd className="mt-1 break-words text-sm">{alumno.carrera}</dd></div> : null}{alumno.legajo ? <div><dt className="text-xs text-slate-500">Legajo estudiantil</dt><dd className="mt-1 break-words text-sm">{alumno.legajo}</dd></div> : null}{alumno.emergenciaNombre ? <div><dt className="text-xs text-slate-500">Nombre y apellido del contacto</dt><dd className="mt-1 break-words text-sm">{alumno.emergenciaNombre}</dd></div> : null}{alumno.emergenciaVinculo ? <div><dt className="text-xs text-slate-500">Vínculo con el alumno</dt><dd className="mt-1 break-words text-sm">{alumno.emergenciaVinculo}</dd></div> : null}{alumno.emergenciaTelefono ? <div><dt className="text-xs text-slate-500">Teléfono de emergencia</dt><dd className="mt-1 break-words text-sm">{alumno.emergenciaTelefono}</dd></div> : null}{alumno.observaciones ? <div><dt className="text-xs text-slate-500">Observaciones</dt><dd className="mt-1 break-words text-sm">{alumno.observaciones}</dd></div> : null}</dl></section> : null}
-
-      {tab === "resumen" && alumno.contactosEmergencia?.length ? <section className="rounded-xl border border-slate-300 bg-white shadow-sm p-5 dark:border-slate-800 dark:bg-slate-900"><h2 className="font-semibold">Contactos de emergencia</h2><div className="mt-4 grid gap-4 sm:grid-cols-2">{alumno.contactosEmergencia.map((contacto, indice) => <div key={indice} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700"><p className="font-medium">{contacto.nombre}</p><p className="mt-1 text-sm text-slate-500">Vínculo: {contacto.vinculo}</p><p className="mt-1 text-sm">{contacto.telefono}</p></div>)}</div></section> : null}
+      {tab === "resumen" ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <AlumnoFichaModulo modulo="domicilio" search={search}>
+            <DatosModulo campos={[
+              ["Domicilio de origen", alumno.domicilio],
+              ["Localidad", alumno.localidad],
+              ["Provincia", alumno.provincia],
+              ["Código postal", alumno.codigoPostal],
+            ]} />
+          </AlumnoFichaModulo>
+          <AlumnoFichaModulo modulo="academica" search={search}>
+            <DatosModulo campos={[
+              ["Carrera", alumno.carrera],
+              ["Cantidad de materias cursadas", alumno.cantidadMateriasCursadas],
+              ["Legajo estudiantil", alumno.legajo],
+            ]} />
+          </AlumnoFichaModulo>
+          <AlumnoFichaModulo modulo="emergencia" search={search}>
+            {contactos.length ? (
+              <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+                {contactos.map((contacto, indice) => (
+                  <li key={indice} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+                    <p className="font-medium">{contacto.nombre || "Contacto " + (indice + 1)}</p>
+                    <p className="mt-1 text-sm text-slate-500">{contacto.vinculo}</p>
+                    <p className="mt-1 text-sm">{contacto.telefono}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="mt-4 text-sm text-slate-500">Sin contactos registrados.</p>}
+          </AlumnoFichaModulo>
+          <AlumnoFichaModulo modulo="adicional" search={search}>
+            <DatosModulo campos={[["Observaciones", alumno.observaciones]]} />
+          </AlumnoFichaModulo>
+        </div>
+      ) : null}
 
       {tab === "resumen" || tab === "contrato" ? <AlumnoContratos contratos={contratosAlumno} idVigente={contrato?.idContrato} /> : null}
 

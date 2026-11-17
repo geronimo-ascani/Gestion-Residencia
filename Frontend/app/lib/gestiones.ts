@@ -8,10 +8,12 @@ export function esFechaISO(fecha: string): boolean {
 }
 const importeValido = (valor: number | undefined, minimo: number) => valor !== undefined && Number.isFinite(valor) && valor >= minimo && Number.isSafeInteger(Math.round(valor * 100)) && Math.abs(valor * 100 - Math.round(valor * 100)) < 0.00001;
 
-export function validarAltaAlumno(data: Pick<DataState, "alumnos">, alumno: Pick<Alumno, "nombre" | "apellido" | "documento" | "telefono" | "correo">) {
+export function validarAltaAlumno(data: Pick<DataState, "alumnos">, alumno: Pick<Alumno, "nombre" | "apellido" | "documento" | "telefono" | "correo">, idAlumno?: string) {
   if (![alumno.nombre, alumno.apellido, alumno.documento, alumno.telefono].every((v) => v.trim())) throw new Error("Completá el nombre, apellido, documento y teléfono del alumno.");
   const documento = (v: string) => normalizar(v.replace(/[.\s-]/g, ""));
-  if (data.alumnos.some((a) => documento(a.documento) === documento(alumno.documento))) throw new Error("Ya existe un alumno con este documento. Registrá un reingreso desde su ficha.");
+  if (data.alumnos.some((a) => a.idAlumno !== idAlumno && documento(a.documento) === documento(alumno.documento))) {
+    throw new Error(idAlumno ? "Ya existe otro alumno con este documento." : "Ya existe un alumno con este documento. Registrá un reingreso desde su ficha.");
+  }
   if (alumno.correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(alumno.correo.trim())) throw new Error("Ingresá un correo válido.");
 }
 
