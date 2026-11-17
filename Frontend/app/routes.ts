@@ -28,6 +28,7 @@ export default [
     route("alumnos", "routes/alumnos.tsx"),
     route("alumnos/nuevo", "routes/alumnos.nuevo.tsx"),
     route("alumnos/:idAlumno", "routes/alumnos.$idAlumno.tsx"),
+    route("alumnos/:idAlumno/editar/:modulo", "routes/alumnos.$idAlumno.editar.tsx"),
     route("habitaciones", "routes/habitaciones.tsx"),
     route("habitaciones/nueva", "routes/habitaciones.nueva.tsx"),
     route("habitaciones/:idHabitacion", "routes/habitaciones.$idHabitacion.tsx"),
