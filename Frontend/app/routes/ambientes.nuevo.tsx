@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router";
@@ -55,7 +56,7 @@ export default function NuevoAmbiente() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader eyebrow="Ambientes" title="Nuevo ambiente" description="Registrá un espacio común de la residencia y su equipamiento inicial." />
-      <form onSubmit={guardar} noValidate className="flex flex-col gap-6">
+      <FormularioConfirmado onSubmit={guardar} noValidate className="flex flex-col gap-6">
         {Object.keys(errores).length ? <FormErrorSummary title="Verificá los datos antes de guardar:" errors={Object.entries(errores).map(([campo, message]) => ({ id: `${idBase}-${campo}`, message }))} /> : null}
         <Card>
           <CardHeader><div><CardTitle>Datos del ambiente</CardTitle><CardDescription>Identificá el espacio y su ubicación dentro de la residencia.</CardDescription></div></CardHeader>
@@ -81,18 +82,18 @@ export default function NuevoAmbiente() {
                 <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,1fr)_140px_auto]">
                   <TextField id={`${idBase}-objeto-${indice}`} label="Nombre del objeto" placeholder="Ej.: Lavarropas" required value={objeto.nombre} onChange={(event) => actualizarObjeto(objeto.id, "nombre", event.target.value)} error={errores[`objeto-${indice}`]} />
                   <TextField id={`${idBase}-cantidad-${indice}`} label="Cantidad" type="number" min={1} step={1} required value={objeto.cantidad} onChange={(event) => actualizarObjeto(objeto.id, "cantidad", event.target.value)} error={errores[`cantidad-${indice}`]} />
-                  <Button type="button" variant="ghost" className="sm:mt-7" aria-label={`Quitar objeto ${indice + 1}`} onClick={() => { setObjetos((previos) => previos.filter((item) => item.id !== objeto.id)); setErrores({}); }}>Quitar</Button>
+                  <Button type="button" variant="ghost" className="sm:mt-7" data-modifica-formulario aria-label={`Quitar objeto ${indice + 1}`} onClick={() => { setObjetos((previos) => previos.filter((item) => item.id !== objeto.id)); setErrores({}); }}>Quitar</Button>
                 </div>
               </fieldset>
             ))}
-            <div><Button type="button" variant="outline" onClick={() => { secuencia.current += 1; setObjetos((previos) => [...previos, { id: secuencia.current, nombre: "", cantidad: "1" }]); }}>Agregar objeto</Button></div>
+            <div><Button type="button" variant="outline" data-modifica-formulario onClick={() => { secuencia.current += 1; setObjetos((previos) => [...previos, { id: secuencia.current, nombre: "", cantidad: "1" }]); }}>Agregar objeto</Button></div>
           </CardContent>
         </Card>
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-300 pt-5 dark:border-slate-700">
           <p className="text-xs text-slate-500 dark:text-slate-400">Los campos marcados con * son obligatorios.</p>
-          <div className="flex gap-3"><ButtonLink to="/ambientes" variant="outline">Cancelar</ButtonLink><Button type="submit">Registrar ambiente</Button></div>
+          <div className="flex gap-3"><ButtonLink to="/ambientes" variant="outline" data-descartar>Cancelar</ButtonLink><Button type="submit">Registrar ambiente</Button></div>
         </div>
-      </form>
+      </FormularioConfirmado>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { Dialog } from "../Components/ui/dialog";
 import { hojaMulta, SeccionMulta } from "../Components/multa-form";
 import { extenderMes, importeMulta, TIPOS_MULTA } from "../lib/multas";
@@ -12,6 +13,7 @@ import { Badge, StatusBadge } from "../Components/ui/badge";
 import { useToast } from "../Components/ui/toast";
 import { estadoMultaVisual } from "../lib/domain";
 import { formatARS, formatFecha } from "../lib/format";
+import { facturaActivaDeMulta } from "../lib/facturacion";
 import { useData } from "../lib/store";
 
 export function meta() {
@@ -21,7 +23,7 @@ export function meta() {
 export default function MultaDetalle() {
   const { idMulta } = useParams();
   const { multas, facturas, alumnoPorId, registrarPagoMulta, anularMulta, extenderPlazoMulta } = useData();
-  const factura = facturas.find((f) => f.detalles.some((d) => d.idMulta === idMulta));
+  const factura = facturaActivaDeMulta(facturas, idMulta);
   const { toast } = useToast();
   const [confirmacion, setConfirmacion] = useState<"pago" | "anular" | null>(null);
   const [prorrogaAbierta, setProrrogaAbierta] = useState(false);
@@ -79,9 +81,9 @@ export default function MultaDetalle() {
         description="Detalle, estado y acciones de la multa."
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {multa.estado === "pendiente" ? <ButtonLink to={`/multas/${multa.idMulta}/editar`} variant="outline">Modificar</ButtonLink> : null}
             {multa.estado === "pendiente" && !factura ? (
               <>
-                <ButtonLink to={`/multas/${multa.idMulta}/editar`} variant="outline">Modificar</ButtonLink>
                 <Button variant="danger" onClick={() => setConfirmacion("anular")}>Cancelar multa</Button>
                 <Button variant="outline" onClick={() => { setMotivoProrroga(""); setProrrogaAbierta(true); }}>Extender pago un mes</Button>
                 <Button onClick={() => setConfirmacion("pago")}><Icon name="check" className="h-4 w-4" />Registrar pago</Button>
@@ -95,7 +97,7 @@ export default function MultaDetalle() {
         }
       />
 
-      {factura ? <p className="rounded-lg border border-brand-200 bg-white p-4 text-sm dark:border-slate-700 dark:bg-slate-900">Esta multa está incluida en la factura <Link to={`/facturacion/${factura.idFactura}`} className="font-medium text-brand-700 underline dark:text-brand-300">{factura.idFactura}</Link>. Sus cobros se registran desde la factura y sus condiciones de emisión se conservan.</p> : null}
+      {factura ? <p className="rounded-lg border border-brand-200 bg-white p-4 text-sm dark:border-slate-700 dark:bg-slate-900">Esta multa está incluida en la factura <Link to={`/facturacion/${factura.idFactura}`} className="font-medium text-brand-700 underline dark:text-brand-300">{factura.idFactura}</Link>. Los cobros se registran desde el detalle de la factura.</p> : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge estado={estado} />
@@ -197,7 +199,7 @@ export default function MultaDetalle() {
 
 
       <Dialog open={prorrogaAbierta} onClose={() => setProrrogaAbierta(false)} title="Extender pago un mes" description="Otorgá un plazo excepcional para esta multa. El cambio quedará registrado en el historial.">
-        <form className="space-y-4" onSubmit={(event) => {
+        <FormularioConfirmado className="space-y-4" onSubmit={(event) => {
           event.preventDefault();
           if (!motivoProrroga.trim()) return;
           extenderPlazoMulta(multa.idMulta, motivoProrroga);
@@ -207,8 +209,8 @@ export default function MultaDetalle() {
           <dl className="grid grid-cols-2 gap-4 rounded-lg bg-slate-50 p-4 text-sm dark:bg-slate-800"><div><dt className="text-slate-500">Vencimiento actual</dt><dd className="mt-1">{formatFecha(multa.fechaVence)}</dd></div><div><dt className="text-slate-500">Nuevo vencimiento</dt><dd className="mt-1 font-semibold">{formatFecha(extenderMes(multa.fechaVence))}</dd></div></dl>
           <p className="text-sm text-slate-500">El recargo se calculará a partir del nuevo vencimiento. La multa mantiene su importe base y su primera factura de cobro.</p>
           <label htmlFor="motivo-prorroga" className="block text-sm font-medium">Motivo de la extensión *<textarea id="motivo-prorroga" required maxLength={4000} value={motivoProrroga} onChange={(event) => setMotivoProrroga(event.target.value)} className="mt-2 min-h-24 w-full rounded-md border border-slate-400 bg-transparent p-3" /></label>
-          <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setProrrogaAbierta(false)}>Cancelar</Button><Button type="submit" disabled={!motivoProrroga.trim()}>Confirmar extensión</Button></div>
-        </form>
+          <div className="flex justify-end gap-2"><Button type="button" variant="outline" data-descartar onClick={() => setProrrogaAbierta(false)}>Cancelar</Button><Button type="submit" disabled={!motivoProrroga.trim()}>Confirmar extensión</Button></div>
+        </FormularioConfirmado>
       </Dialog>
 
       <ConfirmDialog

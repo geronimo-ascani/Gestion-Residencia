@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -78,7 +79,7 @@ export default function EditarGrupoLimpieza() {
         }
       />
 
-      <form onSubmit={handleSubmit} className="max-w-xl space-y-6">
+      <FormularioConfirmado onSubmit={handleSubmit} className="max-w-xl space-y-6">
         <TextField
           id={`${id}-nombre`}
           label="Nombre del grupo"
@@ -91,7 +92,7 @@ export default function EditarGrupoLimpieza() {
           }}
         />
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">
+          <ButtonLink data-descartar to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">
               Cancelar
             </ButtonLink>
           <Button type="submit">
@@ -99,7 +100,7 @@ export default function EditarGrupoLimpieza() {
             Guardar cambios
           </Button>
         </div>
-      </form>
+      </FormularioConfirmado>
     </div>
   );
 }

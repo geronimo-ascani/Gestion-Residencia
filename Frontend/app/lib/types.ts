@@ -200,7 +200,17 @@ export interface GrupoLimpiezaAmbiente {
   fechaHasta: string | null;
 }
 
+export interface OpcionCatalogo {
+  id: string;
+  nombre: string;
+  activa: boolean;
+}
+
+export type CatalogoAlumno = "carreras" | "vinculos";
+
 export interface DataState {
+  carreras: OpcionCatalogo[];
+  vinculos: OpcionCatalogo[];
   reclamos: Reclamo[];
   parametros: Parametros;
   facturas: Factura[];
@@ -269,6 +279,17 @@ export interface Factura {
   fechaEmision: string;
   fechaVence: string;
   detalles: DetalleFactura[];
+  fechaCancelacion?: string;
+  motivoCancelacion?: string;
+  idFacturaOrigen?: string;
+  creditoAplicado?: number;
+}
+
+export interface ReemplazoFacturaInput {
+  idFacturaOrigen: string;
+  concepto: string;
+  monto: number;
+  fechaVence: string;
 }
 
 export interface RegistrarCobroInput {

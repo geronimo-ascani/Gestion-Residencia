@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { useData } from "../../lib/store";
 import { Button } from "../ui/button";
+import { FormularioConfirmado } from "../ui/formulario-confirmado";
 import { Dialog } from "../ui/dialog";
 import { TextField } from "../ui/text-field";
 import { useToast } from "../ui/toast";
@@ -85,7 +86,7 @@ export function NuevoAlumnoDialog({
       title="Nuevo alumno"
       description="Después de crearlo podés asignarle una habitación y un contrato."
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <FormularioConfirmado onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
             id={`${idBase}-nombre`}
@@ -150,12 +151,12 @@ export function NuevoAlumnoDialog({
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" data-descartar onClick={onClose}>
             Cancelar
           </Button>
           <Button type="submit">Crear alumno</Button>
         </div>
-      </form>
+      </FormularioConfirmado>
     </Dialog>
   );
 }

@@ -26,7 +26,7 @@ export function calendarioMulta(fecha: string, diaVencimiento = 10) {
 
 export function importeMulta(multa: Multa, hoy = FECHA_REFERENCIA, facturas: Factura[] = []) {
   if (multa.estado === "anulada") return { base: multa.monto, recargo: 0, total: 0 };
-  const detalle = facturas.flatMap((f) => f.detalles).find((d) => d.idMulta === multa.idMulta);
+  const detalle = facturas.filter((f) => !f.fechaCancelacion).flatMap((f) => f.detalles).find((d) => d.idMulta === multa.idMulta);
   // Al emitir, el importe queda congelado en la factura, incluso después del vencimiento.
   if (detalle) return { base: multa.monto, recargo: Math.max(0, detalle.monto - multa.monto), total: detalle.monto };
   const fecha = multa.estado === "pagada" ? multa.fechaPago ?? multa.fechaVence : hoy;

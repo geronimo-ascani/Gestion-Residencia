@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -21,7 +22,7 @@ export default function RegistrarCobro() {
   const { facturas, pagos, registrarCobro } = useData();
   const [params] = useSearchParams();
   const [idFactura, setIdFactura] = useState(params.get("factura") ?? "");
-  const factura = facturas.find((f) => f.idFactura === idFactura);
+  const factura = facturas.find((f) => f.idFactura === idFactura && !f.fechaCancelacion);
   const pendientes = facturas.filter((f) => saldoFactura(f, pagos) > 0);
   const [monto, setMonto] = useState(() => factura ? String(saldoFactura(factura, pagos)) : "");
   const [fecha, setFecha] = useState(FECHA_REFERENCIA);
@@ -35,7 +36,7 @@ export default function RegistrarCobro() {
   const { toast } = useToast();
   return <div className="flex flex-col gap-6">
     <PageHeader eyebrow="Cobros" title="Registrar cobro" description="Asociá el pago a una factura. Podés cancelar el saldo completo o registrar un pago parcial." actions={<BackToList to="/cobros" />} />
-    {pendientes.length === 0 ? <EmptyState icon="payments" title="No hay facturas con saldo pendiente" description="Todas las facturas emitidas están pagadas. Podés consultar o generar facturas desde Facturación." action={<ButtonLink to="/facturacion" variant="outline">Ir a facturación</ButtonLink>} /> : <form className="flex flex-col gap-6" onSubmit={(event) => {
+    {pendientes.length === 0 ? <EmptyState icon="payments" title="No hay facturas con saldo pendiente" description="Podés consultar las facturas emitidas o generar una nueva desde Facturación." action={<ButtonLink to="/facturacion" variant="outline">Ir a facturación</ButtonLink>} /> : <FormularioConfirmado className="flex flex-col gap-6" onSubmit={(event) => {
       event.preventDefault();
       if (enviando.current) return;
       enviando.current = true;
@@ -44,7 +45,7 @@ export default function RegistrarCobro() {
     }}>
       <Card><CardHeader><CardTitle>Factura a cobrar</CardTitle></CardHeader><CardContent className="space-y-5">
         <SelectField id={`${id}-factura`} label="Alumno y factura pendiente" required value={idFactura} onChange={(e) => { const f = facturas.find((item) => item.idFactura === e.target.value); setIdFactura(e.target.value); setMonto(f ? String(saldoFactura(f, pagos)) : ""); setError(""); }}><option value="">Seleccioná una factura</option>{pendientes.map((f) => <option key={f.idFactura} value={f.idFactura}>{f.titular} · {f.periodo} · {f.idFactura} · Saldo {formatARS(saldoFactura(f, pagos))}</option>)}</SelectField>
-        {factura ? <dl className="grid gap-4 rounded-lg bg-brand-50 p-4 sm:grid-cols-3 dark:bg-slate-800"><div><dt className="text-sm text-slate-500">Total facturado</dt><dd className="font-semibold">{formatARS(totalFactura(factura))}</dd></div><div><dt className="text-sm text-slate-500">Cobrado</dt><dd className="font-semibold">{formatARS(totalFactura(factura) - saldoFactura(factura, pagos))}</dd></div><div><dt className="text-sm text-slate-500">Saldo pendiente</dt><dd className="font-semibold">{formatARS(saldoFactura(factura, pagos))}</dd></div></dl> : null}
+        {factura ? <dl className="grid gap-4 rounded-lg bg-brand-50 p-4 sm:grid-cols-3 dark:bg-slate-800"><div><dt className="text-sm text-slate-500">Total facturado</dt><dd className="font-semibold">{formatARS(totalFactura(factura))}</dd></div><div><dt className="text-sm text-slate-500">Importe cubierto</dt><dd className="font-semibold">{formatARS(totalFactura(factura) - saldoFactura(factura, pagos))}</dd></div><div><dt className="text-sm text-slate-500">Saldo pendiente</dt><dd className="font-semibold">{formatARS(saldoFactura(factura, pagos))}</dd></div></dl> : null}
         {idFactura && !factura ? <p role="alert" className="text-sm text-red-700">La factura indicada no existe. Seleccioná una factura pendiente.</p> : null}
       </CardContent></Card>
       <Card><CardHeader><CardTitle>Datos del cobro</CardTitle></CardHeader><CardContent className="grid gap-5 sm:grid-cols-2">
@@ -55,7 +56,7 @@ export default function RegistrarCobro() {
         <p className="text-sm text-slate-500 sm:col-span-2">Las multas incluidas se marcan como pagadas al cancelar el total de la factura.</p>
       </CardContent></Card>
       {error ? <p role="alert" className="rounded-md border border-red-200 bg-white p-4 text-sm text-red-700 dark:bg-slate-900">{error}</p> : null}
-      <div className="flex justify-end gap-3"><ButtonLink to="/cobros" variant="outline">Cancelar</ButtonLink><Button type="submit" disabled={!factura || saldoFactura(factura, pagos) <= 0 || confirmado}><Icon name="check" className="h-4 w-4" />Registrar cobro</Button></div>
-    </form>}
+      <div className="flex justify-end gap-3"><ButtonLink to="/cobros" variant="outline" data-descartar>Cancelar</ButtonLink><Button type="submit" disabled={!factura || saldoFactura(factura, pagos) <= 0 || confirmado}><Icon name="check" className="h-4 w-4" />Registrar cobro</Button></div>
+    </FormularioConfirmado>}
   </div>;
 }

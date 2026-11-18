@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -99,7 +100,7 @@ export default function NuevoAmbienteGrupo() {
           }
         />
       ) : (
-        <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+        <FormularioConfirmado onSubmit={handleSubmit} className="max-w-3xl space-y-6">
           <div className="grid gap-5 sm:grid-cols-2">
             <SelectField
               id="ambiente"
@@ -136,7 +137,7 @@ export default function NuevoAmbienteGrupo() {
             La asignación queda vigente hasta que se libere; el historial conserva las fechas.
           </p>
           <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-            <ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">
+            <ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline" data-descartar>
                 Cancelar
               </ButtonLink>
             <Button type="submit">
@@ -144,7 +145,7 @@ export default function NuevoAmbienteGrupo() {
               Asignar ambiente
             </Button>
           </div>
-        </form>
+        </FormularioConfirmado>
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -96,7 +97,7 @@ export default function BajaContrato() {
         }
       />
 
-      <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+      <FormularioConfirmado onSubmit={handleSubmit} className="max-w-3xl space-y-6">
         <div className="grid gap-5 sm:grid-cols-2">
           <TextField
             id={`${idBase}-fecha`}
@@ -125,14 +126,14 @@ export default function BajaContrato() {
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <ButtonLink to={`/contratos/${contrato.idContrato}`} variant="outline">
+          <ButtonLink to={`/contratos/${contrato.idContrato}`} variant="outline" data-descartar>
               Cancelar
             </ButtonLink>
           <Button type="submit" variant="danger">
             Registrar baja
           </Button>
         </div>
-      </form>
+      </FormularioConfirmado>
     </div>
   );
 }

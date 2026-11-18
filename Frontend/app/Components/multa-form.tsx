@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "./ui/formulario-confirmado";
 import { arancelesMulta } from "../lib/parametros";
 import { useId, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
@@ -21,7 +22,7 @@ const area = "mt-2 block min-h-28 w-full rounded-md border border-slate-400 bg-t
 
 export function MultaForm({ multa, alumnoInicial = "", onSave }: {
   multa?: Multa; alumnoInicial?: string;
-  onSave: (datos: DatosMultaInput, alumnos: string[]) => void;
+  onSave: (datos: DatosMultaInput, alumnos: string[], fechaVence: string) => void;
 }) {
   const { alumnos, contratos, parametros } = useData();
   const tiposMulta = arancelesMulta(TIPOS_MULTA, parametros);
@@ -37,6 +38,7 @@ export function MultaForm({ multa, alumnoInicial = "", onSave }: {
   const [extra, setExtra] = useState(multa?.tipo === "extraordinaria" ? String(multa.montoSancion ?? multa.monto) : "");
   const [danios, setDanios] = useState(multa?.montoDanios ? String(multa.montoDanios) : "");
   const [error, setError] = useState("");
+  const [fechaVence, setFechaVence] = useState(multa?.fechaVence ?? "");
   const arancel = tiposMulta.find((t) => t.id === tipo);
   const montoSancion = tipo === "extraordinaria" ? Number(extra) : multa?.tipo === tipo ? multa.montoSancion ?? multa.monto - (multa.montoDanios ?? 0) : arancel?.monto ?? 0;
   const recargo = multa ? multa.recargoPorcentaje ?? 20 : parametros.recargoMulta;
@@ -48,9 +50,13 @@ export function MultaForm({ multa, alumnoInicial = "", onSave }: {
     if (!seleccion.length || !arancel || !Number.isFinite(montoSancion) || montoSancion <= 0 || !Number.isFinite(montoDanios) || (huboDanios && (!detalleDanios.trim() || montoDanios <= 0)) || !motivo.trim()) {
       setError("Seleccioná al menos un alumno y completá el tipo, el motivo y los importes mayores a cero que correspondan."); return;
     }
-    onSave({ tipo, montoSancion, montoDanios, motivo: motivo.trim(), observaciones: observaciones.trim(), huboDanios, detalleDanios: huboDanios ? detalleDanios.trim() : "" }, seleccion);
+    try {
+      onSave({ tipo, montoSancion, montoDanios, motivo: motivo.trim(), observaciones: observaciones.trim(), huboDanios, detalleDanios: huboDanios ? detalleDanios.trim() : "" }, seleccion, fechaVence);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar la multa.");
+    }
   }
-  return <form onSubmit={submit} className={hojaMulta}>
+  return <FormularioConfirmado onSubmit={submit} className={hojaMulta}>
     <div className="border-b-2 border-brand-600 pb-5"><p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Gestión de Residencia · Administración</p><h2 className="mt-2 text-2xl font-semibold">Acta de sanción económica</h2><p className="mt-2 text-sm text-slate-500">{multa ? `Referencia ${multa.idMulta}` : "Nueva emisión"} · {formatFecha(multa?.fechaEmision ?? FECHA_REFERENCIA)}</p></div>
     <SeccionMulta titulo="1. Alumnos involucrados">
       {multa ? <p>{alumnos.find((a) => a.idAlumno === multa.idAlumno)?.apellido}, {alumnos.find((a) => a.idAlumno === multa.idAlumno)?.nombre}</p> : <>
@@ -86,12 +92,12 @@ export function MultaForm({ multa, alumnoInicial = "", onSave }: {
       <div className="rounded-lg border border-brand-200 bg-brand-50 p-5 dark:border-slate-700 dark:bg-slate-800"><p className="text-sm font-medium">Total de la multa por alumno</p><p className="mt-2 text-3xl font-semibold tabular-nums">{arancel && Number.isFinite(total) ? formatARS(total) : "Pendiente de completar"}</p><p className="mt-2 text-sm text-slate-500">Incluye la sanción y los daños declarados. No se divide entre los alumnos seleccionados.</p></div>
       <fieldset className="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-700"><legend className="px-2 text-sm font-semibold">Calendario de cobro por alumno</legend>
         {!seleccion.length && <p className="text-sm text-slate-500">Seleccioná alumnos para consultar sus fechas de cobro.</p>}
-        {seleccion.map((alumno) => { const a = alumnos.find((a) => a.idAlumno === alumno); const calendario = multa ?? calendarioMulta(FECHA_REFERENCIA, contratoVigente(contratos, alumno)?.diaVencimientoPago); return <div key={alumno} className="space-y-3 border-b border-slate-200 pb-4 last:border-0 last:pb-0 dark:border-slate-700"><p className="text-sm font-medium">{a?.apellido}, {a?.nombre}</p><div className="grid gap-3 sm:grid-cols-3"><TextField id={`${id}-${alumno}-desde`} label="Primera factura" readOnly value={calendario.periodoDesde ?? "Sin informar"} /><TextField id={`${id}-${alumno}-hasta`} label="Última factura sin recargo" readOnly value={calendario.periodoHasta ?? "Sin informar"} /><TextField id={`${id}-${alumno}-vence`} label="Fecha límite de pago" readOnly value={formatFecha(calendario.fechaVence)} /></div></div>; })}
+        {seleccion.map((alumno) => { const a = alumnos.find((a) => a.idAlumno === alumno); const calendario = multa ?? calendarioMulta(FECHA_REFERENCIA, contratoVigente(contratos, alumno)?.diaVencimientoPago); return <div key={alumno} className="space-y-3 border-b border-slate-200 pb-4 last:border-0 last:pb-0 dark:border-slate-700"><p className="text-sm font-medium">{a?.apellido}, {a?.nombre}</p><div className="grid gap-3 sm:grid-cols-3"><TextField id={`${id}-${alumno}-desde`} label="Primera factura" readOnly value={calendario.periodoDesde ?? "Sin informar"} /><TextField id={`${id}-${alumno}-hasta`} label="Última factura sin recargo" readOnly value={(multa ? fechaVence.slice(0, 7) : calendario.periodoHasta) || "Sin informar"} />{multa ? <TextField id={`${id}-${alumno}-vence`} label="Fecha límite de pago" type="date" required min={multa.fechaEmision} value={fechaVence} onChange={(event) => setFechaVence(event.target.value)} /> : <TextField id={`${id}-${alumno}-vence`} label="Fecha límite de pago" readOnly value={formatFecha(calendario.fechaVence)} />}</div></div>; })}
       </fieldset>
       <div className="grid gap-4 sm:grid-cols-2"><TextField id={`${id}-recargo`} label={`Recargo único si vence (${recargo}%)`} readOnly value={arancel ? formatARS(Math.round(total * recargo) / 100) : "Pendiente"} /><TextField id={`${id}-total-vencido`} label="Total por alumno después del vencimiento" readOnly value={arancel ? formatARS(Math.round(total * (100 + recargo)) / 100) : "Pendiente"} /></div>
-      <p className="text-sm text-slate-500">El cobro comienza en la factura del mes siguiente. Las emisiones posteriores al día 15 pueden pagarse completas hasta la segunda factura. El vencimiento respeta el día de pago del contrato; si no está definido, se usa el día 10.</p>
+      {!multa ? <p className="text-sm text-slate-500">El cobro comienza en la factura del mes siguiente. Las emisiones posteriores al día 15 pueden pagarse completas hasta la segunda factura. El vencimiento respeta el día de pago del contrato; si no está definido, se usa el día 10.</p> : null}
     </SeccionMulta>
     {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-    <div className="flex flex-wrap justify-end gap-3"><ButtonLink to={multa ? `/multas/${multa.idMulta}` : "/multas"} variant="outline">Cancelar</ButtonLink><Button type="submit">{multa ? "Guardar cambios" : `Emitir ${seleccion.length === 1 ? "multa" : "multas"}`}</Button></div>
-  </form>;
+    <div className="flex flex-wrap justify-end gap-3"><ButtonLink data-descartar to={multa ? `/multas/${multa.idMulta}` : "/multas"} variant="outline">Cancelar</ButtonLink><Button type="submit">{multa ? "Guardar cambios" : `Emitir ${seleccion.length === 1 ? "multa" : "multas"}`}</Button></div>
+  </FormularioConfirmado>;
 }

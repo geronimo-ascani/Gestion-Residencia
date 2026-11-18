@@ -103,7 +103,7 @@ export default function Habitaciones() {
         }
       />
 
-      <ListSummary title="Resumen de habitaciones" description="Distribución de la residencia · Planta baja" icon="building" items={[
+      <ListSummary title="Resumen de habitaciones" description="Capacidad y ocupación de la residencia." icon="building" items={[
         { label: "Habitaciones", value: habitaciones.length },
         { label: "Plazas totales", value: resumen.capacidadTotal },
         { label: "Plazas ocupadas", value: resumen.camasOcupadas },

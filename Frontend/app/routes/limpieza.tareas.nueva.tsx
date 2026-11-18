@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
@@ -41,7 +42,7 @@ export default function NuevaTareaLimpieza() {
         description="Registrá una tarea adicional con sus actividades. Quedará fuera de la rotación semanal de los grupos."
         actions={<BackToList to="/limpieza" />}
       />
-      <form onSubmit={guardar} className="max-w-2xl space-y-6 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+      <FormularioConfirmado onSubmit={guardar} className="max-w-2xl space-y-6 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <TextField id={`${id}-nombre`} label="Nombre de la tarea" required maxLength={150} value={nombre} onChange={(event) => setNombre(event.target.value)} placeholder="Ej.: Limpiar el lavadero" />
         <div className="space-y-2">
           <label htmlFor={`${id}-actividades`} className="block text-sm font-medium">Actividades a realizar *</label>
@@ -50,10 +51,10 @@ export default function NuevaTareaLimpieza() {
         </div>
         {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <ButtonLink to="/limpieza" variant="outline">Cancelar</ButtonLink>
+          <ButtonLink to="/limpieza" variant="outline" data-descartar>Cancelar</ButtonLink>
           <Button type="submit"><Icon name="plus" className="h-4 w-4" />Crear tarea</Button>
         </div>
-      </form>
+      </FormularioConfirmado>
     </div>
   );
 }

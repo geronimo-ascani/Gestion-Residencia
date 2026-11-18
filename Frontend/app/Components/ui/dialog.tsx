@@ -30,6 +30,7 @@ export function Dialog({
   closeOnOverlayClick?: boolean;
 }) {
   const titleId = useId();
+  const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
 
@@ -42,6 +43,8 @@ export function Dialog({
 
     const focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKeyDown = (event: KeyboardEvent) => {
+      const dialogos = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+      if (dialogos[dialogos.length - 1] !== panelRef.current) return;
       if (event.key === "Escape") onCloseRef.current();
       if (event.key === "Tab") {
         const elementos = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]') ?? []).filter((e) => e.getClientRects().length > 0);
@@ -82,6 +85,7 @@ export function Dialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
         className={cn(
           "relative max-h-[90dvh] w-full overflow-y-auto rounded-lg border border-slate-300 bg-white shadow-sm p-5 shadow-xl outline-none",
           "dark:border-slate-800 dark:bg-slate-900",
@@ -97,7 +101,7 @@ export function Dialog({
               {title}
             </h2>
             {description ? (
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              <p id={descriptionId} className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {description}
               </p>
             ) : null}

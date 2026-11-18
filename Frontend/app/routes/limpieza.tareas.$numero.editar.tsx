@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
@@ -51,7 +52,7 @@ function FormularioEditarTarea({ tarea }: { tarea: TareaLimpieza }) {
         description="Actualizá el nombre y las actividades de esta tarea."
         actions={<ButtonLink to={`/limpieza/tareas/${tarea.numero}`} variant="outline"><Icon name="arrow" className="h-4 w-4 rotate-180" />Volver al detalle</ButtonLink>}
       />
-      <form onSubmit={guardar} className="w-full space-y-6 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+      <FormularioConfirmado onSubmit={guardar} className="w-full space-y-6 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <TextField id={`${id}-nombre`} label="Nombre de la tarea" required maxLength={150} value={nombre} onChange={(event) => setNombre(event.target.value)} placeholder="Ej.: Limpiar el lavadero" />
         <div className="space-y-2">
           <label htmlFor={`${id}-actividades`} className="block text-sm font-medium">Actividades a realizar *</label>
@@ -60,10 +61,10 @@ function FormularioEditarTarea({ tarea }: { tarea: TareaLimpieza }) {
         </div>
         {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <ButtonLink to={`/limpieza/tareas/${tarea.numero}`} variant="outline">Cancelar</ButtonLink>
+          <ButtonLink data-descartar to={`/limpieza/tareas/${tarea.numero}`} variant="outline">Cancelar</ButtonLink>
           <Button type="submit"><Icon name="check" className="h-4 w-4" />Guardar cambios</Button>
         </div>
-      </form>
+      </FormularioConfirmado>
     </div>
   );
 }

@@ -2,6 +2,18 @@ import { normalizar } from "./format";
 import { TIPOS_AMBIENTE } from "./types";
 import type { Ambiente, EquipamientoAmbiente } from "./types";
 
+export function editarEquipamiento(ambiente: Ambiente, nombreAnterior: string, equipo?: EquipamientoAmbiente): Ambiente {
+  const inventario = ambiente.equipamiento ?? [];
+  const indice = inventario.findIndex((item) => item.nombre === nombreAnterior);
+  if (indice < 0) throw new Error("El objeto ya no está en el inventario.");
+  if (!equipo) return { ...ambiente, equipamiento: inventario.filter((_, i) => i !== indice) };
+
+  const nombre = equipo.nombre.trim();
+  if (!nombre || !Number.isSafeInteger(equipo.cantidad) || equipo.cantidad <= 0) throw new Error("Ingresá un nombre y una cantidad entera positiva.");
+  if (inventario.some((item, i) => i !== indice && normalizar(item.nombre) === normalizar(nombre))) throw new Error("Ya existe un objeto con ese nombre.");
+  return { ...ambiente, equipamiento: inventario.map((item, i) => i === indice ? { ...equipo, nombre } : item) };
+}
+
 export interface NuevoAmbienteInput {
   ambiente: string;
   tipo: string;

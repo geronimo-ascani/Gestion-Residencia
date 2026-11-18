@@ -18,6 +18,7 @@ import { Tabs } from "../Components/ui/tabs";
 import { useToast } from "../Components/ui/toast";
 import { asignacionActiva, contratoVigente, diasHasta, estadoContrato, estadoMultaVisual, sumarDia } from "../lib/domain";
 import { formatARS, formatFecha } from "../lib/format";
+import { facturaActivaDeMulta } from "../lib/facturacion";
 import { useData } from "../lib/store";
 import type { Multa } from "../lib/types";
 
@@ -310,6 +311,7 @@ export default function AlumnoDetalle() {
               <TBody>
                 {multasAlumno.map((multa) => {
                   const ev = estadoMultaVisual(multa);
+                  const factura = facturaActivaDeMulta(facturas, multa.idMulta);
                   return (
                     <TR key={multa.idMulta}>
                       <TD>
@@ -325,9 +327,9 @@ export default function AlumnoDetalle() {
                       <TD>
                         <StatusBadge estado={ev} />
                       </TD>
-                      <TD className="text-right tabular-nums">{formatARS(importeMulta(multa).total)}</TD>
+                      <TD className="text-right tabular-nums">{formatARS(importeMulta(multa, undefined, facturas).total)}</TD>
                       <TD className="text-right">
-                        {facturas.some((f) => f.detalles.some((d) => d.idMulta === multa.idMulta)) ? <ButtonLink to={`/facturacion/${facturas.find((f) => f.detalles.some((d) => d.idMulta === multa.idMulta))!.idFactura}`} size="sm" variant="outline">Ver factura</ButtonLink> : multa.estado === "pendiente" ? (
+                        {factura ? <ButtonLink to={`/facturacion/${factura.idFactura}`} size="sm" variant="outline">Ver factura</ButtonLink> : multa.estado === "pendiente" ? (
                           <div className="flex justify-end gap-1">
                             <Button size="sm" variant="outline" onClick={() => pagarMulta(multa)}>
                               Pagar

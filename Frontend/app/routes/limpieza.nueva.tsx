@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
@@ -32,7 +33,7 @@ export default function NuevoGrupoLimpieza() {
   return <div className="flex flex-col gap-6">
     <PageHeader eyebrow="Limpieza" title="Crear grupo" description="Completá los datos, la tarea inicial y los integrantes del grupo." actions={<BackToList to="/limpieza" />} />
     {grupos.length >= 4 && <p role="status" className="rounded-lg bg-amber-50 p-4 text-amber-900 dark:bg-amber-950 dark:text-amber-200">Ya están configurados los cuatro grupos. Podés modificar sus integrantes desde el detalle. Para reemplazar un grupo, eliminá primero el anterior.</p>}
-    <form onSubmit={guardar} className="space-y-6 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+    <FormularioConfirmado onSubmit={guardar} className="space-y-6 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
       <fieldset disabled={grupos.length >= 4} className="space-y-6 disabled:opacity-60">
         <legend className="mb-4 text-lg font-semibold">Datos del grupo</legend>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -45,7 +46,7 @@ export default function NuevoGrupoLimpieza() {
         <LimpiezaIntegrantes seleccionados={integrantes} onChange={setIntegrantes} />
       </fieldset>
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800"><ButtonLink to="/limpieza" variant="outline">Cancelar</ButtonLink><Button type="submit" disabled={grupos.length >= 4}><Icon name="plus" className="h-4 w-4" />Crear grupo</Button></div>
-    </form>
+      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800"><ButtonLink to="/limpieza" variant="outline" data-descartar>Cancelar</ButtonLink><Button type="submit" disabled={grupos.length >= 4}><Icon name="plus" className="h-4 w-4" />Crear grupo</Button></div>
+    </FormularioConfirmado>
   </div>;
 }

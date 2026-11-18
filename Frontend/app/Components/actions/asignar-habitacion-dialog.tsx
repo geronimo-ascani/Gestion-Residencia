@@ -6,6 +6,7 @@ import {
 } from "../../lib/domain";
 import { useData } from "../../lib/store";
 import { Button } from "../ui/button";
+import { FormularioConfirmado } from "../ui/formulario-confirmado";
 import { Dialog } from "../ui/dialog";
 import { SelectField } from "../ui/select-field";
 import { useToast } from "../ui/toast";
@@ -136,7 +137,7 @@ export function AsignarHabitacionDialog({
             : "Si el alumno ya tenía una habitación, la asignación anterior se cierra con la fecha de hoy."
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <FormularioConfirmado onSubmit={handleSubmit} className="space-y-4">
         {!idAlumno ? (
           alumnosDisponibles.length > 0 ? (
             <SelectField
@@ -226,7 +227,7 @@ export function AsignarHabitacionDialog({
         ) : null}
 
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" data-descartar onClick={onClose}>
             Cancelar
           </Button>
           <Button
@@ -236,7 +237,7 @@ export function AsignarHabitacionDialog({
             {idAlumno && asignacionActiva(asignaciones, idAlumno) ? "Confirmar cambio" : "Asignar"}
           </Button>
         </div>
-      </form>
+      </FormularioConfirmado>
     </Dialog>
   );
 }

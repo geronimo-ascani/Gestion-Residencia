@@ -1,19 +1,20 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { esFechaISO } from "../lib/gestiones";
 import { BackToList } from "../Components/ui/back-to-list";
 import { useId, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
-import { Button } from "../Components/ui/button";
+import { Button, ButtonLink } from "../Components/ui/button";
 import { Icon } from "../Components/ui/icons";
 import { PageHeader } from "../Components/ui/page-header";
 import { SelectField } from "../Components/ui/select-field";
 import { TextField } from "../Components/ui/text-field";
 import { useToast } from "../Components/ui/toast";
-import { contratosSuperpuestos, diasHasta, sumarDia } from "../lib/domain";
+import { diasHasta, sumarDia } from "../lib/domain";
 import { FECHA_REFERENCIA } from "../lib/config";
 import { formatFecha, formatARS } from "../lib/format";
 import { useData } from "../lib/store";
-import type { BorradorContrato } from "../lib/types";
+import type { BorradorContrato, Contrato } from "../lib/types";
 
 export function meta() {
   return [{ title: "Nuevo contrato · Gestión de Residencia" }];
@@ -22,7 +23,11 @@ export function meta() {
 const seccion = "rounded-xl border border-slate-300 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900";
 
 export default function NuevoContrato() {
-  const { alumnos, contratos, crearContrato, parametros } = useData();
+  return <ContratoForm />;
+}
+
+export function ContratoForm({ contrato, titularEditable = true }: { contrato?: Contrato; titularEditable?: boolean }) {
+  const { alumnos, crearContrato, actualizarContrato, parametros } = useData();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,7 +36,15 @@ export default function NuevoContrato() {
   const retorno = location.state as { contratoBorrador?: BorradorContrato } | null;
   const consultaDesde = searchParams.get("desde") ?? "";
   const desdeInicial = esFechaISO(consultaDesde) ? consultaDesde : FECHA_REFERENCIA;
-  const [datos, setDatos] = useState<BorradorContrato>(() => retorno?.contratoBorrador ?? {
+  const destino = contrato ? `/contratos/${contrato.idContrato}` : "/contratos";
+  const [datos, setDatos] = useState<BorradorContrato>(() => contrato ? {
+    idAlumno: contrato.idAlumno, fechaDesde: contrato.fechaDesde, fechaHasta: contrato.fechaHasta,
+    fechaFirma: contrato.fechaFirma ?? "",
+    montoMensual: String(contrato.montoMensual ?? ""),
+    depositoGarantia: String(contrato.depositoGarantia ?? ""),
+    diaVencimientoPago: String(contrato.diaVencimientoPago ?? ""),
+    observaciones: contrato.observaciones ?? "",
+  } : retorno?.contratoBorrador ?? {
     idAlumno: searchParams.get("alumno") ?? "",
     fechaDesde: desdeInicial,
     fechaHasta: sumarDia(desdeInicial, parametros.duracionContrato - 1),
@@ -57,54 +70,45 @@ export default function NuevoContrato() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!alumno) { setError("Seleccioná un alumno registrado."); return; }
-    if (!datos.fechaDesde || !datos.fechaHasta || datos.fechaHasta < datos.fechaDesde) {
-      setError("La fecha hasta no puede ser anterior a la fecha desde."); return;
-    }
-    if (!datos.fechaFirma || datos.fechaFirma > datos.fechaHasta) {
-      setError("La fecha de firma no puede ser posterior al fin del contrato."); return;
-    }
-    if (!datos.montoMensual || !Number.isFinite(Number(datos.montoMensual)) || Number(datos.montoMensual) <= 0 ||
-      (datos.depositoGarantia !== "" && (!Number.isFinite(Number(datos.depositoGarantia)) || Number(datos.depositoGarantia) < 0)) ||
-      !Number.isInteger(Number(datos.diaVencimientoPago)) || Number(datos.diaVencimientoPago) < 1 || Number(datos.diaVencimientoPago) > 31) {
-      setError("Revisá el importe mensual, el depósito y el día de vencimiento del pago."); return;
-    }
-    if (contratosSuperpuestos(contratos, datos)) {
-      setError("Las fechas se superponen con otro contrato del alumno."); return;
-    }
-    try { crearContrato({
+    const input = {
       idAlumno: datos.idAlumno, fechaDesde: datos.fechaDesde, fechaHasta: datos.fechaHasta,
-      fechaFirma: datos.fechaFirma, montoMensual: Number(datos.montoMensual),
+      fechaFirma: datos.fechaFirma || undefined,
+      montoMensual: datos.montoMensual === "" ? undefined : Number(datos.montoMensual),
       depositoGarantia: datos.depositoGarantia === "" ? undefined : Number(datos.depositoGarantia),
-      diaVencimientoPago: Number(datos.diaVencimientoPago), observaciones: datos.observaciones.trim(),
-    });
-    toast({ title: "Contrato creado", description: `${alumno.apellido}, ${alumno.nombre} · ${formatFecha(datos.fechaDesde)} al ${formatFecha(datos.fechaHasta)}` });
-    navigate("/contratos");
-    } catch (err) { setError(err instanceof Error ? err.message : "No se pudo crear el contrato."); }
+      diaVencimientoPago: datos.diaVencimientoPago === "" ? undefined : Number(datos.diaVencimientoPago),
+      observaciones: datos.observaciones.trim(),
+    };
+    try {
+      if (contrato) actualizarContrato(contrato.idContrato, input);
+      else crearContrato(input);
+      toast({ title: contrato ? "Contrato actualizado" : "Contrato creado", description: `${alumno.apellido}, ${alumno.nombre} · ${formatFecha(datos.fechaDesde)} al ${formatFecha(datos.fechaHasta)}` });
+      navigate(destino);
+    } catch (err) { setError(err instanceof Error ? err.message : "No se pudo guardar el contrato."); }
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader eyebrow="Contratos" title="Nuevo contrato"
+      <PageHeader eyebrow="Contratos" title={contrato ? `Modificar contrato ${contrato.idContrato}` : "Nuevo contrato"}
         description="Completá los datos del contrato de residencia. Los campos con asterisco son obligatorios."
         actions={
-          <BackToList to="/contratos" />
+          contrato ? <ButtonLink to={destino} variant="outline">Volver al contrato</ButtonLink> : <BackToList to={destino} />
         }
       />
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <FormularioConfirmado onSubmit={handleSubmit} className="space-y-6">
         <section className={seccion}>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Alumno titular</h2>
-          <p className="mt-1 mb-6 text-sm text-slate-500">Seleccioná un alumno del padrón o registrá uno nuevo para continuar.</p>
+          <p className="mt-1 mb-6 text-sm text-slate-500">{titularEditable ? "Seleccioná un alumno del padrón." : "El titular está asociado a una factura, un cobro o una baja registrada."}</p>
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
-              <SelectField id={`${idBase}-alumno`} label="Alumno" required value={datos.idAlumno} onChange={(event) => actualizar("idAlumno", event.target.value)}>
+              <SelectField id={`${idBase}-alumno`} label="Alumno" required disabled={!titularEditable} value={datos.idAlumno} onChange={(event) => actualizar("idAlumno", event.target.value)}>
                 <option value="" disabled>Seleccionar alumno</option>
-                {alumnosOrdenados.map((item) => <option key={item.idAlumno} value={item.idAlumno}>{item.apellido}, {item.nombre} · DNI {item.documento}</option>)}
+                {alumnosOrdenados.filter((a) => a.estado === "activo" || a.idAlumno === contrato?.idAlumno).map((item) => <option key={item.idAlumno} value={item.idAlumno}>{item.apellido}, {item.nombre} · DNI {item.documento}</option>)}
               </SelectField>
             </div>
-            <Button className="mt-6 shrink-0" variant="outline" aria-label="Cargar nuevo alumno y continuar con el contrato" title="Cargar nuevo alumno"
+            {!contrato ? <Button className="mt-6 shrink-0" variant="outline" aria-label="Cargar nuevo alumno y continuar con el contrato" title="Cargar nuevo alumno"
               onClick={() => navigate("/alumnos/nuevo", { state: { contratoBorrador: datos } })}>
               <Icon name="plus" className="h-4 w-4" />
-            </Button>
+            </Button> : null}
           </div>
           {alumno ? <dl className="mt-5 grid gap-4 rounded-lg bg-slate-50 p-4 text-sm sm:grid-cols-3 dark:bg-slate-800">
             <div><dt className="text-slate-500">Documento</dt><dd className="mt-1 font-medium">{alumno.documento}</dd></div>
@@ -116,7 +120,7 @@ export default function NuevoContrato() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Vigencia del contrato</h2>
           <p className="mt-1 mb-6 text-sm text-slate-500">Indicá la fecha de firma y el período de residencia.</p>
           <div className="grid gap-5 sm:grid-cols-3">
-            <TextField id={`${idBase}-firma`} label="Fecha de firma" type="date" required value={datos.fechaFirma} onChange={(event) => actualizar("fechaFirma", event.target.value)} />
+            <TextField id={`${idBase}-firma`} label="Fecha de firma" type="date" required={!contrato || Boolean(contrato.fechaFirma)} value={datos.fechaFirma} onChange={(event) => actualizar("fechaFirma", event.target.value)} />
             <TextField id={`${idBase}-desde`} label="Desde" type="date" required value={datos.fechaDesde} onChange={(event) => actualizar("fechaDesde", event.target.value)} />
             <TextField id={`${idBase}-hasta`} label="Hasta" type="date" required min={datos.fechaDesde || undefined} value={datos.fechaHasta} onChange={(event) => actualizar("fechaHasta", event.target.value)} />
           </div>
@@ -125,9 +129,9 @@ export default function NuevoContrato() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Condiciones económicas</h2>
           <p className="mt-1 mb-6 text-sm text-slate-500">Importes expresados en pesos argentinos.</p>
           <div className="grid gap-5 sm:grid-cols-3">
-            <TextField id={`${idBase}-monto`} label="Importe mensual (ARS)" type="number" min="0.01" step="0.01" required value={datos.montoMensual} onChange={(event) => actualizar("montoMensual", event.target.value)} />
+            <TextField id={`${idBase}-monto`} label="Importe mensual (ARS)" type="number" min="0.01" step="0.01" required={!contrato || contrato.montoMensual !== undefined} value={datos.montoMensual} onChange={(event) => actualizar("montoMensual", event.target.value)} />
             <TextField id={`${idBase}-deposito`} label="Depósito de garantía (ARS)" type="number" min="0" step="0.01" hint="Opcional. Ingresá 0 si no corresponde." value={datos.depositoGarantia} onChange={(event) => actualizar("depositoGarantia", event.target.value)} />
-            <TextField id={`${idBase}-dia`} label="Día de vencimiento del pago" type="number" min="1" max="31" step="1" required hint="Entre el 1 y el 31 de cada mes." value={datos.diaVencimientoPago} onChange={(event) => actualizar("diaVencimientoPago", event.target.value)} />
+            <TextField id={`${idBase}-dia`} label="Día de vencimiento del pago" type="number" min="1" max="31" step="1" required={!contrato || contrato.diaVencimientoPago !== undefined} hint="Entre el 1 y el 31 de cada mes." value={datos.diaVencimientoPago} onChange={(event) => actualizar("diaVencimientoPago", event.target.value)} />
           </div>
         </section>
         <section className={seccion}>
@@ -141,16 +145,16 @@ export default function NuevoContrato() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Resumen antes de guardar</h2>
           <dl className="mt-4 grid gap-5 text-sm sm:grid-cols-3">
             <div><dt className="text-slate-500">Titular</dt><dd className="mt-1 font-medium">{alumno ? `${alumno.apellido}, ${alumno.nombre}` : "Sin seleccionar"}</dd></div>
-            <div><dt className="text-slate-500">Duración</dt><dd className="mt-1">{duracion > 1 ? `${duracion} días de residencia` : "Revisá las fechas"}</dd></div>
+            <div><dt className="text-slate-500">Duración</dt><dd className="mt-1">{duracion >= 1 ? `${duracion} días de residencia` : "Revisá las fechas"}</dd></div>
             <div><dt className="text-slate-500">Importe mensual</dt><dd className="mt-1 font-medium">{Number(datos.montoMensual) > 0 ? formatARS(Number(datos.montoMensual)) : "Sin completar"}</dd></div>
           </dl>
         </section>
         {error ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
         <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-5 dark:border-slate-800">
-          <Button variant="outline" onClick={() => navigate("/contratos")}>Cancelar</Button>
-          <Button type="submit"><Icon name="plus" className="h-4 w-4" />Guardar contrato</Button>
+          <Button variant="outline" data-descartar onClick={() => navigate(destino)}>Cancelar</Button>
+          <Button type="submit"><Icon name={contrato ? "check" : "plus"} className="h-4 w-4" />{contrato ? "Guardar cambios" : "Guardar contrato"}</Button>
         </div>
-      </form>
+      </FormularioConfirmado>
     </div>
   );
 }

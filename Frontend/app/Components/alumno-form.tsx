@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "./ui/formulario-confirmado";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router";
@@ -19,8 +20,6 @@ interface Errores {
   correo?: string;
 }
 
-const CARRERAS = ["Ingeniería Industrial", "Ingeniería en Sistemas de Información", "Licenciado en Administración Rural"];
-const VINCULOS = ["Madre", "Padre", "Familiar", "Tutor/a", "Pareja", "Amigo/a", "Otro"];
 const CONTACTO_VACIO = { nombre: "", vinculo: "", telefono: "" };
 
 type AlumnoFormProps =
@@ -28,7 +27,9 @@ type AlumnoFormProps =
   | { alumno: Alumno; modulo: ModuloAlumno };
 
 export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
-  const { crearAlumno, actualizarAlumno, alumnos } = useData();
+  const { crearAlumno, actualizarAlumno, alumnos, carreras, vinculos } = useData();
+  const carrerasActivas = carreras.filter((item) => item.activa).map((item) => item.nombre);
+  const vinculosActivos = vinculos.filter((item) => item.activa).map((item) => item.nombre);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -105,7 +106,7 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
       if (alumno && original?.nombre === nombre && original.vinculo === vinculo && original.telefono === telefono) return false;
       return !nombre.trim() || !vinculo || !telefono.trim();
     });
-    if ((!alumno && (!CARRERAS.includes(datosIngreso.carrera) || materias === undefined)) ||
+    if ((!alumno && (!carrerasActivas.includes(datosIngreso.carrera) || materias === undefined)) ||
       (mostrar("academica") && materias !== undefined && (!Number.isInteger(materias) || materias < 0)) ||
       (mostrar("emergencia") && contactoIncompleto)) {
       setErrorIngreso(alumno
@@ -195,7 +196,7 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
 
       {contratoBorrador ? <p className="rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-100">Estás cargando el titular de un nuevo contrato. Al guardar volverás al formulario de contrato con este alumno seleccionado y los datos que ya completaste.</p> : null}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <FormularioConfirmado onSubmit={handleSubmit} className="space-y-6">
         {mostrar("personales") ? (
           <section className="rounded-xl border border-slate-300 bg-white shadow-sm p-6 dark:border-slate-800 dark:bg-slate-900">
           <h2 className="text-lg font-semibold text-brand-900">Datos personales</h2>
@@ -279,8 +280,8 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
           <section className="rounded-xl border border-slate-300 bg-white shadow-sm p-6 dark:border-slate-800 dark:bg-slate-900"><h2 className="text-lg font-semibold text-brand-900">Información académica</h2><p className="mt-1 mb-6 border-b border-slate-200 pb-4 text-sm text-slate-600">Estudiante de la Facultad Regional Trenque Lauquen.</p><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <SelectField id={`${idBase}-carrera`} label="Carrera" required={!alumno} value={datosIngreso.carrera ?? ""} onChange={(event) => setDatosIngreso((previo) => ({ ...previo, carrera: event.target.value }))}>
             <option value="" disabled={!alumno}>Seleccionar</option>
-            {alumno?.carrera && !CARRERAS.includes(alumno.carrera) ? <option value={alumno.carrera}>{alumno.carrera}</option> : null}
-            {CARRERAS.map((carrera) => <option key={carrera} value={carrera}>{carrera}</option>)}
+            {alumno?.carrera && !carrerasActivas.includes(alumno.carrera) ? <option value={alumno.carrera}>{alumno.carrera}</option> : null}
+            {carrerasActivas.map((carrera) => <option key={carrera} value={carrera}>{carrera}</option>)}
           </SelectField>
           <TextField id={`${idBase}-cantidadMateriasCursadas`} label="Cantidad de materias cursadas" type="number" min={0} step={1} required={!alumno} value={datosIngreso.cantidadMateriasCursadas ?? ""} onChange={(event) => setDatosIngreso((previo) => ({ ...previo, cantidadMateriasCursadas: event.target.value }))} />
           <TextField id={`${idBase}-legajo`} label="Legajo estudiantil" type="text" value={datosIngreso.legajo ?? ""} onChange={(event) => setDatosIngreso((previo) => ({ ...previo, legajo: event.target.value }))} />
@@ -290,7 +291,7 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
           <section className="rounded-xl border border-slate-300 bg-white shadow-sm p-6 dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div><h2 className="text-lg font-semibold text-brand-900">Contacto de emergencia</h2><p className="mt-1 text-sm text-slate-500">Personas a quienes contactar ante una urgencia. Indicá su vínculo con el alumno.</p></div>
-            <Button type="button" variant="outline" onClick={() => {
+            <Button type="button" variant="outline" data-modifica-formulario onClick={() => {
               setContactos((previos) => [...previos, { id: siguienteContacto, nombre: "", vinculo: "", telefono: "" }]);
               setSiguienteContacto((previo) => previo + 1);
             }}><Icon name="plus" className="h-4 w-4" />Agregar</Button>
@@ -303,12 +304,12 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
                   <TextField id={`${idBase}-contacto-${contacto.id}-nombre`} label="Nombre y apellido del contacto" required={!alumno} value={contacto.nombre} onChange={(event) => actualizarContacto(contacto.id, "nombre", event.target.value)} />
                   <SelectField id={`${idBase}-contacto-${contacto.id}-vinculo`} label="Vínculo" required={!alumno} value={contacto.vinculo} onChange={(event) => actualizarContacto(contacto.id, "vinculo", event.target.value)}>
                     <option value="" disabled>Seleccionar</option>
-                    {contacto.vinculo && !VINCULOS.includes(contacto.vinculo) ? <option value={contacto.vinculo}>{contacto.vinculo}</option> : null}
-                    {VINCULOS.map((vinculo) => <option key={vinculo} value={vinculo}>{vinculo}</option>)}
+                    {contacto.vinculo && !vinculosActivos.includes(contacto.vinculo) ? <option value={contacto.vinculo}>{contacto.vinculo}</option> : null}
+                    {vinculosActivos.map((vinculo) => <option key={vinculo} value={vinculo}>{vinculo}</option>)}
                   </SelectField>
                   <TextField id={`${idBase}-contacto-${contacto.id}-telefono`} label="Teléfono de emergencia" type="tel" required={!alumno} value={contacto.telefono} onChange={(event) => actualizarContacto(contacto.id, "telefono", event.target.value)} />
                 </div>
-                {alumno || contactos.length > 1 ? <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" aria-label={`Quitar contacto ${indice + 1}`} onClick={() => setContactos((previos) => previos.filter((item) => item.id !== contacto.id))}>Quitar contacto</Button></div> : null}
+                {alumno || contactos.length > 1 ? <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" data-modifica-formulario aria-label={`Quitar contacto ${indice + 1}`} onClick={() => setContactos((previos) => previos.filter((item) => item.id !== contacto.id))}>Quitar contacto</Button></div> : null}
               </fieldset>
             ))}
           </div>
@@ -324,7 +325,7 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
         {!alumno ? <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">Al guardar se crea la ficha del alumno. El contrato y la habitación se gestionan después; el alumno figurará como pendiente de ingreso hasta tener un contrato vigente.</p> : null}
         {errorIngreso ? <p role="alert" className="text-sm text-red-600">{errorIngreso}</p> : null}
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <ButtonLink to={destinoVolver} state={contratoBorrador ? { contratoBorrador } : undefined} variant="outline">
+          <ButtonLink to={destinoVolver} state={contratoBorrador ? { contratoBorrador } : undefined} variant="outline" data-descartar>
               Cancelar
             </ButtonLink>
           <Button type="submit">
@@ -332,7 +333,7 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
             {alumno ? "Guardar cambios" : contratoBorrador ? "Guardar alumno y continuar contrato" : "Ingresar alumno"}
           </Button>
         </div>
-      </form>
+      </FormularioConfirmado>
     </div>
   );
 }

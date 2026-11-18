@@ -62,6 +62,7 @@ export type EstadoBadge =
   | "por-vencer"
   | "finalizado"
   | "cancelado"
+  | "cancelada"
   | "programado"
   | "activo"
   | "inactivo"
@@ -77,6 +78,7 @@ const estados: Record<EstadoBadge, { label: string; variant: BadgeVariant }> = {
   vigente: { label: "Vigente", variant: "success" },
   "por-vencer": { label: "Por vencer", variant: "warning" },
   finalizado: { label: "Finalizado", variant: "neutral" },
+  cancelada: { label: "Cancelada", variant: "neutral" },
   cancelado: { label: "Cancelado", variant: "danger" },
   programado: { label: "Programado", variant: "info" },
   activo: { label: "Activo", variant: "success" },

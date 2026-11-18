@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "./ui/formulario-confirmado";
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -71,7 +72,7 @@ export function StudentClaimForm() {
   function errorCampo(campo: string) { return errores[campo] ? <p id={`${campo}-error`} className="mt-1 text-xs text-red-600 dark:text-red-300">{errores[campo]}</p> : null; }
 
   return <div className="space-y-5"><Link className={studentLink} to="/estudiante/reclamos">← Volver a mis presentaciones</Link><StudentSection title="Contanos qué necesitás" description="Los campos marcados con * son obligatorios." icon="contracts">
-    <form onSubmit={enviar} noValidate className="space-y-6">
+    <FormularioConfirmado onSubmit={enviar} noValidate className="space-y-6">
       {Object.keys(errores).length ? <FormErrorSummary key={intentos} errors={Object.entries(errores).map(([id, message]) => ({ id, message }))} /> : null}
       {error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
       <fieldset id="tipo"><legend className="mb-3 text-sm font-semibold">¿Qué querés presentar? *</legend><div className="grid gap-3 sm:grid-cols-3">{TIPOS_RECLAMO.map((t) => <label key={t.id} className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${input.tipo === t.id ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20" : "border-slate-200 dark:border-slate-700"}`}><input type="radio" name="tipo" value={t.id} checked={input.tipo === t.id} onChange={() => cambiar("tipo", t.id)} className="mt-1 accent-brand-600" /><span><span className="block text-sm font-semibold">{t.label}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{t.id === "reclamo" ? "Algo no está funcionando como esperabas." : t.id === "solicitud" ? "Necesitás pedir una gestión o autorización." : "Querés informar una situación en la residencia."}</span></span></label>)}</div>{errorCampo("tipo")}</fieldset>
@@ -81,7 +82,7 @@ export function StudentClaimForm() {
       <div><label htmlFor="descripcion" className="mb-2 block text-sm font-medium">Descripción *</label><textarea id="descripcion" className={`${control} min-h-40 resize-y`} rows={6} value={input.descripcion} maxLength={3000} onChange={(e) => cambiar("descripcion", e.target.value)} placeholder="Explicá qué ocurrió, desde cuándo y qué necesitás. Cuantos más detalles nos des, mejor podremos ayudarte." required aria-invalid={Boolean(errores.descripcion)} aria-describedby={errores.descripcion ? "descripcion-error" : "descripcion-ayuda"} /><p id="descripcion-ayuda" className="mt-2 text-xs text-slate-500">Mínimo 20 caracteres. {input.descripcion.length}/3000.</p>{errorCampo("descripcion")}</div>
       <div className="rounded-2xl bg-brand-50 p-4 text-sm leading-6 text-brand-800 dark:bg-brand-900/20 dark:text-brand-200">Tu presentación quedará registrada como <strong>Pendiente</strong>. Desde el detalle vas a poder ver las respuestas de administración y agregar información.</div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5 dark:border-slate-800"><Link to="/estudiante/reclamos" className="rounded text-sm text-slate-500 hover:underline">Volver sin enviar</Link><Button type="submit" isLoading={ocupado} className="rounded-xl"><Icon name="plus" className="h-4 w-4" />Enviar presentación</Button></div>
-    </form>
+    </FormularioConfirmado>
   </StudentSection></div>;
 }
 
@@ -110,12 +111,12 @@ export function StudentClaimDetail({ id, administracion = false }: { id: string;
       <div className="mt-6"><h3 className="text-sm font-semibold">Descripción de la presentación</h3><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-slate-600 dark:text-slate-300">{reclamo.descripcion}</p></div>
     </StudentSection>
     <StudentSection title="Seguimiento" description="Respuestas, información adicional y cambios de estado." icon="calendar"><ClaimTimeline reclamo={reclamo} /></StudentSection>
-    {reclamoAbierto(reclamo) ? <StudentSection title={administracion ? "Responder y gestionar" : "Agregar información"} description={administracion ? "La respuesta y el estado serán visibles para el alumno." : "Podés sumar detalles o cancelar la presentación si ya no corresponde."} icon="contracts"><form className="space-y-4" onSubmit={responder}>
+    {reclamoAbierto(reclamo) ? <StudentSection title={administracion ? "Responder y gestionar" : "Agregar información"} description={administracion ? "La respuesta y el estado serán visibles para el alumno." : "Podés sumar detalles o cancelar la presentación si ya no corresponde."} icon="contracts"><FormularioConfirmado className="space-y-4" onSubmit={responder}>
       <div><label htmlFor="respuesta-reclamo" className="mb-2 block text-sm font-medium">{estado === "cancelado" ? "Motivo de cancelación" : "Mensaje"} *</label><textarea id="respuesta-reclamo" className={`${control} min-h-28`} rows={4} value={mensaje} minLength={5} maxLength={2000} required onChange={(e) => setMensaje(e.target.value)} placeholder={administracion ? "Informá cómo se está gestionando o la resolución del caso…" : "Agregá información que pueda ayudar a resolver tu presentación…"} /><p className="mt-2 text-xs text-slate-500">Entre 5 y 2000 caracteres.</p></div>
       <div><label htmlFor="accion-reclamo" className="mb-2 block text-sm font-medium">{administracion ? "Estado" : "Acción"}</label><select id="accion-reclamo" className={control} value={estado} onChange={(e) => setEstado(e.target.value as EstadoReclamo | "")}><option value="">{administracion ? "Mantener estado actual" : "Agregar comentario"}</option>{administracion ? ESTADOS_RECLAMO.filter((e) => e.id !== "cancelado").map((e) => <option key={e.id} value={e.id}>{e.label}</option>) : <option value="cancelado">Cancelar mi presentación</option>}</select></div>
       {error ? <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
       <Button type="submit" isLoading={ocupado} className="rounded-xl" variant={estado === "cancelado" ? "danger" : "solid"}>{estado === "cancelado" ? "Cancelar presentación" : "Enviar actualización"}</Button>
-    </form></StudentSection> : <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900"><Icon name="check" className="h-5 w-5 shrink-0" />Esta presentación está cerrada. Su historial queda disponible para consulta.</div>}
+    </FormularioConfirmado></StudentSection> : <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900"><Icon name="check" className="h-5 w-5 shrink-0" />Esta presentación está cerrada. Su historial queda disponible para consulta.</div>}
   </div>;
 }
 

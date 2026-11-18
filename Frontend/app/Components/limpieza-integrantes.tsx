@@ -32,7 +32,7 @@ export function LimpiezaIntegrantes({ seleccionados, onChange, idGrupo }: {
           return <div key={h.idHabitacion} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
             <p className="font-medium">Habitación {h.numeroHabitacion}</p>
             <p className="my-2 text-sm text-slate-500">{cantidad} de {ids.length} residentes seleccionados</p>
-            <Button type="button" size="sm" variant="outline" disabled={!ids.length} onClick={() => alternar(ids, cantidad !== ids.length)}>{cantidad === ids.length && ids.length ? "Quitar residentes" : "Agregar residentes"}</Button>
+            <Button type="button" size="sm" variant="outline" data-modifica-formulario disabled={!ids.length} onClick={() => alternar(ids, cantidad !== ids.length)}>{cantidad === ids.length && ids.length ? "Quitar residentes" : "Agregar residentes"}</Button>
           </div>;
         })}
       </div>

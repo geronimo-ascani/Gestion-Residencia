@@ -1,4 +1,4 @@
-import { aplicarAsignacionHabitacion, validarAltaAlumno, validarAltaHabitacion, validarAltaContrato } from "./gestiones";
+import { aplicarAsignacionHabitacion, editarContrato, editarHabitacion, esFechaISO, validarAltaAlumno, validarAltaHabitacion, validarAltaContrato } from "./gestiones";
 import { cargarDatosGuardados, DATOS_KEY } from "./persistence";
 import { estadoAcceso } from "./administracion";
 import { sincronizarUsuario } from "./session";
@@ -16,15 +16,17 @@ import type { ReactNode } from "react";
 import { calendarioMulta, conHistorialMulta, extenderMes, importeMulta, TIPOS_MULTA } from "./multas";
 import { estaActiva, actualizarIntegrantesLimpieza, validarGrupoLimpieza, validarTareaLimpieza, contratoVigente } from "./domain";
 import { FECHA_REFERENCIA } from "./config";
-import { aplicarCobro, prepararFactura } from "./facturacion";
-import type { RegistrarCobroInput } from "./types";
+import { actualizarMultaFacturada, aplicarCancelacionFactura, aplicarCobro, aplicarEmisionFactura, facturaActivaDeMulta, prepararFactura } from "./facturacion";
+import type { ReemplazoFacturaInput, RegistrarCobroInput } from "./types";
 import { normalizar } from "./format";
 import { createInitialData } from "./mock/data";
-import { validarNuevoAmbiente } from "./ambientes";
+import { actualizarCatalogo } from "./catalogos";
+import { editarEquipamiento, validarNuevoAmbiente } from "./ambientes";
 import type { NuevoAmbienteInput } from "./ambientes";
 import { TIPOS_AMBIENTE } from "./types";
 import type {
   Alumno,
+  CatalogoAlumno,
   DatosIngresoAlumno,
   Ambiente,
   DataState,
@@ -33,6 +35,7 @@ import type {
   NuevaTareaLimpiezaInput,
   Habitacion,
   Multa,
+  OpcionCatalogo,
 } from "./types";
 
 let secuencia = 1000;
@@ -57,7 +60,7 @@ export interface DatosMultaInput {
   montoDanios: number;
 }
 export interface NuevaMultaInput extends DatosMultaInput { idAlumnos: string[]; }
-export interface EditarMultaInput extends DatosMultaInput { idMulta: string; }
+export interface EditarMultaInput extends DatosMultaInput { idMulta: string; fechaVence: string; }
 
 export interface NuevoAlumnoInput extends DatosIngresoAlumno {
   nombre: string;
@@ -95,6 +98,7 @@ export interface DataContextValue extends DataState {
   usuarioAutenticado: Usuario | null;
   crearReclamo: (input: NuevoReclamoInput) => string;
   responderReclamo: (id: string, mensaje: string, estado?: EstadoReclamo) => void;
+  guardarOpcionCatalogo: (catalogo: CatalogoAlumno, opcion: Omit<OpcionCatalogo, "id"> & { id?: string }) => void;
   guardarParametros: (valores: Parametros) => void;
   ajustarImporteContrato: (id: string, monto: number) => void;
   crearAdministrador: (input: { nombre: string; apellido: string; documento: string; correo: string; telefono: string; gestionaAdministradores: boolean }) => string;
@@ -102,7 +106,8 @@ export interface DataContextValue extends DataState {
   cambiarClave: (actual: string, nueva: string) => Promise<void>;
   crearAccesoAlumno: (idAlumno: string, correo: string) => void;
   suspenderCuenta: (id: string, suspender: boolean) => void;
-  generarFactura: (idContrato: string, periodo: string) => string;
+  generarFactura: (idContrato: string, periodo: string, reemplazo?: ReemplazoFacturaInput) => string;
+  cancelarFactura: (idFactura: string, motivo: string) => void;
   registrarCobro: (input: RegistrarCobroInput) => string;
   alumnoPorId: Map<string, Alumno>;
   habitacionPorId: Map<string, Habitacion>;
@@ -110,6 +115,7 @@ export interface DataContextValue extends DataState {
   ambientePorId: Map<string, Ambiente>;
   crearAmbiente: (input: NuevoAmbienteInput) => string | null;
   agregarEquipamientoAmbiente: (idAmbiente: string, equipo: EquipamientoAmbiente) => boolean;
+  actualizarEquipamientoAmbiente: (idAmbiente: string, nombreAnterior: string, equipo?: EquipamientoAmbiente) => void;
   registrarPagoMulta: (idMulta: string) => void;
   anularMulta: (idMulta: string) => void;
   emitirMulta: (input: NuevaMultaInput) => string[];
@@ -119,6 +125,7 @@ export interface DataContextValue extends DataState {
   liberarHabitacion: (idAlumno: string) => void;
   crearAlumno: (input: NuevoAlumnoInput) => string;
   actualizarAlumno: (idAlumno: string, input: Partial<NuevoAlumnoInput>) => void;
+  actualizarHabitacion: (idHabitacion: string, input: NuevaHabitacionInput) => void;
   crearHabitacion: (input: NuevaHabitacionInput) => string;
   actualizarTareaLimpieza: (numero: number, input: NuevaTareaLimpiezaInput) => void;
   crearTareaLimpieza: (input: NuevaTareaLimpiezaInput) => void;
@@ -132,6 +139,7 @@ export interface DataContextValue extends DataState {
     fechaDesde: string,
   ) => boolean;
   liberarAmbienteGrupo: (idGrupoLimpieza: string, idAmbiente: string) => void;
+  actualizarContrato: (idContrato: string, input: NuevoContratoInput) => void;
   crearContrato: (input: NuevoContratoInput) => void;
   cancelarContrato: (idContrato: string, fecha: string, motivo: string) => void;
 }
@@ -209,6 +217,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
         actualizarReclamo(state, usuarioActual, id, mensaje, estado, eventoId, fecha);
         setState((previo) => actualizarReclamo(previo, usuarioActual, id, mensaje, estado, eventoId, fecha));
       },
+      guardarOpcionCatalogo(catalogo, opcion) {
+        exigirAdministrador(state);
+        if (opcion.id && !state[catalogo].some((item) => item.id === opcion.id)) throw new Error("La opción ya no existe.");
+        const registro = { ...opcion, id: opcion.id ?? nuevoId("CAT") };
+        actualizarCatalogo(state, catalogo, registro);
+        setState((previo) => actualizarCatalogo(previo, catalogo, registro));
+      },
       guardarParametros(valores) {
         exigirAdministrador(state);
         if (usuarioActual.rol !== "administrador") throw new Error("No tenés permiso para modificar parámetros.");
@@ -266,14 +281,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
       grupoPorId,
       ambientePorId,
 
-      generarFactura(idContrato, periodo) {
+      generarFactura(idContrato, periodo, reemplazo) {
         exigirAdministrador(state);
         const id = nuevoId("F");
-        prepararFactura(state, idContrato, periodo, id);
-        setState((previo) => previo.facturas.some((f) => f.idContrato === idContrato && f.periodo === periodo) ? previo : {
-          ...previo, facturas: [...previo.facturas, prepararFactura(previo, idContrato, periodo, id)],
+        prepararFactura(state, idContrato, periodo, id, reemplazo);
+        setState((previo) => {
+          if (previo.facturas.some((f) => (!f.fechaCancelacion && f.idContrato === idContrato && f.periodo === periodo) ||
+            (reemplazo && f.idFacturaOrigen === reemplazo.idFacturaOrigen))) return previo;
+          return aplicarEmisionFactura(previo, prepararFactura(previo, idContrato, periodo, id, reemplazo));
         });
         return id;
+      },
+
+      cancelarFactura(idFactura, motivo) {
+        exigirAdministrador(state);
+        aplicarCancelacionFactura(state, idFactura, motivo);
+        setState((previo) => aplicarCancelacionFactura(previo, idFactura, motivo));
       },
 
       registrarCobro(input) {
@@ -328,9 +351,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return true;
       },
 
+      actualizarEquipamientoAmbiente(idAmbiente, nombreAnterior, equipo) {
+        exigirAdministrador(state);
+        const aplicar = (previo: DataState) => {
+          const ambiente = previo.ambientes.find((item) => item.idAmbiente === idAmbiente && item.tipo);
+          if (!ambiente) throw new Error("El ambiente no existe.");
+          const actualizado = editarEquipamiento(ambiente, nombreAnterior, equipo);
+          return { ...previo, ambientes: previo.ambientes.map((item) => item === ambiente ? actualizado : item) };
+        };
+        aplicar(state);
+        setState(aplicar);
+      },
+
       registrarPagoMulta(idMulta) {
         exigirAdministrador(state);
-        if (state.facturas.some((f) => f.detalles.some((d) => d.idMulta === idMulta))) return;
+        if (facturaActivaDeMulta(state.facturas, idMulta)) return;
         setState((previo) => ({
           ...previo,
           multas: previo.multas.map((multa) =>
@@ -343,7 +378,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       anularMulta(idMulta) {
         exigirAdministrador(state);
-        if (state.facturas.some((f) => f.detalles.some((d) => d.idMulta === idMulta))) return;
+        if (facturaActivaDeMulta(state.facturas, idMulta)) return;
         setState((previo) => ({
           ...previo,
           multas: previo.multas.map((multa) =>
@@ -374,22 +409,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return nuevas.map((m) => m.idMulta);
       },
 
-      actualizarMulta({ idMulta, ...datos }) {
+      actualizarMulta({ idMulta, fechaVence, ...datos }) {
         exigirAdministrador(state);
-        if (state.facturas.some((f) => f.detalles.some((d) => d.idMulta === idMulta))) throw new Error("La multa ya está facturada y no admite modificaciones.");
-        const anterior = state.multas.find((m) => m.idMulta === idMulta);
-        const tipo = arancelesMulta(TIPOS_MULTA, state.parametros).map((t) => anterior?.tipo === t.id ? { ...t, monto: anterior.montoSancion ?? anterior.monto - (anterior.montoDanios ?? 0) } : t).find((t) => t.id === datos.tipo);
-        if (!tipo || !datos.motivo.trim() || !Number.isFinite(datos.montoSancion) || datos.montoSancion <= 0 || !Number.isFinite(datos.montoDanios) || datos.montoDanios < 0 || (datos.huboDanios && (!datos.detalleDanios.trim() || datos.montoDanios <= 0))) return;
-        setState((previo) => ({ ...previo, multas: previo.multas.map((multa) =>
-          multa.idMulta === idMulta && multa.estado === "pendiente"
-            ? conHistorialMulta(multa, { ...multa, ...datos, montoSancion: tipo.id === "extraordinaria" ? datos.montoSancion : tipo.monto, montoDanios: datos.huboDanios ? datos.montoDanios : 0, monto: (tipo.id === "extraordinaria" ? datos.montoSancion : tipo.monto) + (datos.huboDanios ? datos.montoDanios : 0), detalleDanios: datos.huboDanios ? datos.detalleDanios.trim() : "" }, "edicion")
-            : multa,
-        ) }));
+        const aplicar = (previo: DataState) => {
+          const anterior = previo.multas.find((m) => m.idMulta === idMulta);
+          if (anterior?.estado !== "pendiente") throw new Error("Solo se pueden modificar multas pendientes.");
+          const tipo = arancelesMulta(TIPOS_MULTA, previo.parametros).find((t) => t.id === datos.tipo);
+          if (!tipo || !datos.motivo.trim() || !Number.isFinite(datos.montoSancion) || datos.montoSancion <= 0 ||
+            !Number.isFinite(datos.montoDanios) || datos.montoDanios < 0 ||
+            (datos.huboDanios && (!datos.detalleDanios.trim() || datos.montoDanios <= 0))) {
+            throw new Error("Revisá el tipo, el motivo y los importes de la multa.");
+          }
+          if (!esFechaISO(fechaVence) || fechaVence < anterior.fechaEmision) throw new Error("El vencimiento debe ser igual o posterior a la fecha de emisión.");
+          const montoSancion = tipo.id === "extraordinaria" ? datos.montoSancion
+            : anterior.tipo === tipo.id ? anterior.montoSancion ?? anterior.monto - (anterior.montoDanios ?? 0) : tipo.monto;
+          const montoDanios = datos.huboDanios ? datos.montoDanios : 0;
+          const multa = conHistorialMulta(anterior, {
+            ...anterior, ...datos, fechaVence,
+            periodoHasta: fechaVence === anterior.fechaVence ? anterior.periodoHasta : fechaVence.slice(0, 7),
+            motivo: datos.motivo.trim(), observaciones: datos.observaciones.trim(),
+            montoSancion, montoDanios, monto: Math.round((montoSancion + montoDanios) * 100) / 100,
+            detalleDanios: datos.huboDanios ? datos.detalleDanios.trim() : "",
+          }, "edicion");
+          return actualizarMultaFacturada(previo, anterior, multa);
+        };
+        aplicar(state);
+        setState(aplicar);
       },
 
       extenderPlazoMulta(idMulta, motivo) {
         exigirAdministrador(state);
-        if (state.facturas.some((f) => f.detalles.some((d) => d.idMulta === idMulta))) return;
+        if (facturaActivaDeMulta(state.facturas, idMulta)) return;
         if (!motivo.trim()) return;
         setState((previo) => ({ ...previo, multas: previo.multas.map((multa) => {
           if (multa.idMulta !== idMulta || multa.estado !== "pendiente") return multa;
@@ -441,6 +491,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }));
       },
 
+      actualizarHabitacion(idHabitacion, input) {
+        exigirAdministrador(state);
+        editarHabitacion(state, idHabitacion, input);
+        setState((previo) => editarHabitacion(previo, idHabitacion, input));
+      },
       crearHabitacion(input) {
         exigirAdministrador(state);
         validarAltaHabitacion(state, input);
@@ -588,6 +643,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
             asignaciones: previo.asignaciones.map((a) => a.idAlumno === contrato.idAlumno && a.fechaDesde <= contrato.fechaHasta && (!a.fechaHasta || a.fechaHasta > fecha) ? { ...a, fechaHasta: a.fechaDesde > fecha ? a.fechaDesde : fecha } : a),
           };
         });
+      },
+
+      actualizarContrato(idContrato, input) {
+        exigirAdministrador(state);
+        editarContrato(state, idContrato, input);
+        setState((previo) => editarContrato(previo, idContrato, input));
       },
 
       crearContrato(input) {

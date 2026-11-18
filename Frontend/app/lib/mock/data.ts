@@ -1,3 +1,4 @@
+import { CARRERAS_INICIALES, catalogoInicial } from "../catalogos";
 import { PARAMETROS_INICIALES } from "../parametros";
 import { TAREAS_LIMPIEZA } from "../domain";
 import type { Alumno, Ambiente, Contrato, DataState, Habitacion, HabitacionAlumno } from "../types";
@@ -61,12 +62,6 @@ const AMBIENTES_COMUNES: Ambiente[] = [
   },
 ];
 
-const CARRERAS = [
-  "Ingeniería en Sistemas de Información",
-  "Ingeniería Industrial",
-  "Licenciado en Administración Rural",
-] as const;
-
 // Nombre, apellido, habitación, carrera, localidad y código postal de origen.
 const RESIDENTES = [
   ["Lucía", "Fernández", 1, 0, "Pehuajó", "6450"],
@@ -115,7 +110,7 @@ export function createInitialData(): DataState {
       provincia: "Buenos Aires",
       codigoPostal,
       institucion: "UTN · Facultad Regional Trenque Lauquen",
-      carrera: CARRERAS[carrera],
+      carrera: CARRERAS_INICIALES[carrera],
       anioCursado: `${1 + (indice % 4)}° año`,
       cantidadMateriasCursadas: 6 + (indice % 4) * 6,
       legajo: `2026-${pad(indice + 1)}`,
@@ -161,6 +156,8 @@ export function createInitialData(): DataState {
   );
 
   return {
+    carreras: catalogoInicial("carreras"),
+    vinculos: catalogoInicial("vinculos"),
     reclamos: [],
     facturas: alumnos.flatMap((alumno, indice) => ["2026-09", "2026-10"].map((periodo) => ({
       idFactura: `F-${alumno.idAlumno}-${periodo}`, idContrato: contratos[indice].idContrato,

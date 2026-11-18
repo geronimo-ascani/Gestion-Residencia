@@ -105,6 +105,7 @@ export default function HabitacionDetalle() {
                 <Icon name="arrow" className="h-4 w-4 rotate-180" />
                 Habitaciones
               </ButtonLink>
+            <ButtonLink to={`/habitaciones/${habitacion.idHabitacion}/editar`} variant="outline">Modificar habitación</ButtonLink>
             <Button
               onClick={() => setDialogoAsignacionAbierto(true)}
               disabled={cuposDisponibles === 0}

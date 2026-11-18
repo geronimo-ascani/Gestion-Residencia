@@ -8,6 +8,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Confirmar",
+  cancelLabel = "Cancelar",
   tone = "danger",
 }: {
   open: boolean;
@@ -16,6 +17,7 @@ export function ConfirmDialog({
   title: string;
   description?: string;
   confirmLabel?: string;
+  cancelLabel?: string;
   tone?: "danger" | "brand";
 }) {
   return (
@@ -28,7 +30,7 @@ export function ConfirmDialog({
     >
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onClose}>
-          Cancelar
+          {cancelLabel}
         </Button>
         <Button
           variant={tone === "danger" ? "danger" : "solid"}

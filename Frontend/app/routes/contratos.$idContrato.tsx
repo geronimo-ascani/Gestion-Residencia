@@ -71,6 +71,7 @@ export default function ContratoDetalle() {
                   <Icon name="chevron" className="h-4 w-4 rotate-[-90deg]" />
                 </span>
               </ButtonLink>
+            <ButtonLink to={`/contratos/${contrato.idContrato}/editar`} variant="outline">Modificar contrato</ButtonLink>
             <ButtonLink to={`/facturacion/nueva?contrato=${contrato.idContrato}`} variant="outline"><Icon name="payments" className="h-4 w-4" />Generar factura</ButtonLink>
           </div>
         }

@@ -26,6 +26,7 @@ export function validarCorreoCuenta(correo: string, usuarios: Usuario[], excluir
 }
 
 const secciones = {
+  carreras: "Carreras", vinculos: "Vínculos de emergencia",
   reclamos: "Reclamos y solicitudes", alumnos: "Alumnos", contratos: "Contratos", habitaciones: "Habitaciones", asignaciones: "Asignaciones de habitación",
   usuarios: "Cuentas de acceso", facturas: "Facturación", pagos: "Cobros", multas: "Multas", grupos: "Grupos de limpieza",
   tareasLimpieza: "Tareas de limpieza", grupoAlumnos: "Integrantes de limpieza", ambientes: "Ambientes", grupoAmbientes: "Asignaciones de ambientes",
@@ -42,7 +43,7 @@ export function registrarCambios(antes: DataState, despues: DataState, fecha: st
     // Los índices se usan solo para relaciones sin identificador propio.
     const identidad = (fila: object, indice: number) => {
       const r = fila as Record<string, unknown>;
-      const pk: Record<string, string> = { reclamos: "idReclamo", alumnos: "idAlumno", usuarios: "idUsuario", contratos: "idContrato", habitaciones: "idHabitacion", facturas: "idFactura", pagos: "idPago", multas: "idMulta", grupos: "idGrupoLimpieza", ambientes: "idAmbiente", tareasLimpieza: "numero" };
+      const pk: Record<string, string> = { carreras: "id", vinculos: "id", reclamos: "idReclamo", alumnos: "idAlumno", usuarios: "idUsuario", contratos: "idContrato", habitaciones: "idHabitacion", facturas: "idFactura", pagos: "idPago", multas: "idMulta", grupos: "idGrupoLimpieza", ambientes: "idAmbiente", tareasLimpieza: "numero" };
       return String(r[pk[campo]] ?? indice);
     };
     const mapa = new Map(previos.map((fila, indice) => [identidad(fila, indice), fila]));

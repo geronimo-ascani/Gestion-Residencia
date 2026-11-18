@@ -1,3 +1,4 @@
+import { FormularioConfirmado } from "../Components/ui/formulario-confirmado";
 import { BackToList } from "../Components/ui/back-to-list";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -26,6 +27,6 @@ export default function AlumnosGrupoLimpieza() {
   }
   return <div className="flex flex-col gap-6">
     <PageHeader eyebrow="Limpieza" title={`Integrantes · ${grupo.nombreDelGrupo}`} description="Asigná por habitación o elegí alumnos individualmente. Los cambios se aplican al guardar." actions={<ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">Volver al grupo</ButtonLink>} />
-    <form onSubmit={guardar} className="space-y-6"><LimpiezaIntegrantes seleccionados={ids} onChange={setIds} idGrupo={grupo.idGrupoLimpieza} /><div className="flex justify-end gap-2"><ButtonLink to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">Cancelar</ButtonLink><Button type="submit">Guardar integrantes</Button></div></form>
+    <FormularioConfirmado onSubmit={guardar} className="space-y-6"><LimpiezaIntegrantes seleccionados={ids} onChange={setIds} idGrupo={grupo.idGrupoLimpieza} /><div className="flex justify-end gap-2"><ButtonLink data-descartar to={`/limpieza/${grupo.idGrupoLimpieza}`} variant="outline">Cancelar</ButtonLink><Button type="submit">Guardar integrantes</Button></div></FormularioConfirmado>
   </div>;
 }
