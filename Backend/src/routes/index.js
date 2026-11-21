@@ -11,11 +11,12 @@ import grupoLimpiezaRoutes from "./grupoLimpieza.routes.js";
 import ambienteRoutes from "./ambiente.routes.js";
 import reclamoRoutes from "./reclamo.routes.js";
 import administracionRoutes from "./administracion.routes.js";
+import { administracionController } from "../controllers/administracion.controller.js";
 
 const apiRouter = Router();
 
 /**
- * Health check de la API
+ * Health check y Bootstrap del sistema
  */
 apiRouter.get("/health", (req, res) => {
   res.status(200).json({
@@ -24,6 +25,8 @@ apiRouter.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+apiRouter.get("/estado", administracionController.getEstadoCompleto);
+apiRouter.get("/bootstrap", administracionController.getEstadoCompleto);
 
 /**
  * Enrutadores por módulo del sistema
@@ -44,8 +47,6 @@ apiRouter.use("/tareas-limpieza", grupoLimpiezaRoutes);
 apiRouter.use("/ambientes", ambienteRoutes);
 apiRouter.use("/reclamos", reclamoRoutes);
 apiRouter.use("/administracion", administracionRoutes);
-apiRouter.use("/parametros", administracionRoutes);
-apiRouter.use("/notificaciones", administracionRoutes);
-apiRouter.use("/auditoria", administracionRoutes);
+apiRouter.use("/", administracionRoutes);
 
 export default apiRouter;

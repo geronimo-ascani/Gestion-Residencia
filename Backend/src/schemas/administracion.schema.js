@@ -64,6 +64,7 @@ export const notificacionIdParamSchema = z.object({
  * Esquema para consulta de notificaciones.
  */
 export const queryNotificacionesSchema = z.object({
+  idUsuario: z.coerce.number().int().positive().optional(),
   soloNoLeidas: z
     .preprocess((val) => {
       if (typeof val === "string") {
@@ -73,4 +74,41 @@ export const queryNotificacionesSchema = z.object({
       return val;
     }, z.boolean())
     .optional(),
+});
+
+/**
+ * Esquema para dar de alta un Administrador.
+ */
+export const crearAdministradorSchema = z.object({
+  nombre: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
+  apellido: z.string().trim().min(2, "El apellido debe tener al menos 2 caracteres").max(100),
+  correo: z.string().trim().email("Formato de correo inválido").toLowerCase(),
+  contrasena: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional(),
+  gestionaAdministradores: z.boolean().optional().default(false),
+});
+
+/**
+ * Esquema para editar un Administrador.
+ */
+export const updateAdministradorSchema = z.object({
+  nombre: z.string().trim().min(2).max(100).optional(),
+  apellido: z.string().trim().min(2).max(100).optional(),
+  telefono: z.string().trim().max(30).optional().nullable(),
+  gestionaAdministradores: z.boolean().optional(),
+  estado: z.enum(["activo", "pendiente", "suspendido", "inactivo"]).optional(),
+});
+
+/**
+ * Esquema para suspender o reactivar una cuenta de usuario.
+ */
+export const cambiarEstadoCuentaSchema = z.object({
+  suspender: z.boolean({ required_error: "Debe indicar si desea suspender (true) o reactivar (false)" }),
+});
+
+/**
+ * Esquema para opciones de catálogos dinámicos.
+ */
+export const opcionCatalogoSchema = z.object({
+  nombre: z.string().trim().min(1, "El nombre es obligatorio").max(150),
+  activa: z.boolean().optional(),
 });

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { habitacionController } from "../controllers/habitacion.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
+import { requireAdmin } from "../middlewares/auth.middleware.js";
 import {
   createHabitacionSchema,
   updateHabitacionSchema,
@@ -14,10 +15,11 @@ const router = Router();
 
 /**
  * @route   POST /api/habitaciones
- * @desc    Crear una nueva habitación
+ * @desc    Crear una nueva habitación (solo administradores)
  */
 router.post(
   "/",
+  requireAdmin,
   validate({ body: createHabitacionSchema }),
   habitacionController.create
 );
@@ -44,10 +46,11 @@ router.get(
 
 /**
  * @route   PUT /api/habitaciones/:id
- * @desc    Actualizar datos de una habitación
+ * @desc    Actualizar datos de una habitación (solo administradores)
  */
 router.put(
   "/:id",
+  requireAdmin,
   validate({
     params: habitacionIdParamSchema,
     body: updateHabitacionSchema,
@@ -57,20 +60,22 @@ router.put(
 
 /**
  * @route   DELETE /api/habitaciones/:id
- * @desc    Eliminar una habitación (solo si no tiene ocupantes actuales)
+ * @desc    Eliminar una habitación (solo si no tiene ocupantes actuales, solo administradores)
  */
 router.delete(
   "/:id",
+  requireAdmin,
   validate({ params: habitacionIdParamSchema }),
   habitacionController.delete
 );
 
 /**
  * @route   POST /api/habitaciones/:id/asignar
- * @desc    Asignar un alumno a la habitación
+ * @desc    Asignar un alumno a la habitación (solo administradores)
  */
 router.post(
   "/:id/asignar",
+  requireAdmin,
   validate({
     params: habitacionIdParamSchema,
     body: asignarAlumnoSchema,
@@ -80,10 +85,11 @@ router.post(
 
 /**
  * @route   PUT /api/habitaciones/:id/desasignar
- * @desc    Desasignar / liberar a un alumno de la habitación
+ * @desc    Desasignar / liberar a un alumno de la habitación (solo administradores)
  */
 router.put(
   "/:id/desasignar",
+  requireAdmin,
   validate({
     params: habitacionIdParamSchema,
     body: desasignarAlumnoSchema,

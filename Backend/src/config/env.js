@@ -1,8 +1,12 @@
 import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-// Cargar variables de entorno desde .env
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Cargar variables de entorno desde .env local o desde la raíz del Backend
 dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 // Esquema de validación estricta para variables de entorno
 const envSchema = z.object({

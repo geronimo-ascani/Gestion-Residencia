@@ -1,5 +1,6 @@
 import { prisma } from "../config/database.js";
 import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
+import { administracionService } from "./administracion.service.js";
 
 /**
  * Normaliza cadenas para búsqueda insensible a mayúsculas y acentos.
@@ -91,7 +92,7 @@ class ReclamoService {
     const autorId = data.idAutor ? Number(data.idAutor) : usuarioSesion?.idUsuario || null;
     const autorRol = usuarioSesion?.rol || "alumno";
 
-    return await prisma.$transaction(async (tx) => {
+    const resultado = await prisma.$transaction(async (tx) => {
       const nuevoReclamo = await tx.reclamo.create({
         data: {
           idAlumno: alumnoId,
@@ -129,6 +130,16 @@ class ReclamoService {
 
       return this.#formatearReclamo(reclamoCreado);
     });
+
+    void administracionService.notificarAdministradores({
+      claveEvento: "reclamo_creado",
+      tipo: data.prioridad === "alta" ? "alerta" : "info",
+      titulo: `Nueva presentación: ${data.asunto.trim()}`,
+      detalle: `El alumno ${alumno.nombre} ${alumno.apellido} ha registrado un/a ${data.tipo || "reclamo"} en ${data.ubicacion.trim()}.`,
+      destino: `/reclamos/${resultado.idReclamo}`,
+    });
+
+    return resultado;
   }
 
   /**
@@ -349,7 +360,7 @@ class ReclamoService {
     const autorNombre = data.autor?.trim() || usuarioSesion?.nombre || (rol === "alumno" ? "Alumno" : "Administración");
     const autorId = data.idAutor ? Number(data.idAutor) : usuarioSesion?.idUsuario || null;
 
-    return await prisma.$transaction(async (tx) => {
+    const resultado = await prisma.$transaction(async (tx) => {
       // 1. Agregar hito al historial
       await tx.seguimientoReclamo.create({
         data: {
@@ -378,6 +389,26 @@ class ReclamoService {
 
       return this.#formatearReclamo(reclamoActualizado);
     });
+
+    if (rol === "alumno") {
+      void administracionService.notificarAdministradores({
+        claveEvento: "reclamo_comentario",
+        tipo: "info",
+        titulo: `Nuevo mensaje en presentación #${reclamo.idReclamo}`,
+        detalle: `${autorNombre}: ${data.mensaje.trim().slice(0, 150)}`,
+        destino: `/reclamos/${reclamo.idReclamo}`,
+      });
+    } else {
+      void administracionService.notificarAlumno(reclamo.idAlumno, {
+        claveEvento: "reclamo_respuesta",
+        tipo: "info",
+        titulo: `Respuesta de administración en tu presentación: ${reclamo.asunto}`,
+        detalle: `${autorNombre}: ${data.mensaje.trim().slice(0, 150)} (Estado: ${nuevoEstado})`,
+        destino: `/estudiante/reclamos/${reclamo.idReclamo}`,
+      });
+    }
+
+    return resultado;
   }
 
   /**

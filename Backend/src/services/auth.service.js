@@ -276,10 +276,13 @@ class AuthService {
       },
     });
 
+    // Simular el canal de despacho seguro (consola/logs) sin exponer el token abiertamente en producción
+    console.log(`[AUTH-EMAIL-SIMULATOR] Enlace de restablecimiento para ${usuario.correo}: /reset-password?token=${rawToken}`);
+
     return {
       ok: true,
       message: "Si el correo está registrado, se enviará un enlace de recuperación.",
-      resetToken: rawToken, // Facilita pruebas y entornos de desarrollo/demo
+      ...(env.NODE_ENV === "development" || env.NODE_ENV === "test" ? { resetToken: rawToken } : {}),
     };
   }
 

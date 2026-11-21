@@ -199,8 +199,8 @@ model Contrato {
   fechaDesde         DateTime
   fechaHasta         DateTime
   fechaFirma         DateTime?
-  montoMensual       Decimal   @default(180000.00) @db.Decimal(10, 2)
-  depositoGarantia   Decimal   @default(0.00) @db.Decimal(10, 2)
+  montoMensual       Decimal   @default(180000.00) @db.Decimal(12, 2)
+  depositoGarantia   Decimal   @default(0.00) @db.Decimal(12, 2)
   diaVencimientoPago Int       @default(10)
   observaciones      String?
   fechaCancelacion   DateTime?
@@ -214,19 +214,25 @@ model Contrato {
 }
 
 model Factura {
-  idFactura    Int              @id @default(autoincrement())
-  idContrato   Int
-  idAlumno     Int?
-  periodo      String           // "2026-10"
-  fechaEmision DateTime         @default(now())
-  fechaVence   DateTime
-  titular      String
-  documento    String
+  idFactura         Int              @id @default(autoincrement())
+  idContrato        Int
+  idAlumno          Int?
+  periodo           String           // "2026-10"
+  fechaEmision      DateTime         @default(now())
+  fechaVence        DateTime
+  titular           String
+  documento         String
+  fechaCancelacion  DateTime?
+  motivoCancelacion String?
+  idFacturaOrigen   Int?
+  creditoAplicado   Decimal          @default(0.00) @db.Decimal(12, 2)
 
-  contrato     Contrato         @relation(fields: [idContrato], references: [idContrato], onDelete: Cascade)
-  alumno       Alumno?          @relation(fields: [idAlumno], references: [idAlumno], onDelete: SetNull)
-  detalles     DetalleFactura[]
-  pagos        Pago[]
+  contrato          Contrato         @relation(fields: [idContrato], references: [idContrato], onDelete: Cascade)
+  alumno            Alumno?          @relation(fields: [idAlumno], references: [idAlumno], onDelete: SetNull)
+  facturaOrigen     Factura?         @relation("ReemplazosFactura", fields: [idFacturaOrigen], references: [idFactura], onDelete: SetNull)
+  reemplazos        Factura[]        @relation("ReemplazosFactura")
+  detalles          DetalleFactura[]
+  pagos             Pago[]
 
   @@map("facturas")
 }
@@ -234,9 +240,9 @@ model Factura {
 model DetalleFactura {
   idDetalle Int     @id @default(autoincrement())
   idFactura Int
-  idMulta   Int?    @unique
+  idMulta   Int?
   concepto  String
-  monto     Decimal @db.Decimal(10, 2)
+  monto     Decimal @db.Decimal(12, 2)
   orden     Int     @default(1)
 
   factura   Factura @relation(fields: [idFactura], references: [idFactura], onDelete: Cascade)
@@ -249,7 +255,7 @@ model Pago {
   idPago     Int      @id @default(autoincrement())
   idAlumno   Int
   idFactura  Int?
-  monto      Decimal  @db.Decimal(10, 2)
+  monto      Decimal  @db.Decimal(12, 2)
   fecha      DateTime @default(now())
   concepto   String
   medio      String?  // "efectivo", "transferencia", "tarjeta"
@@ -267,7 +273,7 @@ model CuotaMensual {
   idAlumno     Int
   fechaEmision DateTime @default(now())
   mesAsociado  String
-  montoPagado  Decimal  @db.Decimal(10, 2)
+  montoPagado  Decimal  @db.Decimal(12, 2)
   estadoCuota  String   // "PENDIENTE", "PAGADA", "VENCIDA"
 
   alumno       Alumno   @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
@@ -280,28 +286,28 @@ model CuotaMensual {
 // ==========================================
 
 model Multa {
-  idMulta           Int             @id @default(autoincrement())
+  idMulta           Int              @id @default(autoincrement())
   idAlumno          Int
   idEmision         String?
-  tipo              String          @default("leve")
+  tipo              String           @default("leve")
   motivo            String
   observaciones     String?
-  huboDanios        Boolean         @default(false)
+  huboDanios        Boolean          @default(false)
   detalleDanios     String?
-  monto             Decimal         @db.Decimal(10, 2)
-  montoSancion      Decimal         @default(0.00) @db.Decimal(10, 2)
-  montoDanios       Decimal         @default(0.00) @db.Decimal(10, 2)
-  recargoPorcentaje Decimal         @default(0.00) @db.Decimal(5, 2)
-  fechaEmision      DateTime        @default(now())
+  monto             Decimal          @db.Decimal(12, 2)
+  montoSancion      Decimal          @default(0.00) @db.Decimal(12, 2)
+  montoDanios       Decimal          @default(0.00) @db.Decimal(12, 2)
+  recargoPorcentaje Decimal          @default(0.00) @db.Decimal(5, 2)
+  fechaEmision      DateTime         @default(now())
   fechaVence        DateTime
   periodoDesde      String?
   periodoHasta      String?
-  estadoMulta       String          @default("PENDIENTE") // "PENDIENTE", "PAGADA", "ANULADA"
+  estadoMulta       String           @default("PENDIENTE") // "PENDIENTE", "PAGADA", "ANULADA"
   fechaPago         DateTime?
-  montoPagado       Decimal?        @db.Decimal(10, 2)
+  montoPagado       Decimal?         @db.Decimal(12, 2)
 
-  alumno            Alumno          @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
-  detalleFactura    DetalleFactura?
+  alumno            Alumno           @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
+  detallesFactura   DetalleFactura[]
   cambios           CambioMulta[]
 
   @@map("multas")
@@ -444,4 +450,20 @@ model ParametroSistema {
   valor Decimal @db.Decimal(12, 2)
 
   @@map("parametros_sistema")
+}
+
+// ==========================================
+// CATÁLOGOS DINÁMICOS
+// ==========================================
+
+model OpcionCatalogo {
+  id            Int      @id @default(autoincrement())
+  catalogo      String   // "carreras" | "vinculos"
+  nombre        String
+  activa        Boolean  @default(true)
+  creadaEn      DateTime @default(now())
+  actualizadaEn DateTime @updatedAt
+
+  @@unique([catalogo, nombre])
+  @@map("opciones_catalogo")
 }

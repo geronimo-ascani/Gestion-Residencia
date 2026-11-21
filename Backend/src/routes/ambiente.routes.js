@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ambienteController } from "../controllers/ambiente.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
+import { requireAdmin } from "../middlewares/auth.middleware.js";
 import {
   createAmbienteSchema,
   updateAmbienteSchema,
@@ -14,10 +15,11 @@ const router = Router();
 
 /**
  * @route   POST /api/ambientes
- * @desc    Crear un nuevo ambiente común con inventario opcional
+ * @desc    Crear un nuevo ambiente común con inventario opcional (solo administradores)
  */
 router.post(
   "/",
+  requireAdmin,
   validate({ body: createAmbienteSchema }),
   ambienteController.create
 );
@@ -44,10 +46,11 @@ router.get(
 
 /**
  * @route   PUT /api/ambientes/:id
- * @desc    Actualizar metadatos de un ambiente (nombre, tipo, tareas, descripción)
+ * @desc    Actualizar metadatos de un ambiente (nombre, tipo, tareas, descripción) (solo administradores)
  */
 router.put(
   "/:id",
+  requireAdmin,
   validate({
     params: ambienteIdParamSchema,
     body: updateAmbienteSchema,
@@ -57,10 +60,11 @@ router.put(
 
 /**
  * @route   DELETE /api/ambientes/:id
- * @desc    Eliminar un ambiente y su equipamiento
+ * @desc    Eliminar un ambiente y su equipamiento (solo administradores)
  */
 router.delete(
   "/:id",
+  requireAdmin,
   validate({ params: ambienteIdParamSchema }),
   ambienteController.delete
 );
@@ -73,10 +77,11 @@ router.delete(
 
 /**
  * @route   POST /api/ambientes/:id/equipamiento
- * @desc    Agregar equipamiento al ambiente (si ya existe, acumula la cantidad)
+ * @desc    Agregar equipamiento al ambiente (si ya existe, acumula la cantidad) (solo administradores)
  */
 router.post(
   "/:id/equipamiento",
+  requireAdmin,
   validate({
     params: ambienteIdParamSchema,
     body: agregarEquipamientoSchema,
@@ -86,20 +91,22 @@ router.post(
 
 /**
  * @route   PUT /api/ambientes/:id/equipamiento/:idEquipamiento
- * @desc    Modificar un objeto de equipamiento en el ambiente
+ * @desc    Modificar un objeto de equipamiento en el ambiente (solo administradores)
  */
 router.put(
   "/:id/equipamiento/:idEquipamiento",
+  requireAdmin,
   validate({ params: equipamientoIdParamSchema }),
   ambienteController.updateEquipamiento
 );
 
 /**
  * @route   DELETE /api/ambientes/:id/equipamiento/:idEquipamiento
- * @desc    Eliminar un objeto de equipamiento del ambiente
+ * @desc    Eliminar un objeto de equipamiento del ambiente (solo administradores)
  */
 router.delete(
   "/:id/equipamiento/:idEquipamiento",
+  requireAdmin,
   validate({ params: equipamientoIdParamSchema }),
   ambienteController.deleteEquipamiento
 );

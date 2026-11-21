@@ -456,7 +456,7 @@ class LimpiezaService {
     // 4. Validar alumnos si fueron provistos
     if (idAlumnos.length > 0) {
       const alumnosEncontrados = await prisma.alumno.findMany({
-        where: { idAlumno: { in: idAlumnos }, estado: "ACTIVO" },
+        where: { idAlumno: { in: idAlumnos }, estado: { in: ["activo", "ACTIVO"] } },
       });
       if (alumnosEncontrados.length !== idAlumnos.length) {
         throw new BadRequestError("Uno o más alumnos no existen o no se encuentran activos.");
@@ -588,7 +588,7 @@ class LimpiezaService {
 
     if (alumnosIds.length > 0) {
       const encontrados = await prisma.alumno.findMany({
-        where: { idAlumno: { in: alumnosIds }, estado: "ACTIVO" },
+        where: { idAlumno: { in: alumnosIds }, estado: { in: ["activo", "ACTIVO"] } },
       });
       if (encontrados.length !== alumnosIds.length) {
         throw new BadRequestError("Uno o más alumnos no existen o no se encuentran activos.");

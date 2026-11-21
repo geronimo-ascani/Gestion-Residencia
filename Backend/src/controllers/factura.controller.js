@@ -79,6 +79,45 @@ class FacturaController {
   };
 
   /**
+   * POST /api/facturas/:id/cancelar
+   * Cancela una factura existente registrando motivo y fecha.
+   */
+  cancelar = async (req, res, next) => {
+    try {
+      const facturaCancelada = await facturaService.cancelarFactura(
+        req.params.id,
+        req.body
+      );
+      return successResponse(
+        res,
+        facturaCancelada,
+        "Factura cancelada exitosamente",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * POST /api/facturas/reemplazo
+   * Emite una factura de reemplazo aplicando el crédito acumulado de una factura cancelada.
+   */
+  emitirReemplazo = async (req, res, next) => {
+    try {
+      const reemplazo = await facturaService.emitirReemplazo(req.body);
+      return successResponse(
+        res,
+        reemplazo,
+        "Factura de reemplazo emitida exitosamente con crédito aplicado",
+        201
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
    * DELETE /api/facturas/:id
    * Elimina una factura si no tiene cobros o pagos asociados.
    */

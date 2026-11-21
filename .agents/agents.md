@@ -9,100 +9,138 @@
 
 ## 1. Qué es este proyecto
 
-Aplicación web de gestión de una residencia estudiantil. Permite administrar
-alumnos, habitaciones, contratos, pagos, multas y grupos de limpieza.
+Aplicación web integral para la administración de una residencia estudiantil.
+Permite gestionar alumnos, habitaciones, contratos, facturación mensual,
+cobros, multas disciplinarias, grupos de limpieza, presentaciones/reclamos y
+portal de autogestión para residentes.
 
-**Estado actual: prototipo frontend.** No hay backend, base de datos ni
-autenticación real. Los datos viven en memoria (mock) y se reinician al recargar
-la página. El objetivo es validar flujos, reglas de negocio y UI antes de
-conectar una API.
+**Estado actual: sistema fullstack integrado y persistente.** Cuenta con una
+API REST en Node.js/Express, Prisma ORM y base de datos relacional PostgreSQL
+alojada en Supabase. El frontend hidrata el estado global en el inicio desde
+`GET /api/estado`, mantiene sincronización bidireccional y envía todas las mutaciones
+a la base de datos persistente mediante `lib/api.ts`.
 
 ### Stack
 
 | Área | Tecnología |
 | --- | --- |
-| Framework | React Router v8 (SSR activado) |
+| Framework Frontend | React Router v8 (SSR activado) |
 | UI | React 19 + Tailwind CSS v4 |
-| Lenguaje | TypeScript 5.9 en modo `strict` |
-| Build | Vite 8 |
+| Lenguaje Frontend | TypeScript 5.9 en modo `strict` |
+| Build Frontend | Vite 8 |
 | Iconos | SVG propios (`Components/ui/icons.tsx`) |
-| Estado | Context API + `useState` (`lib/store.tsx`) |
+| Estado UI | Context API + `useState` (`lib/store.tsx`) sincronizado con `lib/api.ts` |
+| Servidor Backend | Node.js + Express 4 (Arquitectura por capas: rutas, controladores, esquemas Zod y servicios) |
+| ORM | Prisma Client v6 |
+| Base de Datos | PostgreSQL (Supabase pooler) |
+| Autenticación | JWT (tokens Bearer) + bcryptjs |
 
 ### Fuera de alcance por ahora
 
-- Backend, ORM, base de datos o rutas de API propias.
-- Autenticación real y protección de rutas (las pantallas de auth existen, pero
-  dependen de endpoints `/api/auth/*` que no están implementados).
-- Persistencia entre recargas (`localStorage`, cookies, etc.).
-- Envío real de correos, pagos o notificaciones.
+- Envío real de correos mediante SMTP externo (el restablecimiento de contraseñas genera y devuelve el token en modo desarrollo).
+- Integración con pasarelas de pago externas en vivo (Mercado Pago/Stripe); los cobros se registran y concilian administrativamente en la base de datos.
 
 No agregar dependencias externas sin una razón concreta y aprobación. El
-proyecto se mantiene deliberadamente sin librerías de UI, formularios ni fechas.
+proyecto se mantiene deliberadamente sin librerías pesadas de componentes ni dependencias innecesarias.
 
 ---
 
 ## 2. Comandos
 
-Ejecutar siempre desde `Frontend/`.
+### Desde la raíz del proyecto
 
 ```bash
-npm install       # instalar dependencias
-npm run dev       # servidor de desarrollo (http://localhost:5173)
-npm run typecheck # react-router typegen + tsc
-npm run build     # build de producción
-npm run start     # servir el build
+npm run dev           # Inicia Frontend (5173) y Backend (3000) en paralelo
+npm run dev:frontend  # Inicia únicamente el Frontend
+npm run dev:backend   # Inicia únicamente el Backend
+npm run build         # Build de producción del Frontend (SSR y cliente)
+npm run typecheck     # Typecheck estricto de TypeScript en Frontend
+npm run seed          # Puebla la base de datos PostgreSQL con datos base
+npm run test:backend  # Ejecuta pruebas de integración y persistencia
 ```
+
+### Comandos individuales por proyecto
+
+* **Frontend:**
+  ```bash
+  cd Frontend
+  npm install
+  npm run dev
+  npm run typecheck
+  npm run build
+  ```
+* **Backend:**
+  ```bash
+  cd Backend
+  npm install
+  npm run dev
+  npm run seed
+  npm run prisma:studio
+  ```
 
 Antes de dar una tarea por terminada:
 
 1. `npm run typecheck`
 2. `npm run build`
-3. Probar manualmente las rutas afectadas (incluido el caso “no encontrado” y los
-   filtros/búsquedas).
+3. Probar manualmente las rutas afectadas y verificar la persistencia de las operaciones.
 
 ---
 
 ## 3. Estructura del proyecto
 
 ```
-Frontend/
-├─ app/
-│  ├─ root.tsx                 # Layout HTML, ErrorBoundary, estilos globales
-│  ├─ routes.ts                # Configuración central de rutas
-│  ├─ app.css                  # Tailwind + tema (paleta brand)
-│  ├─ Components/
-│  │  ├─ actions/              # Diálogos de acción (asignar, multa, contrato…)
-│  │  ├─ dashboard/            # Widgets del panel
-│  │  ├─ layout/               # AppShell (sidebar, topbar, breadcrumbs)
-│  │  └─ ui/                   # Sistema de componentes reutilizables
-│  ├─ lib/
-│  │  ├─ config.ts             # FECHA_REFERENCIA y nombre del sistema
-│  │  ├─ types.ts              # Modelo de datos (fuente de verdad)
-│  │  ├─ domain.ts             # Reglas y derivaciones de negocio
-│  │  ├─ store.tsx             # DataProvider + acciones en memoria
-│  │  ├─ mock/data.ts          # Generación determinista de datos mock
-│  │  ├─ format.ts             # Formatos de fecha, moneda, porcentaje
-│  │  ├─ auth.ts               # Cliente HTTP de auth (sin backend todavía)
-│  │  ├─ session.ts            # Usuario logueado mock
-│  │  ├─ validation.ts         # Reglas de validación de formularios
-│  │  └─ cn.ts                 # Joiner de clases
-│  ├─ routes/                  # Páginas (una por ruta)
-│  └─ welcome/                 # Assets de la plantilla original
-├─ react-router.config.ts      # ssr: true
-├─ vite.config.ts              # Tailwind + React Router + tsconfigPaths
-└─ tsconfig.json               # Alias `~/*` → `./app/*`
+Gestion-Residencia/
+├─ package.json                # Scripts raíz para orquestar Backend y Frontend
+├─ scripts/
+│  └─ dev.mjs                  # Runner concurrente ligero para desarrollo
+├─ Backend/
+│  ├─ prisma/
+│  │  └─ schema.prisma         # Esquema de base de datos PostgreSQL
+│  ├─ src/
+│  │  ├─ app.js                # Configuración de Express, middlewares y CORS
+│  │  ├─ server.js             # Punto de entrada y listener HTTP (puerto 3000)
+│  │  ├─ config/               # Base de datos (Prisma), variables de entorno y constantes
+│  │  ├─ controllers/          # Controladores HTTP por módulo
+│  │  ├─ middlewares/          # Autenticación JWT, validación Zod y manejo de errores
+│  │  ├─ routes/               # Enrutadores Express montados bajo /api
+│  │  ├─ schemas/              # Esquemas de validación Zod y helpers de conversión de IDs
+│  │  ├─ services/             # Lógica de negocio, reglas de dominio y transacciones
+│  │  ├─ scripts/              # Seeder determinista y scripts de prueba de integración
+│  │  └─ utils/                # Respuestas estandarizadas y clases de error
+│  └─ package.json
+├─ Frontend/
+│  ├─ app/
+│  │  ├─ root.tsx              # Layout HTML, ErrorBoundary, estilos globales
+│  │  ├─ routes.ts             # Configuración central de rutas
+│  │  ├─ app.css               # Tailwind + tema (paleta brand)
+│  │  ├─ Components/
+│  │  │  ├─ actions/           # Diálogos de acción (asignar, multa, contrato…)
+│  │  │  ├─ dashboard/         # Widgets del panel
+│  │  │  ├─ layout/            # AppShell (sidebar, topbar, breadcrumbs) y StudentShell
+│  │  │  └─ ui/                # Sistema de componentes reutilizables
+│  │  ├─ lib/
+│  │  │  ├─ config.ts          # FECHA_REFERENCIA y nombre del sistema
+│  │  │  ├─ types.ts           # Modelo de datos TypeScript (fuente de verdad)
+│  │  │  ├─ api.ts             # Cliente HTTP tipado para conectar con la API REST
+│  │  │  ├─ domain.ts          # Reglas y derivaciones de negocio
+│  │  │  ├─ store.tsx          # DataProvider: hidratación desde /api/estado y sincronización
+│  │  │  ├─ mock/data.ts       # Estado base vacío inicial
+│  │  │  ├─ format.ts          # Formatos de fecha, moneda, porcentaje
+│  │  │  ├─ auth.ts            # Cliente de autenticación conectado a /api/auth/login
+│  │  │  ├─ session.ts         # Manejo de sesión activa (JWT y usuario autenticado)
+│  │  │  └─ cn.ts              # Joiner de clases CSS
+│  │  └─ routes/               # Páginas completas por ruta
+│  ├─ vite.config.ts           # Proxy /api hacia Backend (puerto 3000)
+│  └─ tsconfig.json            # Alias ~/* → ./app/*
 ```
 
 ### Dónde va cada cosa
 
-- **Entidad o campo nuevo** → `lib/types.ts`, luego `lib/mock/data.ts` y
-  `lib/store.tsx` si requiere acciones.
-- **Regla derivada** (estados, días, ocupación) → `lib/domain.ts`. No duplicar
-  fórmulas en las páginas.
-- **Formato de presentación** → `lib/format.ts`.
-- **Datos de ejemplo** → `lib/mock/data.ts`. Deben ser deterministas.
-- **Componente reutilizable** → `Components/ui/`. Si es específico de una
-  entidad, `Components/actions/` o `Components/dashboard/`.
+- **Entidad, tabla o migración** → `Backend/prisma/schema.prisma`, luego `lib/types.ts` en Frontend.
+- **Regla derivada de UI** (estados, días, ocupación) → `lib/domain.ts`. No duplicar fórmulas en las páginas.
+- **Lógica de negocio persistente** → `Backend/src/services/`.
+- **Llamada a la API** → `Frontend/app/lib/api.ts`, consumida desde `lib/store.tsx`.
+- **Componente reutilizable** → `Components/ui/`. Si es específico de una entidad, `Components/actions/` o `Components/dashboard/`.
 - **Página** → `app/routes/` y registrar la ruta en `app/routes.ts`.
 
 ---
@@ -378,40 +416,25 @@ Todas las reglas de fechas y estados se calculan contra `FECHA_REFERENCIA`
 `routes/app-shell.tsx` envuelve la aplicación con `DataProvider` y
 `ToastProvider`.
 
-### Reglas del store
+### Reglas del store y sincronización con API
 
-- El estado es **en memoria** y se reinicia al recargar. No agregar persistencia
-  sin decisión explícita.
-- Todas las mutaciones usan `setState` funcional y crean objetos/arrays nuevos
-  (inmutabilidad). No mutar el estado directamente.
-- Los IDs nuevos se generan con `nuevoId(prefijo)` (secuencia global desde 1000).
-  Prefijos actuales: `A` alumno, `C` contrato, `M` multa.
-- Cada acción nueva debe:
-  1. agregarse a `DataContextValue` con su tipo de entrada,
-  2. implementarse en el `useMemo` del provider,
-  3. devolver el ID cuando la página necesite navegar al detalle,
-  4. validar referencias y reglas de negocio (no confiar solo en la UI).
-- Los mapas derivados (`alumnoPorId`, `habitacionPorId`, `grupoPorId`,
-  `ambientePorId`) se recalculan con `useMemo`; usarlos en las páginas en lugar
-  de recorrer arrays repetidamente.
-- `registrarPagoMulta` y `anularMulta` usan `FECHA_REFERENCIA` como fecha de pago.
-- `asignarHabitacion` cierra la asignación vigente del alumno y agrega una nueva
-  con `fechaDesde = FECHA_REFERENCIA` y `fechaHasta = null`.
+- **Persistencia real en PostgreSQL (Supabase):** Al montar, `DataProvider` consulta `GET /api/estado` a través de `lib/api.ts` e hidrata el estado global en memoria. Si el navegador pierde conexión, cuenta con respaldo en `localStorage`.
+- **Mutaciones bidireccionales y optimistas:** Las acciones actualizan el estado local de React para respuesta inmediata en la UI y disparan en segundo plano la petición correspondiente a la API REST (`apiCrearAlumno`, `apiEmitirMulta`, `apiGenerarFactura`, `apiCrearReclamo`, etc.).
+- Todas las mutaciones de estado local son inmutables usando `setState` funcional.
+- Las referencias cruzadas (`alumnoPorId`, `habitacionPorId`, `grupoPorId`, `ambientePorId`) se recalculan con `useMemo` para evitar recorridas lineales repetidas.
 
-### Acciones disponibles
+### Acciones disponibles en `DataContextValue`
 
-| Acción | Efecto |
+| Módulo | Acciones disponibles |
 | --- | --- |
-| `registrarPagoMulta(idMulta)` | Marca la multa como pagada |
-| `anularMulta(idMulta)` | Marca la multa como anulada |
-| `emitirMulta(input)` | Crea una multa pendiente |
-| `asignarHabitacion(idAlumno, idHabitacion)` | Cierra la anterior y crea la nueva |
-| `liberarHabitacion(idAlumno)` | Cierra la asignación activa |
-| `crearAlumno(input)` | Crea alumno activo y devuelve `idAlumno` |
-| `crearContrato(input)` | Agrega un contrato |
-
-No existen todavía acciones para editar/inactivar alumnos, editar/eliminar
-contratos; los cobros disponen de registrarCobro y limpieza dispone de crear/actualizar/eliminar grupos y guardar integrantes.
+| **Alumnos** | `crearAlumno(input)`, `actualizarAlumno(idAlumno, input)` |
+| **Habitaciones** | `crearHabitacion(input)`, `actualizarHabitacion(idHabitacion, input)`, `asignarHabitacion(idAlumno, idHabitacion)`, `liberarHabitacion(idAlumno)` |
+| **Contratos** | `crearContrato(input)`, `actualizarContrato(idContrato, input)`, `cancelarContrato(idContrato, fecha, motivo)`, `ajustarImporteContrato(id, monto)` |
+| **Facturación y Cobros** | `generarFactura(idContrato, periodo, reemplazo?)`, `cancelarFactura(idFactura, motivo)`, `registrarCobro(input)` |
+| **Multas** | `emitirMulta(input)`, `actualizarMulta(input)`, `extenderPlazoMulta(idMulta, motivo)`, `anularMulta(idMulta)`, `registrarPagoMulta(idMulta)` |
+| **Limpieza y Ambientes** | `crearGrupoLimpieza`, `actualizarGrupoLimpieza`, `eliminarGrupoLimpieza`, `guardarAlumnosGrupo`, `crearTareaLimpieza`, `actualizarTareaLimpieza`, `crearAmbiente`, `agregarEquipamientoAmbiente`, `actualizarEquipamientoAmbiente` |
+| **Reclamos y Seguimiento** | `crearReclamo(input)`, `responderReclamo(id, mensaje, estado?)` |
+| **Administración y Cuentas** | `crearAdministrador`, `actualizarAdministrador`, `suspenderCuenta`, `cambiarClave`, `guardarParametros`, `guardarOpcionCatalogo` |
 
 ---
 
@@ -421,27 +444,23 @@ Configuración central: `app/routes.ts`.
 
 | Ruta | Archivo | Estado |
 | --- | --- | --- |
-| `/` | `routes/dashboard.tsx` | Implementado |
-| `/alumnos` | `routes/alumnos.tsx` | Implementado |
-| `/alumnos/nuevo` | `routes/alumnos.nuevo.tsx` | Implementado |
-| `/alumnos/:idAlumno` | `routes/alumnos.$idAlumno.tsx` | Implementado |
-| `/habitaciones` | `routes/habitaciones.tsx` | Implementado |
-| `/ambientes` | `routes/ambientes.tsx` | Implementado; inventario de espacios comunes |
-| `/ambientes/nuevo` | `routes/ambientes.nuevo.tsx` | Implementado; alta de espacio e inventario inicial |
-| `/ambientes/:idAmbiente` | `routes/ambientes.$idAmbiente.tsx` | Implementado; detalle y alta de equipamiento |
-| `/habitaciones/:idHabitacion` | `routes/habitaciones.$idHabitacion.tsx` | Implementado |
-| `/contratos` | `routes/contratos.tsx` | Implementado |
-| `/contratos/:idContrato` | `routes/contratos.$idContrato.tsx` | Implementado |
-| `/multas` | fallback `proximamente.tsx` | Pendiente |
-| `/limpieza` y subrutas | `routes/limpieza*.tsx` | Implementado: listado, detalle, alta, edición e integrantes |
-| `/configuracion` | fallback `proximamente.tsx` | Pendiente |
-| `/login`, `/register`, `/forgot-password`, `/reset-password` | `routes/*.tsx` | UI lista; backend pendiente |
-| `*` | `routes/proximamente.tsx` | Fallback |
+| `/` | `routes/dashboard.tsx` | Implementado (Panel central) |
+| `/estudiante` y subrutas | `routes/estudiante*.tsx` | Implementado (Portal del residente) |
+| `/alumnos` y subrutas | `routes/alumnos*.tsx` | Implementado (Listado, alta, detalle, edición) |
+| `/habitaciones` y subrutas | `routes/habitaciones*.tsx` | Implementado (Listado, alta, detalle, edición) |
+| `/ambientes` y subrutas | `routes/ambientes*.tsx` | Implementado (Catálogo e inventario de espacios comunes) |
+| `/contratos` y subrutas | `routes/contratos*.tsx` | Implementado (Listado, alta, detalle, baja anticipada) |
+| `/facturacion` y subrutas | `routes/facturacion*.tsx` | Implementado (Listado, emisión mensual, cancelación y reemplazo) |
+| `/cobros` y subrutas | `routes/cobros*.tsx` | Implementado (Listado y registro de cobros con imputación de deuda) |
+| `/multas` y subrutas | `routes/multas*.tsx` | Implementado (Listado, emisión masiva/individual, prórrogas) |
+| `/limpieza` y subrutas | `routes/limpieza*.tsx` | Implementado (Listado, grupos, integrantes y rotación semanal) |
+| `/reclamos` y subrutas | `routes/reclamos*.tsx` | Implementado (Bandeja de mantenimiento/convivencia y respuestas) |
+| `/administracion` y subrutas | `routes/administracion*.tsx`, `routes/parametros.tsx` | Implementado (Administradores y parámetros del sistema) |
+| `/login`, `/register`, etc. | `routes/*.tsx` | Implementado (Autenticación conectada a API JWT) |
+| `*` | `routes/proximamente.tsx` | Fallback para rutas no coincidentes |
 
-- Las rutas de auth están fuera del `AppShell`. No hay guard de sesión: entrar
-  directo a `/` muestra el panel con el usuario mock.
-- Para una sección nueva, crear el archivo de ruta **y** registrarlo en
-  `routes.ts`; si no, cae en `proximamente`.
+- Las rutas de auth están fuera del `AppShell`.
+- `AppShell` protege las rutas redirigiendo usuarios sin sesión a `/login` y restringiendo alumnos a `/estudiante`.
 
 ### Patrón de página
 

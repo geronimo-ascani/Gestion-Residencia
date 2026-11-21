@@ -1,6 +1,7 @@
 import { prisma } from "../config/database.js";
 import { FECHA_REFERENCIA } from "../config/constants.js";
 import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
+import { administracionService } from "./administracion.service.js";
 
 /**
  * Capa de Servicio: Facturación
@@ -56,20 +57,25 @@ class FacturaService {
     const totalCobrado = factura.pagos
       ? factura.pagos.reduce((sum, p) => sum + Number(p.monto), 0)
       : 0;
+    const creditoAplicado = Number(factura.creditoAplicado || 0);
 
-    const saldoPendiente = Math.max(
-      0,
-      Math.round((totalFacturado - totalCobrado) * 100) / 100
-    );
+    const saldoPendiente = factura.fechaCancelacion
+      ? 0
+      : Math.max(
+          0,
+          Math.round((totalFacturado - totalCobrado - creditoAplicado) * 100) / 100
+        );
 
     let estado = "pendiente";
-    if (saldoPendiente === 0) {
+    if (factura.fechaCancelacion) {
+      estado = "cancelada";
+    } else if (saldoPendiente === 0) {
       estado = "pagada";
     } else {
       const fechaVenceStr = factura.fechaVence.toISOString().slice(0, 10);
       if (fechaVenceStr < fechaRefStr) {
         estado = "vencida";
-      } else if (totalCobrado > 0) {
+      } else if (totalCobrado > 0 || creditoAplicado > 0) {
         estado = "parcial";
       }
     }
@@ -78,6 +84,7 @@ class FacturaService {
       ...factura,
       totalFacturado: Math.round(totalFacturado * 100) / 100,
       totalCobrado: Math.round(totalCobrado * 100) / 100,
+      creditoAplicado,
       saldoPendiente,
       estado,
     };
@@ -131,14 +138,20 @@ class FacturaService {
       throw new BadRequestError("El contrato no cuenta con un importe mensual válido.");
     }
 
-    // 6. Obtener multas pendientes habilitadas para incluir
+    // 6. Obtener multas pendientes habilitadas para incluir (que no estén en facturas activas)
     const fechaRefDate = new Date(`${FECHA_REFERENCIA}T23:59:59.999Z`);
     const multasCandidatas = await prisma.multa.findMany({
       where: {
         idAlumno: contrato.idAlumno,
         estadoMulta: "PENDIENTE",
         fechaEmision: { lte: fechaRefDate },
-        detalleFactura: null, // No facturadas previamente
+        detallesFactura: {
+          none: {
+            factura: {
+              fechaCancelacion: null,
+            },
+          },
+        },
       },
       orderBy: { fechaEmision: "asc" },
     });
@@ -205,6 +218,16 @@ class FacturaService {
         },
       });
     });
+
+    if (nuevaFactura?.idAlumno) {
+      void administracionService.notificarAlumno(nuevaFactura.idAlumno, {
+        claveEvento: "factura_emitida",
+        tipo: "vencimiento",
+        titulo: `Nueva factura emitida · Período ${periodo}`,
+        detalle: `Se generó la factura #${nuevaFactura.idFactura}. Vence el ${nuevaFactura.fechaVence ? nuevaFactura.fechaVence.toISOString().slice(0, 10) : ""}.`,
+        destino: `/estudiante/facturas/${nuevaFactura.idFactura}`,
+      });
+    }
 
     return this.#enriquecerFactura(nuevaFactura);
   }
@@ -340,6 +363,7 @@ class FacturaService {
         parcial: enriquecidas.filter((f) => f.estado === "parcial").length,
         vencida: enriquecidas.filter((f) => f.estado === "vencida").length,
         pendiente: enriquecidas.filter((f) => f.estado === "pendiente").length,
+        cancelada: enriquecidas.filter((f) => f.estado === "cancelada").length,
       },
     };
 
@@ -408,6 +432,219 @@ class FacturaService {
 
     return await prisma.factura.delete({
       where: { idFactura: id },
+    });
+  }
+
+  /**
+   * Cancela una factura existente registrando la fecha y motivo de cancelación,
+   * liberando las multas asociadas para futuras facturas y conservando los cobros registrados como crédito.
+   */
+  async cancelarFactura(id, { motivo } = {}) {
+    const idFactura = Number(id);
+    const factura = await prisma.factura.findUnique({
+      where: { idFactura },
+      include: {
+        pagos: true,
+        detalles: true,
+      },
+    });
+
+    if (!factura) {
+      throw new NotFoundError(`No se encontró ninguna factura con el ID: ${idFactura}`);
+    }
+
+    if (factura.fechaCancelacion) {
+      throw new ConflictError(`La factura ID ${idFactura} ya se encuentra cancelada.`);
+    }
+
+    const facturaCancelada = await prisma.factura.update({
+      where: { idFactura },
+      data: {
+        fechaCancelacion: new Date(),
+        motivoCancelacion: motivo?.trim() || "Cancelada administrativamente",
+      },
+      include: {
+        detalles: {
+          include: { multa: true },
+          orderBy: { orden: "asc" },
+        },
+        pagos: true,
+        contrato: true,
+        alumno: true,
+      },
+    });
+
+    if (facturaCancelada?.idAlumno) {
+      void administracionService.notificarAlumno(facturaCancelada.idAlumno, {
+        claveEvento: "factura_cancelada",
+        tipo: "info",
+        titulo: `Factura cancelada · Período ${facturaCancelada.periodo}`,
+        detalle: `La factura #${facturaCancelada.idFactura} fue cancelada. Motivo: ${facturaCancelada.motivoCancelacion || "Cancelada por administración"}.`,
+        destino: `/estudiante/facturas/${facturaCancelada.idFactura}`,
+      });
+    }
+
+    return this.#enriquecerFactura(facturaCancelada);
+  }
+
+  /**
+   * Emite una factura de reemplazo aplicando el crédito cobrado de una factura cancelada previa.
+   */
+  async emitirReemplazo({ idFacturaOrigen, idContrato, periodo, concepto, monto, fechaVence }) {
+    const origen = await prisma.factura.findUnique({
+      where: { idFactura: Number(idFacturaOrigen) },
+      include: {
+        pagos: true,
+        reemplazos: true,
+      },
+    });
+
+    if (!origen) {
+      throw new NotFoundError(`No se encontró la factura de origen con ID: ${idFacturaOrigen}`);
+    }
+
+    if (!origen.fechaCancelacion) {
+      throw new BadRequestError("La factura de origen debe encontrarse cancelada para poder emitir un reemplazo.");
+    }
+
+    if (origen.reemplazos.length > 0) {
+      throw new ConflictError("Esta factura de origen ya cuenta con un reemplazo emitido.");
+    }
+
+    const contrato = await prisma.contrato.findUnique({
+      where: { idContrato: Number(idContrato) },
+      include: { alumno: true },
+    });
+
+    if (!contrato) {
+      throw new NotFoundError(`No se encontró el contrato con ID: ${idContrato}`);
+    }
+
+    if (!this.#correspondeCuota(contrato, periodo)) {
+      throw new BadRequestError("El período debe corresponder a la estadía del contrato.");
+    }
+
+    // Calcular crédito acumulado de la factura origen
+    const creditoAplicado = origen.pagos.reduce((sum, p) => sum + Number(p.monto), 0);
+
+    if (creditoAplicado > 0 && origen.idAlumno && origen.idAlumno !== contrato.idAlumno) {
+      throw new BadRequestError("El crédito de la factura original solo puede aplicarse al mismo titular.");
+    }
+
+    const montoRenglon = Math.round(Number(monto) * 100) / 100;
+    if (montoRenglon <= 0) {
+      throw new BadRequestError("El importe debe ser un número positivo.");
+    }
+
+    // Multas candidatas que no estén en facturas activas
+    const fechaRefDate = new Date(`${FECHA_REFERENCIA}T23:59:59.999Z`);
+    const multasCandidatas = await prisma.multa.findMany({
+      where: {
+        idAlumno: contrato.idAlumno,
+        estadoMulta: "PENDIENTE",
+        fechaEmision: { lte: fechaRefDate },
+        detallesFactura: {
+          none: {
+            factura: {
+              fechaCancelacion: null,
+            },
+          },
+        },
+      },
+      orderBy: { fechaEmision: "asc" },
+    });
+
+    const multasAIncluir = multasCandidatas.filter((m) => {
+      const periodoMulta = m.periodoDesde || m.fechaEmision.toISOString().slice(0, 7);
+      return periodoMulta <= periodo;
+    });
+
+    const totalMultas = multasAIncluir.reduce((sum, m) => sum + Number(m.monto), 0);
+    const totalNuevaFactura = Math.round((montoRenglon + totalMultas) * 100) / 100;
+
+    if (totalNuevaFactura < creditoAplicado) {
+      throw new BadRequestError("El total de la nueva factura no puede ser menor al crédito disponible.");
+    }
+
+    const fechaVenceObj = new Date(`${fechaVence}T23:59:59.000Z`);
+
+    return await prisma.$transaction(async (tx) => {
+      const nuevaFactura = await tx.factura.create({
+        data: {
+          idContrato: contrato.idContrato,
+          idAlumno: contrato.idAlumno,
+          periodo,
+          fechaEmision: new Date(),
+          fechaVence: fechaVenceObj,
+          titular: `${contrato.alumno.apellido}, ${contrato.alumno.nombre}`,
+          documento: contrato.alumno.documento,
+          idFacturaOrigen: origen.idFactura,
+          creditoAplicado,
+        },
+      });
+
+      // Renglón principal
+      await tx.detalleFactura.create({
+        data: {
+          idFactura: nuevaFactura.idFactura,
+          concepto: concepto.trim(),
+          monto: montoRenglon,
+          orden: 1,
+        },
+      });
+
+      // Renglones de multas
+      let ordenRenglon = 2;
+      for (const multa of multasAIncluir) {
+        await tx.detalleFactura.create({
+          data: {
+            idFactura: nuevaFactura.idFactura,
+            idMulta: multa.idMulta,
+            concepto: `Sanción · ${multa.motivo}`,
+            monto: Number(multa.monto),
+            orden: ordenRenglon++,
+          },
+        });
+      }
+
+      // Si el nuevo total queda 100% cubierto por el crédito aplicado
+      if (totalNuevaFactura === creditoAplicado) {
+        for (const multa of multasAIncluir) {
+          await tx.multa.update({
+            where: { idMulta: multa.idMulta },
+            data: {
+              estadoMulta: "PAGADA",
+              fechaPago: new Date(),
+              montoPagado: Number(multa.monto),
+            },
+          });
+        }
+      }
+
+      const completa = await tx.factura.findUnique({
+        where: { idFactura: nuevaFactura.idFactura },
+        include: {
+          detalles: {
+            orderBy: { orden: "asc" },
+            include: { multa: true },
+          },
+          pagos: true,
+          contrato: true,
+          alumno: true,
+        },
+      });
+
+      if (completa?.idAlumno) {
+        void administracionService.notificarAlumno(completa.idAlumno, {
+          claveEvento: "factura_reemplazo",
+          tipo: "vencimiento",
+          titulo: `Nueva factura de reemplazo emitida · Período ${periodo}`,
+          detalle: `Se emitió la factura #${completa.idFactura} en reemplazo de la #${idFacturaOrigen}. Crédito aplicado: $${creditoAplicado}.`,
+          destino: `/estudiante/facturas/${completa.idFactura}`,
+        });
+      }
+
+      return this.#enriquecerFactura(completa);
     });
   }
 }

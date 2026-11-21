@@ -49,6 +49,51 @@ export interface SignInCredentials {
 
 export async function signInWithEmail(credentials: SignInCredentials): Promise<AuthResult> {
   try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password,
+        remember: credentials.remember,
+      }),
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data?.usuario) {
+        const u = json.data.usuario;
+        guardarSesion({
+          idUsuario: String(u.idUsuario),
+          idAlumno: u.idAlumno ? String(u.idAlumno) : undefined,
+          nombre: u.nombre || u.correo,
+          apellido: u.apellido || "",
+          documento: u.documento || "",
+          correo: u.correo,
+          rol: u.rol?.toLowerCase() === "administrador" ? "administrador" : "alumno",
+          estado: u.estado || "activo",
+          gestionaAdministradores: Boolean(u.gestionaAdministradores),
+        }, credentials.remember);
+        if (json.data.token) {
+          try {
+            sessionStorage.setItem("residencia_token", json.data.token);
+            if (credentials.remember) localStorage.setItem("residencia_token", json.data.token);
+          } catch {}
+        }
+        return {};
+      }
+    } else {
+      const errorJson = await res.json().catch(() => null);
+      if (errorJson?.message) {
+        return { error: errorJson.message };
+      }
+    }
+  } catch {
+    // Si no responde el servidor, fallback de respaldo local
+  }
+
+  try {
     const datos = cargarDatosGuardados(localStorage.getItem(DATOS_KEY));
     const u = datos.usuarios.find((u) => u.correo.toLowerCase() === credentials.email.trim().toLowerCase());
     if (!u || estadoAcceso(u, datos) !== "activo") return { error: "Credenciales incorrectas o cuenta sin acceso habilitado." };

@@ -1,0 +1,22 @@
+{
+  "name": "gestion-residencia",
+  "version": "1.0.0",
+  "description": "Sistema de Gestión de Residencia Estudiantil",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:backend": "npm --prefix Backend run dev",
+    "dev:frontend": "npm --prefix Frontend run dev",
+    "build": "npm --prefix Frontend run build",
+    "typecheck": "npm --prefix Frontend run typecheck",
+    "test:backend": "node Backend/src/scripts/test_wiring.mjs",
+    "seed": "npm --prefix Backend run seed"
+  },
+  "keywords": [
+    "react-router",
+    "express",
+    "prisma",
+    "supabase",
+    "residencia-estudiantil"
+  ]
+}

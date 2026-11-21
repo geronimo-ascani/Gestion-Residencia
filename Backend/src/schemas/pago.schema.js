@@ -1,14 +1,12 @@
 import { z } from "zod";
+import { idCoerce } from "./idHelper.js";
 
 /**
  * Esquema para registrar un cobro o pago asociado a una factura.
  */
 export const registrarCobroSchema = z
   .object({
-    idFactura: z.coerce
-      .number({ required_error: "El ID de la factura es obligatorio" })
-      .int()
-      .positive("El ID de la factura debe ser un entero positivo"),
+    idFactura: idCoerce,
     monto: z.coerce
       .number({ required_error: "El monto a cobrar es obligatorio" })
       .positive("El monto debe ser mayor a cero")
@@ -38,10 +36,7 @@ export const registrarCobroSchema = z
  * Esquema para validar el parámetro de ruta ID de pago.
  */
 export const pagoIdParamSchema = z.object({
-  id: z.coerce
-    .number({ required_error: "El ID de pago es obligatorio" })
-    .int()
-    .positive("El ID de pago debe ser un entero positivo"),
+  id: idCoerce,
 });
 
 /**
@@ -50,8 +45,8 @@ export const pagoIdParamSchema = z.object({
 export const queryPagoSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10),
-  idAlumno: z.coerce.number().int().positive().optional(),
-  idFactura: z.coerce.number().int().positive().optional(),
+  idAlumno: idCoerce.optional(),
+  idFactura: idCoerce.optional(),
   medio: z.enum(["efectivo", "transferencia", "tarjeta"]).optional(),
   search: z.string().trim().optional(),
 });

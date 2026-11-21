@@ -1,13 +1,11 @@
 import { z } from "zod";
+import { idCoerce } from "./idHelper.js";
 
 /**
  * Esquema para generar una factura individual a partir de un contrato y período.
  */
 export const generarFacturaSchema = z.object({
-  idContrato: z.coerce
-    .number({ required_error: "El ID de contrato es obligatorio" })
-    .int()
-    .positive("El ID del contrato debe ser un entero positivo"),
+  idContrato: idCoerce,
   periodo: z
     .string({ required_error: "El período es obligatorio" })
     .trim()
@@ -28,10 +26,7 @@ export const generarFacturasMesSchema = z.object({
  * Esquema para validar el parámetro de ruta ID de factura.
  */
 export const facturaIdParamSchema = z.object({
-  id: z.coerce
-    .number({ required_error: "El ID de factura es obligatorio" })
-    .int()
-    .positive("El ID de la factura debe ser un entero positivo"),
+  id: idCoerce,
 });
 
 /**
@@ -45,8 +40,46 @@ export const queryFacturaSchema = z.object({
     .trim()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Formato de período inválido (YYYY-MM)")
     .optional(),
-  idContrato: z.coerce.number().int().positive().optional(),
-  idAlumno: z.coerce.number().int().positive().optional(),
-  estado: z.enum(["pagada", "parcial", "vencida", "pendiente"]).optional(),
+  idContrato: idCoerce.optional(),
+  idAlumno: idCoerce.optional(),
+  estado: z.enum(["pagada", "parcial", "vencida", "pendiente", "cancelada"]).optional(),
   search: z.string().trim().optional(),
+});
+
+/**
+ * Esquema para cancelar una factura.
+ */
+export const cancelarFacturaSchema = z.object({
+  motivo: z.string().trim().max(300, "El motivo no puede exceder 300 caracteres").optional(),
+});
+
+/**
+ * Esquema para emitir un reemplazo de una factura cancelada.
+ */
+export const emitirReemplazoSchema = z.object({
+  idFacturaOrigen: z.coerce
+    .number({ required_error: "El ID de factura de origen es obligatorio" })
+    .int()
+    .positive(),
+  idContrato: z.coerce
+    .number({ required_error: "El ID de contrato es obligatorio" })
+    .int()
+    .positive(),
+  periodo: z
+    .string({ required_error: "El período es obligatorio" })
+    .trim()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "El período debe tener el formato YYYY-MM"),
+  concepto: z
+    .string({ required_error: "El concepto es obligatorio" })
+    .trim()
+    .min(1, "El concepto no puede estar vacío")
+    .max(200, "El concepto no puede exceder 200 caracteres"),
+  monto: z.coerce
+    .number({ required_error: "El monto es obligatorio" })
+    .positive("El importe debe ser mayor a cero")
+    .max(100000000, "El importe no puede superar 100.000.000"),
+  fechaVence: z
+    .string({ required_error: "La fecha de vencimiento es obligatoria" })
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha de vencimiento inválido (YYYY-MM-DD)"),
 });

@@ -1,5 +1,6 @@
 import { prisma } from "../config/database.js";
 import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
+import { administracionService } from "./administracion.service.js";
 
 /**
  * Capa de Servicio: Habitación y Asignación de Alumnos
@@ -301,71 +302,90 @@ class HabitacionService {
       throw new NotFoundError(`No se encontró el alumno con ID: ${idAlumno}`);
     }
 
-    if (alumno.estado !== "ACTIVO") {
+    if (alumno.estado.toLowerCase() !== "activo") {
       throw new BadRequestError(
         `No se puede asignar el alumno ${alumno.nombre} ${alumno.apellido} porque se encuentra en estado '${alumno.estado}'`
       );
     }
 
-    // 2. Verificar que el alumno no tenga ya una habitación activa asignada
+    // 2. Transacción atómica: si el alumno ya tiene habitación activa en otro cuarto, cerrar asignación previa (mudanza directa)
     const now = new Date();
-    const asignacionPrevia = await prisma.habitacionAlumno.findFirst({
-      where: {
-        idAlumno,
-        OR: [
-          { fechaHasta: null },
-          { fechaHasta: { gt: now } },
-        ],
-      },
-      include: { habitacion: true },
-    });
+    const fechaInicio = fechaDesde ? new Date(fechaDesde) : now;
 
-    if (asignacionPrevia) {
-      throw new ConflictError(
-        `El alumno ya se encuentra actualmente alojado en la habitación '${asignacionPrevia.habitacion.numeroHabitacion}'`
-      );
-    }
+    const resultado = await prisma.$transaction(async (tx) => {
+      const asignacionPrevia = await tx.habitacionAlumno.findFirst({
+        where: {
+          idAlumno,
+          OR: [
+            { fechaHasta: null },
+            { fechaHasta: { gt: now } },
+          ],
+        },
+        include: { habitacion: true },
+      });
 
-    // 3. Verificar capacidad máxima disponible
-    const ocupantesCount = await prisma.habitacionAlumno.count({
-      where: {
-        idHabitacion,
-        OR: [
-          { fechaHasta: null },
-          { fechaHasta: { gt: now } },
-        ],
-      },
-    });
+      if (asignacionPrevia) {
+        if (asignacionPrevia.idHabitacion === idHabitacion) {
+          throw new ConflictError(
+            `El alumno ya se encuentra actualmente alojado en la habitación '${asignacionPrevia.habitacion.numeroHabitacion}'`
+          );
+        }
+        // Mudanza directa: cerrar la asignación previa con fechaHasta = fechaInicio
+        await tx.habitacionAlumno.update({
+          where: { idAsignacion: asignacionPrevia.idAsignacion },
+          data: { fechaHasta: fechaInicio },
+        });
+      }
 
-    if (ocupantesCount >= habitacion.capacidadMaxima) {
-      throw new ConflictError(
-        `La habitación '${habitacion.numeroHabitacion}' está completa (capacidad máxima: ${habitacion.capacidadMaxima})`
-      );
-    }
+      // 3. Verificar capacidad máxima disponible
+      const ocupantesCount = await tx.habitacionAlumno.count({
+        where: {
+          idHabitacion,
+          OR: [
+            { fechaHasta: null },
+            { fechaHasta: { gt: now } },
+          ],
+        },
+      });
 
-    const fechaInicio = fechaDesde ? new Date(fechaDesde) : new Date();
+      if (ocupantesCount >= habitacion.capacidadMaxima) {
+        throw new ConflictError(
+          `La habitación '${habitacion.numeroHabitacion}' está completa (capacidad máxima: ${habitacion.capacidadMaxima})`
+        );
+      }
 
-    return await prisma.habitacionAlumno.create({
-      data: {
-        idHabitacion,
-        idAlumno,
-        fechaDesde: fechaInicio,
-        fechaHasta: fechaHasta ? new Date(fechaHasta) : null,
-      },
-      include: {
-        habitacion: true,
-        alumno: {
-          select: {
-            idAlumno: true,
-            nombre: true,
-            apellido: true,
-            documento: true,
-            telefono: true,
-            estado: true,
+      return await tx.habitacionAlumno.create({
+        data: {
+          idHabitacion,
+          idAlumno,
+          fechaDesde: fechaInicio,
+          fechaHasta: fechaHasta ? new Date(fechaHasta) : null,
+        },
+        include: {
+          habitacion: true,
+          alumno: {
+            select: {
+              idAlumno: true,
+              nombre: true,
+              apellido: true,
+              documento: true,
+              telefono: true,
+              estado: true,
+            },
           },
         },
-      },
+      });
     });
+
+    void administracionService.notificarAlumno(idAlumno, {
+      claveEvento: "habitacion_asignada",
+      tipo: "info",
+      titulo: `Habitación asignada · Hab. ${habitacion.numeroHabitacion}`,
+      detalle: `Se ha registrado tu asignación en la habitación ${habitacion.numeroHabitacion}.`,
+      destino: "/estudiante#habitacion",
+    });
+
+    return resultado;
   }
 
   /**
@@ -402,7 +422,7 @@ class HabitacionService {
 
     const fechaSalida = fechaHasta ? new Date(fechaHasta) : now;
 
-    return await prisma.habitacionAlumno.update({
+    const liberacion = await prisma.habitacionAlumno.update({
       where: {
         idAsignacion: asignacion.idAsignacion,
       },
@@ -421,6 +441,16 @@ class HabitacionService {
         },
       },
     });
+
+    void administracionService.notificarAlumno(idAlumno, {
+      claveEvento: "habitacion_liberada",
+      tipo: "info",
+      titulo: `Habitación liberada · Hab. ${habitacion.numeroHabitacion}`,
+      detalle: `Se ha registrado tu salida de la habitación ${habitacion.numeroHabitacion}.`,
+      destino: "/estudiante#habitacion",
+    });
+
+    return liberacion;
   }
 
   /**

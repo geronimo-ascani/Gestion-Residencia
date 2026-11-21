@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { idCoerce } from "./idHelper.js";
 
 export const TIPOS_AMBIENTE_VALIDOS = [
   "Sala de estudio",
@@ -25,7 +26,7 @@ export const createGrupoSchema = z
       .max(100, "El nombre del grupo no puede exceder 100 caracteres"),
     posicionInicial: z.coerce.number().int().min(1).max(4).optional(),
     tareaInicial: z.coerce.number().int().min(1).max(4).optional(),
-    idAlumnos: z.array(z.coerce.number().int().positive()).optional().default([]),
+    idAlumnos: z.array(idCoerce).optional().default([]),
   })
   .transform((data) => ({
     ...data,
@@ -48,36 +49,27 @@ export const updateGrupoSchema = z
   );
 
 export const grupoIdParamSchema = z.object({
-  id: z.coerce
-    .number({ invalid_type_error: "El ID del grupo debe ser un entero" })
-    .int("El ID del grupo debe ser un entero")
-    .positive("El ID del grupo debe ser positivo"),
+  id: idCoerce,
 });
 
 export const agregarAlumnoGrupoSchema = z.object({
-  idAlumno: z.coerce
-    .number({ required_error: "El ID del alumno es obligatorio" })
-    .int("El ID del alumno debe ser un entero")
-    .positive("El ID del alumno debe ser positivo"),
+  idAlumno: idCoerce,
 });
 
 export const guardarIntegrantesSchema = z.object({
-  idAlumnos: z.array(z.coerce.number().int().positive(), {
+  idAlumnos: z.array(idCoerce, {
     required_error: "Debe proporcionar la lista de IDs de alumnos integrantes",
   }),
 });
 
 export const grupoAlumnoParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
-  idAlumno: z.coerce.number().int().positive(),
+  id: idCoerce,
+  idAlumno: idCoerce,
 });
 
 export const asignarAmbienteGrupoSchema = z
   .object({
-    idAmbiente: z.coerce
-      .number({ required_error: "El ID del ambiente es obligatorio" })
-      .int("El ID del ambiente debe ser un entero")
-      .positive("El ID del ambiente debe ser positivo"),
+    idAmbiente: idCoerce,
     fechaDesde: z.coerce
       .date({ invalid_type_error: "La fecha de inicio debe ser válida" })
       .default(() => new Date()),
@@ -101,8 +93,8 @@ export const finalizarAsignacionAmbienteSchema = z.object({
 });
 
 export const grupoAmbienteParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
-  idAmbiente: z.coerce.number().int().positive(),
+  id: idCoerce,
+  idAmbiente: idCoerce,
 });
 
 /**
@@ -226,17 +218,14 @@ export const updateAmbienteSchema = z
   );
 
 export const ambienteIdParamSchema = z.object({
-  id: z.coerce
-    .number({ invalid_type_error: "El ID del ambiente debe ser un entero" })
-    .int("El ID del ambiente debe ser un entero")
-    .positive("El ID del ambiente debe ser positivo"),
+  id: idCoerce,
 });
 
 export const agregarEquipamientoSchema = equipamientoItemSchema;
 
 export const equipamientoIdParamSchema = z.object({
-  id: z.coerce.number().int().positive(),
-  idEquipamiento: z.coerce.number().int().positive(),
+  id: idCoerce,
+  idEquipamiento: idCoerce,
 });
 
 export const queryLimpiezaSchema = z.object({

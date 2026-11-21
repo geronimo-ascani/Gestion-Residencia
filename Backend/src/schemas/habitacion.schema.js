@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { idCoerce } from "./idHelper.js";
 
 /**
  * Esquema de validación para la creación de una Habitación.
@@ -42,10 +43,7 @@ export const updateHabitacionSchema = createHabitacionSchema
  * Esquema de validación para parámetros de ruta con ID de Habitación.
  */
 export const habitacionIdParamSchema = z.object({
-  id: z.coerce
-    .number({ invalid_type_error: "El ID debe ser un número entero válido" })
-    .int("El ID debe ser un número entero")
-    .positive("El ID debe ser un número positivo"),
+  id: idCoerce,
 });
 
 /**
@@ -72,10 +70,7 @@ export const queryHabitacionSchema = z.object({
  */
 export const asignarAlumnoSchema = z
   .object({
-    idAlumno: z.coerce
-      .number({ required_error: "El ID del alumno es obligatorio" })
-      .int("El ID del alumno debe ser un entero")
-      .positive("El ID del alumno debe ser positivo"),
+    idAlumno: idCoerce,
     fechaDesde: z.coerce
       .date({ invalid_type_error: "La fecha de inicio debe ser una fecha válida" })
       .default(() => new Date()),
@@ -96,10 +91,7 @@ export const asignarAlumnoSchema = z
  * Esquema de validación para desasignar/liberar un Alumno de una Habitación.
  */
 export const desasignarAlumnoSchema = z.object({
-  idAlumno: z.coerce
-    .number({ required_error: "El ID del alumno es obligatorio" })
-    .int("El ID del alumno debe ser un entero")
-    .positive("El ID del alumno debe ser positivo"),
+  idAlumno: idCoerce,
   fechaHasta: z.coerce
     .date({ invalid_type_error: "La fecha de egreso debe ser una fecha válida" })
     .default(() => new Date()),

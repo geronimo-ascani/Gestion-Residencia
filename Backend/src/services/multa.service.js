@@ -1,6 +1,7 @@
 import { prisma } from "../config/database.js";
 import { FECHA_REFERENCIA } from "../config/constants.js";
 import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
+import { administracionService } from "./administracion.service.js";
 
 /**
  * Capa de Servicio: Multas y Sanciones Económicas
@@ -51,6 +52,20 @@ class MultaService {
     return nuevaFecha;
   }
 
+  #obtenerDetalleActivo(multa) {
+    if (!multa?.detallesFactura || !Array.isArray(multa.detallesFactura)) return null;
+    return (
+      multa.detallesFactura.find(
+        (d) => d.factura && !d.factura.fechaCancelacion
+      ) || null
+    );
+  }
+
+  #obtenerFacturaActiva(multa) {
+    const detalleActivo = this.#obtenerDetalleActivo(multa);
+    return detalleActivo ? detalleActivo.factura : null;
+  }
+
   /**
    * Computa los importes con recargo por mora y el estado de negocio de una multa.
    */
@@ -91,8 +106,13 @@ class MultaService {
       }
     }
 
+    const detalleActivo = (multa.detallesFactura || []).find(
+      (d) => d.factura && !d.factura.fechaCancelacion
+    ) || null;
+
     return {
       ...multa,
+      detalleFactura: detalleActivo,
       monto: montoBase,
       montoSancion: Number(multa.montoSancion ?? montoBase),
       montoDanios: Number(multa.montoDanios ?? 0),
@@ -219,6 +239,18 @@ class MultaService {
       return creadas;
     });
 
+    for (const m of multasCreadas) {
+      if (m?.idAlumno) {
+        void administracionService.notificarAlumno(m.idAlumno, {
+          claveEvento: "multa_emitida",
+          tipo: "sancion",
+          titulo: `Nueva sanción aplicada: ${m.tipo.toUpperCase()}`,
+          detalle: `Se emitió una multa por '${m.motivo}'. Monto: $${m.monto}. Vence el ${m.fechaVence ? m.fechaVence.toISOString().slice(0, 10) : ""}.`,
+          destino: `/estudiante/multas/${m.idMulta}`,
+        });
+      }
+    }
+
     return multasCreadas.map((m) => this.#enriquecerMulta(m));
   }
 
@@ -277,13 +309,14 @@ class MultaService {
               estado: true,
             },
           },
-          detalleFactura: {
+          detallesFactura: {
             include: {
               factura: {
                 select: {
                   idFactura: true,
                   periodo: true,
                   fechaEmision: true,
+                  fechaCancelacion: true,
                 },
               },
             },
@@ -381,7 +414,7 @@ class MultaService {
             },
           },
         },
-        detalleFactura: {
+        detallesFactura: {
           include: {
             factura: true,
           },
@@ -406,16 +439,21 @@ class MultaService {
     const multa = await prisma.multa.findUnique({
       where: { idMulta: id },
       include: {
-        detalleFactura: true,
+        detallesFactura: {
+          include: {
+            factura: {
+              include: {
+                detalles: true,
+                pagos: true,
+              },
+            },
+          },
+        },
       },
     });
 
     if (!multa) {
       throw new NotFoundError(`No se encontró ninguna multa con el ID: ${id}`);
-    }
-
-    if (multa.detalleFactura) {
-      throw new ConflictError("La multa ya está facturada y no admite modificaciones.");
     }
 
     if (multa.estadoMulta !== "PENDIENTE") {
@@ -441,6 +479,34 @@ class MultaService {
 
     const montoTotal = Math.round((montoSancion + montoDanios) * 100) / 100;
 
+    // Si la multa está en una factura activa, verificar coherencia de saldos y cobros
+    const detalleActivo = this.#obtenerDetalleActivo(multa);
+    let debeSaldar = false;
+    let fechaUltimoCobro = null;
+
+    if (detalleActivo) {
+      const factura = detalleActivo.factura;
+      const totalOtros = factura.detalles
+        .filter((d) => d.idDetalle !== detalleActivo.idDetalle)
+        .reduce((sum, d) => sum + Number(d.monto), 0);
+      const nuevoTotalFactura = Math.round((totalOtros + montoTotal) * 100) / 100;
+      const totalCobrado = factura.pagos.reduce((sum, p) => sum + Number(p.monto), 0);
+
+      if (nuevoTotalFactura < totalCobrado) {
+        throw new ConflictError(
+          `El total actualizado de la factura ($${nuevoTotalFactura}) no puede quedar por debajo del importe ya cobrado ($${totalCobrado}).`
+        );
+      }
+
+      if (nuevoTotalFactura === totalCobrado && totalCobrado > 0) {
+        debeSaldar = true;
+        fechaUltimoCobro = factura.pagos.reduce(
+          (max, p) => (p.fecha > max ? p.fecha : max),
+          factura.fechaEmision
+        );
+      }
+    }
+
     let fechaVenceDate = multa.fechaVence;
     if (camposNuevos.fechaVence) {
       fechaVenceDate = new Date(`${camposNuevos.fechaVence}T23:59:59.000Z`);
@@ -465,6 +531,14 @@ class MultaService {
       .map((c) => ({ campo: c.nombre, anterior: String(c.ant), nuevo: String(c.neu) }));
 
     const multaActualizada = await prisma.$transaction(async (tx) => {
+      // Si está en factura activa, actualizar el importe del renglón
+      if (detalleActivo) {
+        await tx.detalleFactura.update({
+          where: { idDetalle: detalleActivo.idDetalle },
+          data: { monto: montoTotal },
+        });
+      }
+
       // Si hubo cambios, insertar registro de auditoría en CambioMulta
       if (diferencias.length > 0) {
         await tx.cambioMulta.create({
@@ -489,10 +563,14 @@ class MultaService {
           montoDanios,
           monto: montoTotal,
           fechaVence: fechaVenceDate,
-          ...(camposNuevos.periodoHasta ? { periodoHasta: camposNuevos.periodoHasta } : {}),
+          ...(camposNuevos.periodoHasta !== undefined ? { periodoHasta: camposNuevos.periodoHasta } : {}),
+          ...(debeSaldar ? { estadoMulta: "PAGADA", fechaPago: fechaUltimoCobro, montoPagado: montoTotal } : {}),
         },
         include: {
           alumno: true,
+          detallesFactura: {
+            include: { factura: true },
+          },
           cambios: { orderBy: { fecha: "desc" } },
         },
       });
@@ -507,15 +585,19 @@ class MultaService {
   async prorrogar(id, { motivo, dias, nuevaFechaVence }) {
     const multa = await prisma.multa.findUnique({
       where: { idMulta: id },
-      include: { detalleFactura: true },
+      include: {
+        detallesFactura: {
+          include: { factura: true },
+        },
+      },
     });
 
     if (!multa) {
       throw new NotFoundError(`No se encontró ninguna multa con el ID: ${id}`);
     }
 
-    if (multa.detalleFactura) {
-      throw new ConflictError("La multa ya está facturada y no admite prórrogas.");
+    if (this.#obtenerFacturaActiva(multa)) {
+      throw new ConflictError("La multa ya está incluida en una factura activa y no admite prórrogas.");
     }
 
     if (multa.estadoMulta !== "PENDIENTE") {
@@ -565,6 +647,16 @@ class MultaService {
       });
     });
 
+    if (multaProrrogada?.idAlumno) {
+      void administracionService.notificarAlumno(multaProrrogada.idAlumno, {
+        claveEvento: "multa_prorrogada",
+        tipo: "info",
+        titulo: "Prórroga de multa concedida",
+        detalle: `Se aplazó el vencimiento de la multa #${multaProrrogada.idMulta} hasta el ${fechaNuevaStr}. Motivo: ${motivo.trim()}.`,
+        destino: `/estudiante/multas/${multaProrrogada.idMulta}`,
+      });
+    }
+
     return this.#enriquecerMulta(multaProrrogada);
   }
 
@@ -575,7 +667,7 @@ class MultaService {
     const multa = await prisma.multa.findUnique({
       where: { idMulta: id },
       include: {
-        detalleFactura: {
+        detallesFactura: {
           include: {
             factura: {
               include: { pagos: true },
@@ -593,7 +685,8 @@ class MultaService {
       throw new ConflictError("No se puede anular una multa que ya se encuentra pagada.");
     }
 
-    if (multa.detalleFactura?.factura?.pagos?.length > 0) {
+    const facturaActiva = this.#obtenerFacturaActiva(multa);
+    if (facturaActiva?.pagos?.length > 0) {
       throw new ConflictError("No se puede anular una multa cuya factura ya registra pagos.");
     }
 
@@ -620,6 +713,16 @@ class MultaService {
         },
       });
     });
+
+    if (multaAnulada?.idAlumno) {
+      void administracionService.notificarAlumno(multaAnulada.idAlumno, {
+        claveEvento: "multa_anulada",
+        tipo: "info",
+        titulo: "Multa anulada",
+        detalle: `La multa #${multaAnulada.idMulta} ha sido anulada. Motivo: ${motivoFinal}.`,
+        destino: `/estudiante/multas/${multaAnulada.idMulta}`,
+      });
+    }
 
     return this.#enriquecerMulta(multaAnulada);
   }
@@ -668,15 +771,19 @@ class MultaService {
   async delete(id) {
     const multa = await prisma.multa.findUnique({
       where: { idMulta: id },
-      include: { detalleFactura: true },
+      include: {
+        detallesFactura: {
+          include: { factura: true },
+        },
+      },
     });
 
     if (!multa) {
       throw new NotFoundError(`No se encontró ninguna multa con el ID: ${id}`);
     }
 
-    if (multa.detalleFactura) {
-      throw new ConflictError("No se puede eliminar una multa que ya está incluida en una factura.");
+    if (this.#obtenerFacturaActiva(multa)) {
+      throw new ConflictError("No se puede eliminar una multa que ya está incluida en una factura activa.");
     }
 
     if (multa.estadoMulta === "PAGADA") {

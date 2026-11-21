@@ -3,6 +3,7 @@ import cors from "cors";
 import morgan from "morgan";
 import { env } from "./config/env.js";
 import apiRouter from "./routes/index.js";
+import { optionalAuthenticate } from "./middlewares/auth.middleware.js";
 import { errorHandler } from "./middlewares/errorHandler.middleware.js";
 import { NotFoundError } from "./utils/customErrors.js";
 
@@ -19,6 +20,9 @@ app.use(
 app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
 app.use(express.json({ limit: "20kb" }));
 app.use(express.urlencoded({ extended: true, limit: "20kb" }));
+
+// Middleware de autenticación contextual (extrae usuario si viene token Bearer)
+app.use(optionalAuthenticate);
 
 // Enrutador principal de la API
 app.use("/api", apiRouter);

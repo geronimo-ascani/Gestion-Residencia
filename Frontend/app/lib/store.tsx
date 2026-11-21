@@ -20,6 +20,44 @@ import { actualizarMultaFacturada, aplicarCancelacionFactura, aplicarCobro, apli
 import type { ReemplazoFacturaInput, RegistrarCobroInput } from "./types";
 import { normalizar } from "./format";
 import { createInitialData } from "./mock/data";
+import {
+  getEstadoCompleto,
+  apiCrearAlumno,
+  apiActualizarAlumno,
+  apiAsignarHabitacion,
+  apiLiberarHabitacion,
+  apiCrearContrato,
+  apiActualizarContrato,
+  apiCancelarContrato,
+  apiEmitirMulta,
+  apiActualizarMulta,
+  apiProrrogarMulta,
+  apiAnularMulta,
+  apiRegistrarPagoMulta,
+  apiRegistrarCobro,
+  apiGenerarFactura,
+  apiCancelarFactura,
+  apiCrearAmbiente,
+  apiAgregarEquipamientoAmbiente,
+  apiGuardarParametros,
+  apiGuardarOpcionCatalogo,
+  apiCrearGrupoLimpieza,
+  apiActualizarGrupoLimpieza,
+  apiEliminarGrupoLimpieza,
+  apiGuardarAlumnosGrupo,
+  apiCrearTareaLimpieza,
+  apiActualizarTareaLimpieza,
+  apiAsignarAmbienteGrupo,
+  apiLiberarAmbienteGrupo,
+  apiCrearReclamo,
+  apiResponderReclamo,
+  apiCrearAdministrador,
+  apiActualizarAdministrador,
+  apiSuspenderCuenta,
+  apiCambiarClave,
+  apiCrearHabitacion,
+  apiActualizarHabitacion,
+} from "./api";
 import { actualizarCatalogo } from "./catalogos";
 import { editarEquipamiento, validarNuevoAmbiente } from "./ambientes";
 import type { NuevoAmbienteInput } from "./ambientes";
@@ -163,21 +201,60 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const [listo, setListo] = useState(false);
   useEffect(() => {
-    try {
-      const datos = cargarDatosGuardados(localStorage.getItem(DATOS_KEY));
-      const id = restaurarSesion();
-      const cuenta = datos.usuarios.find((u) => u.idUsuario === id);
-      if (cuenta && estadoAcceso(cuenta, datos) === "activo") { sincronizarUsuario(cuenta); setSesionId(cuenta.idUsuario); }
-      setStateBase(datos);
-      setListo(true);
-    } catch { setErrorCarga("No se pudieron cargar los datos guardados. Conservamos la información original para que puedas recuperarla."); }
+    let cancelado = false;
+
+    async function sincronizarConBaseDeDatos() {
+      try {
+        const datosBD = await getEstadoCompleto();
+        if (datosBD && !cancelado) {
+          setStateBase(datosBD);
+          const id = restaurarSesion();
+          const cuenta = datosBD.usuarios.find((u) => u.idUsuario === id);
+          if (cuenta && estadoAcceso(cuenta, datosBD) === "activo") {
+            sincronizarUsuario(cuenta);
+            setSesionId(cuenta.idUsuario);
+          }
+          setListo(true);
+          try {
+            localStorage.setItem(DATOS_KEY, JSON.stringify(datosBD));
+          } catch {}
+          return;
+        }
+      } catch (err) {
+        console.warn("No se pudo sincronizar directamente con la base de datos, usando respaldo:", err);
+      }
+
+      try {
+        const datos = cargarDatosGuardados(localStorage.getItem(DATOS_KEY));
+        const id = restaurarSesion();
+        const cuenta = datos.usuarios.find((u) => u.idUsuario === id);
+        if (cuenta && estadoAcceso(cuenta, datos) === "activo") {
+          sincronizarUsuario(cuenta);
+          setSesionId(cuenta.idUsuario);
+        }
+        if (!cancelado) {
+          setStateBase(datos);
+          setListo(true);
+        }
+      } catch {
+        if (!cancelado) {
+          setErrorCarga("No se pudieron cargar los datos de la residencia.");
+        }
+      }
+    }
+
+    sincronizarConBaseDeDatos();
+
     function recibir(event: StorageEvent) {
       if (event.key !== DATOS_KEY) return;
       try { setStateBase(cargarDatosGuardados(event.newValue)); }
       catch { setListo(false); setErrorCarga("Los datos se modificaron en otra pestaña y no se pudieron leer. Conservamos la información original."); }
     }
     window.addEventListener("storage", recibir);
-    return () => window.removeEventListener("storage", recibir);
+    return () => {
+      cancelado = true;
+      window.removeEventListener("storage", recibir);
+    };
   }, []);
   useEffect(() => {
     if (!listo) return;
@@ -209,6 +286,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const fecha = new Date().toISOString();
         const reclamo = prepararReclamo(state, usuarioActual, input, id, fecha);
         setState((previo) => ({ ...previo, reclamos: [reclamo, ...previo.reclamos] }));
+        void apiCrearReclamo({ ...input, idAlumno: reclamo.idAlumno });
         return id;
       },
       responderReclamo(id, mensaje, estado) {
@@ -216,6 +294,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const fecha = new Date().toISOString();
         actualizarReclamo(state, usuarioActual, id, mensaje, estado, eventoId, fecha);
         setState((previo) => actualizarReclamo(previo, usuarioActual, id, mensaje, estado, eventoId, fecha));
+        void apiResponderReclamo(id, mensaje, estado);
       },
       guardarOpcionCatalogo(catalogo, opcion) {
         exigirAdministrador(state);
@@ -223,17 +302,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const registro = { ...opcion, id: opcion.id ?? nuevoId("CAT") };
         actualizarCatalogo(state, catalogo, registro);
         setState((previo) => actualizarCatalogo(previo, catalogo, registro));
+        void apiGuardarOpcionCatalogo(catalogo, registro);
       },
       guardarParametros(valores) {
         exigirAdministrador(state);
         if (usuarioActual.rol !== "administrador") throw new Error("No tenés permiso para modificar parámetros.");
         validarParametros(valores);
         setState((previo) => ({ ...previo, parametros: { ...valores } }));
+        void apiGuardarParametros(valores);
       },
       ajustarImporteContrato(id, monto) {
         exigirAdministrador(state);
         if (usuarioActual.rol !== "administrador" || !Number.isFinite(monto) || monto <= 0 || Math.abs(monto * 100 - Math.round(monto * 100)) > 0.00001) throw new Error("Ingresá un importe positivo con hasta dos decimales.");
         setState((previo) => ({ ...previo, contratos: previo.contratos.map((c) => c.idContrato === id ? { ...c, montoMensual: monto } : c) }));
+        void apiActualizarContrato(id, { montoMensual: monto });
       },
       async cambiarClave(actual, nueva) {
         const u = state.usuarios.find((u) => u.idUsuario === usuarioActual.idUsuario);
@@ -244,6 +326,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (nueva === actual) throw new Error("Elegí una contraseña diferente a la actual.");
         const passwordHash = await hashClave(nueva);
         setState((previo) => ({ ...previo, usuarios: previo.usuarios.map((item) => item.idUsuario === u.idUsuario ? { ...item, passwordHash } : item) }));
+        void apiCambiarClave(actual, nueva);
       },
       crearAdministrador(input) {
         exigirAdministrador(state);
@@ -256,6 +339,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           validarCorreoCuenta(input.correo, previo.usuarios);
           return { ...previo, usuarios: [...previo.usuarios, { ...input, nombre: `${input.nombre.trim()} ${input.apellido.trim()}`, correo: input.correo.trim().toLowerCase(), idUsuario, rol: "administrador", estado: "activo", fechaAlta: FECHA_REFERENCIA }] };
         });
+        void apiCrearAdministrador(input);
         return idUsuario;
       },
       actualizarAdministrador(id, input) {
@@ -264,6 +348,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (!input.nombre.trim()) throw new Error("Ingresá el nombre completo.");
         validarCorreoCuenta(input.correo, state.usuarios, id);
         setState((previo) => ({ ...previo, usuarios: previo.usuarios.map((u) => u.idUsuario === id && u.rol === "administrador" ? { ...u, nombre: `${input.nombre.trim()} ${input.apellido.trim()}`, apellido: input.apellido.trim(), correo: input.correo.trim().toLowerCase(), telefono: input.telefono.trim() } : u) }));
+        void apiActualizarAdministrador(id, input);
       },
       crearAccesoAlumno(idAlumno, correo) {
         exigirAdministrador(state);
@@ -275,6 +360,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         exigirAdministrador(state);
         cambiarEstadoCuenta(state, id, suspender);
         setState((previo) => cambiarEstadoCuenta(previo, id, suspender));
+        void apiSuspenderCuenta(id, suspender);
       },
       alumnoPorId,
       habitacionPorId,
@@ -290,6 +376,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             (reemplazo && f.idFacturaOrigen === reemplazo.idFacturaOrigen))) return previo;
           return aplicarEmisionFactura(previo, prepararFactura(previo, idContrato, periodo, id, reemplazo));
         });
+        void apiGenerarFactura(idContrato, periodo, reemplazo);
         return id;
       },
 
@@ -297,6 +384,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         exigirAdministrador(state);
         aplicarCancelacionFactura(state, idFactura, motivo);
         setState((previo) => aplicarCancelacionFactura(previo, idFactura, motivo));
+        void apiCancelarFactura(idFactura, motivo);
       },
 
       registrarCobro(input) {
@@ -304,6 +392,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const id = nuevoId("P");
         aplicarCobro(state, input, id);
         setState((previo) => aplicarCobro(previo, input, id));
+        void apiRegistrarCobro(input);
         return id;
       },
 
@@ -322,6 +411,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           tareas: "",
         };
         setState((previo) => Object.keys(validarNuevoAmbiente(input, previo.ambientes)).length ? previo : { ...previo, ambientes: [...previo.ambientes, ambiente] });
+        void apiCrearAmbiente(input);
         return idAmbiente;
       },
 
@@ -348,6 +438,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             };
           }),
         }));
+        void apiAgregarEquipamientoAmbiente(idAmbiente, equipo);
         return true;
       },
 
@@ -374,6 +465,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               : multa,
           ),
         }));
+        void apiRegistrarPagoMulta(idMulta);
       },
 
       anularMulta(idMulta) {
@@ -387,6 +479,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               : multa,
           ),
         }));
+        void apiAnularMulta(idMulta);
       },
 
       emitirMulta({ idAlumnos, ...datos }) {
@@ -406,6 +499,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           estado: "pendiente", fechaPago: null,
         }));
         setState((previo) => ({ ...previo, multas: [...nuevas, ...previo.multas] }));
+        void apiEmitirMulta({ idAlumnos, ...datos });
         return nuevas.map((m) => m.idMulta);
       },
 
@@ -435,6 +529,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
         aplicar(state);
         setState(aplicar);
+        void apiActualizarMulta({ idMulta, fechaVence, ...datos });
       },
 
       extenderPlazoMulta(idMulta, motivo) {
@@ -446,12 +541,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
           const fechaVence = extenderMes(multa.fechaVence);
           return conHistorialMulta(multa, { ...multa, fechaVence, periodoHasta: fechaVence.slice(0, 7) }, "prorroga", motivo.trim());
         }) }));
+        void apiProrrogarMulta(idMulta, motivo.trim());
       },
 
       asignarHabitacion(idAlumno, idHabitacion) {
         exigirAdministrador(state);
         aplicarAsignacionHabitacion(state, idAlumno, idHabitacion);
         setState((previo) => aplicarAsignacionHabitacion(previo, idAlumno, idHabitacion));
+        void apiAsignarHabitacion(idAlumno, idHabitacion);
       },
 
       liberarHabitacion(idAlumno) {
@@ -464,6 +561,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               : asignacion,
           ),
         }));
+        void apiLiberarHabitacion(idAlumno);
       },
 
       crearAlumno(input) {
@@ -474,6 +572,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ...previo,
           alumnos: [...previo.alumnos, { ...input, idAlumno, estado: "activo" }],
         }));
+        void apiCrearAlumno(input);
         return idAlumno;
       },
 
@@ -489,18 +588,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ...previo,
           alumnos: previo.alumnos.map((alumno) => alumno.idAlumno === idAlumno ? { ...alumno, ...input } : alumno),
         }));
+        void apiActualizarAlumno(idAlumno, input);
       },
 
       actualizarHabitacion(idHabitacion, input) {
         exigirAdministrador(state);
         editarHabitacion(state, idHabitacion, input);
         setState((previo) => editarHabitacion(previo, idHabitacion, input));
+        void apiActualizarHabitacion(idHabitacion, input);
       },
       crearHabitacion(input) {
         exigirAdministrador(state);
         validarAltaHabitacion(state, input);
         const idHabitacion = nuevoId("H");
         setState((previo) => ({ ...previo, habitaciones: [...previo.habitaciones, { ...input, idHabitacion }] }));
+        void apiCrearHabitacion(input);
         return idHabitacion;
       },
 
@@ -515,6 +617,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             ...tarea, nombre: input.nombre.trim(), tareas: input.tareas.map((actividad) => actividad.trim()),
           } : tarea) };
         });
+        void apiActualizarTareaLimpieza(numero, input);
       },
 
       crearTareaLimpieza(input) {
@@ -531,6 +634,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             tareas: input.tareas.map((actividad) => actividad.trim()),
           }] };
         });
+        void apiCrearTareaLimpieza(input);
       },
 
       crearGrupoLimpieza(input) {
@@ -544,6 +648,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             idGrupoLimpieza, nombreDelGrupo: input.nombreDelGrupo.trim(), tareaInicial: input.tareaInicial,
           }] }, idGrupoLimpieza, input.idAlumnos);
         });
+        void apiCrearGrupoLimpieza(input);
         return idGrupoLimpieza;
       },
 
@@ -559,6 +664,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               : grupo,
           ),
         }));
+        void apiActualizarGrupoLimpieza(idGrupoLimpieza, nombreDelGrupo);
       },
 
       eliminarGrupoLimpieza(idGrupoLimpieza) {
@@ -575,11 +681,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
             (asignacion) => asignacion.idGrupoLimpieza !== idGrupoLimpieza,
           ),
         }));
+        void apiEliminarGrupoLimpieza(idGrupoLimpieza);
       },
 
       guardarAlumnosGrupo(idGrupoLimpieza, idAlumnos) {
         exigirAdministrador(state);
         setState((previo) => actualizarIntegrantesLimpieza(previo, idGrupoLimpieza, idAlumnos));
+        void apiGuardarAlumnosGrupo(idGrupoLimpieza, idAlumnos);
       },
 
       asignarAmbienteGrupo(idGrupoLimpieza, idAmbiente, fechaDesde) {
@@ -613,6 +721,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             ],
           };
         });
+        void apiAsignarAmbienteGrupo(idGrupoLimpieza, idAmbiente, fechaDesde);
         return true;
       },
 
@@ -630,6 +739,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               : asignacion,
           ),
         }));
+        void apiLiberarAmbienteGrupo(idGrupoLimpieza, idAmbiente, FECHA_REFERENCIA);
       },
 
       cancelarContrato(idContrato, fecha, motivo) {
@@ -643,12 +753,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
             asignaciones: previo.asignaciones.map((a) => a.idAlumno === contrato.idAlumno && a.fechaDesde <= contrato.fechaHasta && (!a.fechaHasta || a.fechaHasta > fecha) ? { ...a, fechaHasta: a.fechaDesde > fecha ? a.fechaDesde : fecha } : a),
           };
         });
+        void apiCancelarContrato(idContrato, fecha, motivo);
       },
 
       actualizarContrato(idContrato, input) {
         exigirAdministrador(state);
         editarContrato(state, idContrato, input);
         setState((previo) => editarContrato(previo, idContrato, input));
+        void apiActualizarContrato(idContrato, input);
       },
 
       crearContrato(input) {
@@ -656,11 +768,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         validarAltaContrato(state, input);
         const idContrato = nuevoId("C");
         setState((previo) => ({ ...previo, contratos: [...previo.contratos, { ...input, idContrato }] }));
+        void apiCrearContrato(input);
       },
     };
   }, [state, sesionId]);
 
-  if (errorCarga) return <main className="mx-auto max-w-xl space-y-5 p-8"><h1 className="text-2xl font-semibold">No pudimos abrir la residencia</h1><p role="alert" className="text-sm leading-6 text-slate-600 dark:text-slate-300">{errorCarga}</p><div className="flex flex-wrap gap-3"><button type="button" className="rounded-lg bg-brand-600 px-4 py-2 text-sm text-white" onClick={() => window.location.reload()}>Reintentar</button><button type="button" className="rounded-lg border border-slate-300 px-4 py-2 text-sm" onClick={() => { try { const copia = localStorage.getItem(DATOS_KEY); if (!copia) return; const url = URL.createObjectURL(new Blob([copia], { type: "application/json" })); const enlace = document.createElement("a"); enlace.href = url; enlace.download = "residencia-respaldo.json"; enlace.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch { setErrorCarga("El navegador no permite acceder a los datos guardados. Revisá sus permisos de almacenamiento."); } }}>Descargar copia de los datos</button></div></main>;
+  if (errorCarga) return <main className="mx-auto max-w-xl space-y-5 p-8"><h1 className="text-2xl font-semibold">No pudimos abrir la residencia</h1><p role="alert" className="text-sm leadi-300 dark:text-slate-300">{errorCarga}</p><div className="flex flex-wrap gap-3"><button type="button" className="rounded-lg bg-brand-600 px-4 py-2 text-sm text-white" onClick={() => window.location.reload()}>Reintentar</button><button type="button" className="rounded-lg border border-slate-300 px-4 py-2 text-sm" onClick={() => { try { const copia = localStorage.getItem(DATOS_KEY); if (!copia) return; const url = URL.createObjectURL(new Blob([copia], { type: "application/json" })); const enlace = document.createElement("a"); enlace.href = url; enlace.download = "residencia-respaldo.json"; enlace.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch { setErrorCarga("El navegador no permite acceder a los datos guardados. Revisá sus permisos de almacenamiento."); } }}>Descargar copia de los datos</button></div></main>;
   return <DataContext.Provider value={value}>{listo ? <>{errorGuardado ? <div role="alert" className="relative z-50 border-b border-red-200 bg-red-50 p-4 text-center text-sm text-red-800">No se pudieron guardar los últimos cambios. No cierres esta pestaña hasta recuperar el almacenamiento disponible.</div> : null}{children}</> : null}</DataContext.Provider>;
 }
 

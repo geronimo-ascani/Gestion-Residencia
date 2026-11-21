@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { idCoerce } from "./idHelper.js";
 
 export const TIPOS_MULTA_VALIDOS = ["leve", "moderada", "grave", "extraordinaria"];
 export const ESTADOS_MULTA = ["PENDIENTE", "PAGADA", "ANULADA", "pendiente", "pagada", "anulada", "vencida"];
@@ -8,8 +9,8 @@ export const ESTADOS_MULTA = ["PENDIENTE", "PAGADA", "ANULADA", "pendiente", "pa
  */
 export const emitirMultaSchema = z
   .object({
-    idAlumno: z.coerce.number().int().positive().optional(),
-    idAlumnos: z.array(z.coerce.number().int().positive()).optional(),
+    idAlumno: idCoerce.optional(),
+    idAlumnos: z.array(idCoerce).optional(),
     tipo: z.enum(["leve", "moderada", "grave", "extraordinaria"], {
       errorMap: () => ({ message: "El tipo de multa debe ser leve, moderada, grave o extraordinaria" }),
     }),
@@ -114,10 +115,7 @@ export const cambiarEstadoMultaSchema = z.object({
  * Esquema para validar el parámetro ID de Multa.
  */
 export const multaIdParamSchema = z.object({
-  id: z.coerce
-    .number({ invalid_type_error: "El ID de multa debe ser un entero positivo" })
-    .int("El ID debe ser un entero")
-    .positive("El ID debe ser positivo"),
+  id: idCoerce,
 });
 
 /**
@@ -126,7 +124,7 @@ export const multaIdParamSchema = z.object({
 export const queryMultaSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10),
-  idAlumno: z.coerce.number().int().positive().optional(),
+  idAlumno: idCoerce.optional(),
   estado: z.string().trim().optional(),
   estadoMulta: z.string().trim().optional(),
   tipo: z.string().trim().optional(),

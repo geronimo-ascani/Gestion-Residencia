@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { idCoerce } from "./idHelper.js";
 
 /**
  * Esquema para un contacto de emergencia individual.
@@ -171,18 +172,15 @@ export const updateAlumnoSchema = createAlumnoSchema
  * Esquema para validar el parámetro de ruta con ID de Alumno.
  */
 export const alumnoIdParamSchema = z.object({
-  id: z.coerce
-    .number({ invalid_type_error: "El ID de alumno debe ser un entero positivo" })
-    .int("El ID debe ser un entero")
-    .positive("El ID debe ser un número positivo"),
+  id: idCoerce,
 });
 
 /**
  * Esquema para parámetros de ruta de contactos de emergencia.
  */
 export const contactoEmergenciaParamSchema = z.object({
-  id: z.coerce.number().int().positive(),
-  idContacto: z.coerce.number().int().positive(),
+  id: idCoerce,
+  idContacto: idCoerce,
 });
 
 /**

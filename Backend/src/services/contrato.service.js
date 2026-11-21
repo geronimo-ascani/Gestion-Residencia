@@ -1,5 +1,6 @@
 import { prisma } from "../config/database.js";
 import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
+import { administracionService } from "./administracion.service.js";
 
 /**
  * Capa de Servicio: Contrato
@@ -21,7 +22,7 @@ class ContratoService {
       throw new NotFoundError(`No se encontró ningún alumno con el ID: ${data.idAlumno}`);
     }
 
-    if (alumno.estado !== "ACTIVO") {
+    if (alumno.estado.toLowerCase() !== "activo") {
       throw new BadRequestError(
         `No se puede generar un contrato para el alumno ${alumno.nombre} ${alumno.apellido} porque se encuentra en estado '${alumno.estado}'`
       );
@@ -44,11 +45,16 @@ class ContratoService {
       }
     }
 
-    return await prisma.contrato.create({
+    const nuevoContrato = await prisma.contrato.create({
       data: {
         idAlumno: data.idAlumno,
         fechaDesde: new Date(data.fechaDesde),
         fechaHasta: new Date(data.fechaHasta),
+        fechaFirma: data.fechaFirma ? new Date(data.fechaFirma) : null,
+        montoMensual: data.montoMensual !== undefined ? data.montoMensual : 180000,
+        depositoGarantia: data.depositoGarantia !== undefined ? data.depositoGarantia : 0,
+        diaVencimientoPago: data.diaVencimientoPago !== undefined ? data.diaVencimientoPago : 10,
+        observaciones: data.observaciones || null,
         estado: estadoInicial,
       },
       include: {
@@ -67,6 +73,16 @@ class ContratoService {
         },
       },
     });
+
+    void administracionService.notificarAlumno(data.idAlumno, {
+      claveEvento: "contrato_creado",
+      tipo: "info",
+      titulo: "Contrato de residencia registrado",
+      detalle: `Tu contrato #${nuevoContrato.idContrato} está vigente desde el ${data.fechaDesde} hasta el ${data.fechaHasta}.`,
+      destino: "/estudiante",
+    });
+
+    return nuevoContrato;
   }
 
   /**
@@ -219,6 +235,13 @@ class ContratoService {
         ...(data.fechaDesde ? { fechaDesde: nuevaFechaDesde } : {}),
         ...(data.fechaHasta ? { fechaHasta: nuevaFechaHasta } : {}),
         ...(data.estado ? { estado: data.estado } : {}),
+        ...(data.fechaFirma !== undefined ? { fechaFirma: data.fechaFirma ? new Date(data.fechaFirma) : null } : {}),
+        ...(data.montoMensual !== undefined ? { montoMensual: data.montoMensual } : {}),
+        ...(data.depositoGarantia !== undefined ? { depositoGarantia: data.depositoGarantia } : {}),
+        ...(data.diaVencimientoPago !== undefined ? { diaVencimientoPago: data.diaVencimientoPago } : {}),
+        ...(data.observaciones !== undefined ? { observaciones: data.observaciones } : {}),
+        ...(data.fechaCancelacion !== undefined ? { fechaCancelacion: data.fechaCancelacion ? new Date(data.fechaCancelacion) : null } : {}),
+        ...(data.motivoCancelacion !== undefined ? { motivoCancelacion: data.motivoCancelacion } : {}),
       },
       include: {
         alumno: {

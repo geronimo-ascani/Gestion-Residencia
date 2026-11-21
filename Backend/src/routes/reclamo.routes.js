@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { reclamoController } from "../controllers/reclamo.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
+import { requireOwnershipOrAdmin, requireAdmin, requireEntityOwnershipOrAdmin } from "../middlewares/auth.middleware.js";
 import {
   createReclamoSchema,
   responderReclamoSchema,
@@ -16,6 +17,7 @@ const router = Router();
  */
 router.post(
   "/",
+  requireOwnershipOrAdmin((req) => req.body.idAlumno),
   validate({ body: createReclamoSchema }),
   reclamoController.create
 );
@@ -26,23 +28,25 @@ router.post(
  */
 router.get(
   "/",
+  requireOwnershipOrAdmin(),
   validate({ query: queryReclamoSchema }),
   reclamoController.getAll
 );
 
 /**
  * @route   GET /api/reclamos/:id
- * @desc    Obtener el detalle de una presentación por ID con toda su bitácora de seguimiento
+ * @desc    Obtener el detalle de una presentación por ID con toda su bitácora de seguimiento (titular o administrador)
  */
 router.get(
   "/:id",
   validate({ params: reclamoIdParamSchema }),
+  requireEntityOwnershipOrAdmin("reclamo"),
   reclamoController.getById
 );
 
 /**
  * @route   POST /api/reclamos/:id/respuestas
- * @desc    Agregar un mensaje de seguimiento o actualizar el estado de la presentación
+ * @desc    Agregar un mensaje de seguimiento o actualizar el estado de la presentación (titular o administrador)
  */
 router.post(
   "/:id/respuestas",
@@ -50,12 +54,13 @@ router.post(
     params: reclamoIdParamSchema,
     body: responderReclamoSchema,
   }),
+  requireEntityOwnershipOrAdmin("reclamo"),
   reclamoController.responder
 );
 
 /**
  * @route   POST /api/reclamos/:id/responder
- * @desc    Alias para agregar respuesta o seguimiento
+ * @desc    Alias para agregar respuesta o seguimiento (titular o administrador)
  */
 router.post(
   "/:id/responder",
@@ -63,15 +68,17 @@ router.post(
     params: reclamoIdParamSchema,
     body: responderReclamoSchema,
   }),
+  requireEntityOwnershipOrAdmin("reclamo"),
   reclamoController.responder
 );
 
 /**
  * @route   DELETE /api/reclamos/:id
- * @desc    Eliminar una presentación
+ * @desc    Eliminar una presentación (solo administradores)
  */
 router.delete(
   "/:id",
+  requireAdmin,
   validate({ params: reclamoIdParamSchema }),
   reclamoController.delete
 );

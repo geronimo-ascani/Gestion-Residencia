@@ -1,23 +1,56 @@
-# Gestión de residencia
+# Gestión de Residencia Estudiantil
 
-## Estructura
-- `Frontend/`: React Router y TypeScript.
-- `Backend/`: reservado para la futura API.
+Sistema integral para la administración de residencias estudiantiles: gestión de residentes, habitaciones, contratos, facturación mensual, cobros, sanciones/multas disciplinarias, grupos de rotación de limpieza y portal de autogestión para alumnos.
 
-Dentro de `Frontend/app`: `routes` (rutas), `layouts` (estructura compartida), `components` (componentes reutilizables), `features` (pantallas por módulo), `config` (navegación), `mocks` (datos ficticios) y `types` (tipos del dominio).
+---
 
-## Ejecutar
-Desde `Frontend`: `npm install` y `npm run dev`.
+## Estructura del Proyecto
 
-## Etapas
-1. Base modular y paneles iniciales: completado. Entrada de demostración, navegación por rol y diseño adaptable.
-2. Alumnos y habitaciones: listado administrativo, asignación sin cama y vista del estudiante.
-3. Limpieza y perfil: grupos, rotación semanal y datos personales.
-4. Mantenimiento: creación de avisos, detalle y seguimiento.
-5. Notificaciones: bandeja, lectura y publicación administrativa.
-6. Facturas y pagos: deuda mensual, detalle, pagos parciales y múltiples métodos simulados.
-7. Multas: alta, consulta, incorporación a factura y recargos.
-8. Acceso: inicio de sesión y recuperación simulados.
-9. Revisión final: estados vacíos, errores, accesibilidad y celulares.
+* **`Frontend/`**: Aplicación web SPA/SSR desarrollada en **React 19**, **React Router v8**, **Tailwind CSS v4** y **TypeScript 5.9** (modo `strict`).
+* **`Backend/`**: API REST en **Node.js** y **Express** con arquitectura por capas (rutas, controladores, validadores Zod y servicios), con **Prisma ORM** conectado a **PostgreSQL (Supabase)**.
 
-Cada etapa cubre ambos roles cuando corresponde. Las rutas de las pantallas pendientes lo indican explícitamente. No hay autenticación, persistencia, backend ni pagos reales.
+---
+
+## Puesta en Marcha
+
+### 1. Instalación de dependencias
+Instalá las dependencias de ambos proyectos:
+```bash
+npm --prefix Backend install
+npm --prefix Frontend install
+```
+
+### 2. Variables de entorno del Backend
+Asegurate de contar con el archivo `Backend/.env` con la cadena de conexión a la base de datos PostgreSQL:
+```env
+PORT=3000
+NODE_ENV=development
+DATABASE_URL="postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres"
+JWT_SECRET="residencia_estudiantil_jwt_secret_key"
+```
+
+### 3. Cargar datos iniciales (Seed)
+Para sembrar la base de datos con las tablas y datos reales:
+```bash
+npm run seed
+```
+
+### 4. Iniciar servidores de desarrollo
+Desde la raíz del repositorio podés levantar ambos servidores en simultáneo:
+```bash
+npm run dev
+```
+* **Frontend:** [http://localhost:5173](http://localhost:5173) (con proxy automático para `/api` hacia el backend).
+* **Backend API:** [http://localhost:3000/api](http://localhost:3000/api) (Health check: `/api/health`, Bootstrap de estado: `/api/estado`).
+
+---
+
+## Scripts Disponibles (Raíz)
+
+* `npm run dev`: Inicia Frontend y Backend simultáneamente en paralelo.
+* `npm run dev:frontend`: Inicia únicamente el servidor Vite del Frontend.
+* `npm run dev:backend`: Inicia únicamente la API Express del Backend con nodemon.
+* `npm run build`: Ejecuta el build de producción del Frontend (cliente y servidor SSR).
+* `npm run typecheck`: Ejecuta `react-router typegen && tsc` para validar tipos en Frontend.
+* `npm run seed`: Puebla la base de datos PostgreSQL con datos base.
+* `npm run test:backend`: Corre la suite de pruebas de integración de la API.

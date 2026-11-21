@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { grupoLimpiezaController } from "../controllers/grupoLimpieza.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
+import { requireAdmin } from "../middlewares/auth.middleware.js";
 import {
   createGrupoSchema,
   updateGrupoSchema,
@@ -39,10 +40,11 @@ router.get("/tareas", grupoLimpiezaController.getAllTareas);
 
 /**
  * @route   POST /api/grupos-limpieza/tareas
- * @desc    Crear una nueva tarea de limpieza
+ * @desc    Crear una nueva tarea de limpieza (solo administradores)
  */
 router.post(
   "/tareas",
+  requireAdmin,
   validate({ body: createTareaLimpiezaSchema }),
   grupoLimpiezaController.createTarea
 );
@@ -59,10 +61,11 @@ router.get(
 
 /**
  * @route   PUT /api/grupos-limpieza/tareas/:numero
- * @desc    Modificar una tarea de limpieza (nombre, estado de rotación o actividades)
+ * @desc    Modificar una tarea de limpieza (solo administradores)
  */
 router.put(
   "/tareas/:numero",
+  requireAdmin,
   validate({
     params: tareaNumeroParamSchema,
     body: updateTareaLimpiezaSchema,
@@ -72,10 +75,11 @@ router.put(
 
 /**
  * @route   DELETE /api/grupos-limpieza/tareas/:numero
- * @desc    Eliminar una tarea de limpieza
+ * @desc    Eliminar una tarea de limpieza (solo administradores)
  */
 router.delete(
   "/tareas/:numero",
+  requireAdmin,
   validate({ params: tareaNumeroParamSchema }),
   grupoLimpiezaController.deleteTarea
 );
@@ -88,10 +92,11 @@ router.delete(
 
 /**
  * @route   POST /api/grupos-limpieza
- * @desc    Crear un nuevo grupo de limpieza (máximo 4, tarea inicial 1-4 única)
+ * @desc    Crear un nuevo grupo de limpieza (solo administradores)
  */
 router.post(
   "/",
+  requireAdmin,
   validate({ body: createGrupoSchema }),
   grupoLimpiezaController.create
 );
@@ -118,10 +123,11 @@ router.get(
 
 /**
  * @route   PUT /api/grupos-limpieza/:id
- * @desc    Actualizar nombre o tarea inicial del grupo
+ * @desc    Actualizar nombre o tarea inicial del grupo (solo administradores)
  */
 router.put(
   "/:id",
+  requireAdmin,
   validate({
     params: grupoIdParamSchema,
     body: updateGrupoSchema,
@@ -131,10 +137,11 @@ router.put(
 
 /**
  * @route   DELETE /api/grupos-limpieza/:id
- * @desc    Eliminar grupo de limpieza
+ * @desc    Eliminar grupo de limpieza (solo administradores)
  */
 router.delete(
   "/:id",
+  requireAdmin,
   validate({ params: grupoIdParamSchema }),
   grupoLimpiezaController.delete
 );
@@ -147,10 +154,11 @@ router.delete(
 
 /**
  * @route   PUT /api/grupos-limpieza/:id/alumnos
- * @desc    Reemplazar de forma atómica la nómina completa de integrantes del grupo (con traslado automático)
+ * @desc    Reemplazar integrantes del grupo (solo administradores)
  */
 router.put(
   "/:id/alumnos",
+  requireAdmin,
   validate({
     params: grupoIdParamSchema,
     body: guardarIntegrantesSchema,
@@ -160,10 +168,11 @@ router.put(
 
 /**
  * @route   POST /api/grupos-limpieza/:id/integrantes
- * @desc    Alias para reemplazo de integrantes
+ * @desc    Alias para reemplazo de integrantes (solo administradores)
  */
 router.post(
   "/:id/integrantes",
+  requireAdmin,
   validate({
     params: grupoIdParamSchema,
     body: guardarIntegrantesSchema,
@@ -173,10 +182,11 @@ router.post(
 
 /**
  * @route   POST /api/grupos-limpieza/:id/alumnos
- * @desc    Añadir o trasladar un alumno a un grupo de limpieza
+ * @desc    Añadir o trasladar un alumno a un grupo de limpieza (solo administradores)
  */
 router.post(
   "/:id/alumnos",
+  requireAdmin,
   validate({
     params: grupoIdParamSchema,
     body: agregarAlumnoGrupoSchema,
@@ -186,10 +196,11 @@ router.post(
 
 /**
  * @route   DELETE /api/grupos-limpieza/:id/alumnos/:idAlumno
- * @desc    Quitar un alumno del grupo de limpieza
+ * @desc    Quitar un alumno del grupo de limpieza (solo administradores)
  */
 router.delete(
   "/:id/alumnos/:idAlumno",
+  requireAdmin,
   validate({ params: grupoAlumnoParamsSchema }),
   grupoLimpiezaController.quitarAlumno
 );
@@ -202,10 +213,11 @@ router.delete(
 
 /**
  * @route   POST /api/grupos-limpieza/:id/ambientes
- * @desc    Asignar un ambiente común al grupo de limpieza
+ * @desc    Asignar un ambiente común al grupo de limpieza (solo administradores)
  */
 router.post(
   "/:id/ambientes",
+  requireAdmin,
   validate({
     params: grupoIdParamSchema,
     body: asignarAmbienteGrupoSchema,
@@ -215,10 +227,11 @@ router.post(
 
 /**
  * @route   PUT /api/grupos-limpieza/:id/ambientes/:idAmbiente/finalizar
- * @desc    Finalizar turno de aseo de un ambiente para el grupo
+ * @desc    Finalizar turno de aseo de un ambiente para el grupo (solo administradores)
  */
 router.put(
   "/:id/ambientes/:idAmbiente/finalizar",
+  requireAdmin,
   validate({
     params: grupoAmbienteParamsSchema,
     body: finalizarAsignacionAmbienteSchema,

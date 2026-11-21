@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { idCoerce } from "./idHelper.js";
 
 export const TIPOS_RECLAMO_VALIDOS = ["reclamo", "solicitud", "problema"];
 export const CATEGORIAS_RECLAMO_VALIDAS = [
@@ -21,10 +22,7 @@ export const PRIORIDADES_RECLAMO_VALIDAS = ["normal", "alta"];
  * Esquema para la creación de una nueva presentación o reclamo.
  */
 export const createReclamoSchema = z.object({
-  idAlumno: z.coerce
-    .number({ required_error: "El ID del alumno es obligatorio" })
-    .int("El ID del alumno debe ser un entero")
-    .positive("El ID del alumno debe ser positivo"),
+  idAlumno: idCoerce,
   tipo: z
     .enum(["reclamo", "solicitud", "problema"], {
       errorMap: () => ({ message: "Elegí el tipo de presentación: reclamo, solicitud o problema" }),
@@ -61,7 +59,7 @@ export const createReclamoSchema = z.object({
     })
     .default("normal"),
   autor: z.string().trim().optional(),
-  idAutor: z.coerce.number().int().positive().optional(),
+  idAutor: idCoerce.optional(),
 });
 
 /**
@@ -77,7 +75,7 @@ export const responderReclamoSchema = z.object({
     .enum(["pendiente", "en_revision", "resuelto", "rechazado", "cancelado"])
     .optional(),
   autor: z.string().trim().optional(),
-  idAutor: z.coerce.number().int().positive().optional(),
+  idAutor: idCoerce.optional(),
   rol: z
     .enum(["administrador", "alumno"], {
       errorMap: () => ({ message: "El rol debe ser 'administrador' o 'alumno'" }),
@@ -89,10 +87,7 @@ export const responderReclamoSchema = z.object({
  * Esquema para validar el parámetro ID de Reclamo.
  */
 export const reclamoIdParamSchema = z.object({
-  id: z.coerce
-    .number({ invalid_type_error: "El ID del reclamo debe ser un entero positivo" })
-    .int("El ID debe ser un entero")
-    .positive("El ID debe ser positivo"),
+  id: idCoerce,
 });
 
 /**
@@ -101,7 +96,7 @@ export const reclamoIdParamSchema = z.object({
 export const queryReclamoSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10),
-  idAlumno: z.coerce.number().int().positive().optional(),
+  idAlumno: idCoerce.optional(),
   vista: z.enum(["abiertos", "cerrados", "todos"]).optional(),
   estado: z.string().trim().optional(),
   categoria: z.string().trim().optional(),

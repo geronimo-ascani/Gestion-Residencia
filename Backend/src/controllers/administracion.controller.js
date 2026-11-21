@@ -86,7 +86,11 @@ class AdministracionController {
    */
   getNotificaciones = async (req, res, next) => {
     try {
-      const userId = req.user?.idUsuario || req.query.idUsuario;
+      let userId = req.user?.idUsuario || req.query.idUsuario;
+      const rol = (req.user?.rol || "").toUpperCase();
+      if (rol === "ALUMNO" && req.user?.idUsuario) {
+        userId = req.user.idUsuario;
+      }
       if (!userId) {
         return res.status(400).json({ status: "error", message: "Debe estar autenticado o indicar idUsuario" });
       }
@@ -127,7 +131,11 @@ class AdministracionController {
    */
   marcarLeida = async (req, res, next) => {
     try {
-      const userId = req.user?.idUsuario || req.body.idUsuario;
+      let userId = req.user?.idUsuario || req.body.idUsuario;
+      const rol = (req.user?.rol || "").toUpperCase();
+      if (rol === "ALUMNO" && req.user?.idUsuario) {
+        userId = req.user.idUsuario;
+      }
       const notif = await administracionService.marcarLeida(req.params.id, userId);
       return successResponse(
         res,
@@ -145,7 +153,11 @@ class AdministracionController {
    */
   marcarTodasLeidas = async (req, res, next) => {
     try {
-      const userId = req.user?.idUsuario || req.body.idUsuario;
+      let userId = req.user?.idUsuario || req.body.idUsuario;
+      const rol = (req.user?.rol || "").toUpperCase();
+      if (rol === "ALUMNO" && req.user?.idUsuario) {
+        userId = req.user.idUsuario;
+      }
       const resultado = await administracionService.marcarTodasLeidas(userId);
       return successResponse(
         res,
@@ -153,6 +165,132 @@ class AdministracionController {
         "Todas las notificaciones fueron marcadas como leídas",
         200
       );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * ==========================================
+   * GESTIÓN DE ADMINISTRADORES Y CUENTAS
+   * ==========================================
+   */
+
+  getAdministradores = async (req, res, next) => {
+    try {
+      const resultado = await administracionService.getAdministradores(req.query);
+      return successResponse(res, resultado, "Lista de administradores obtenida con éxito", 200);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  getAdministradorById = async (req, res, next) => {
+    try {
+      const admin = await administracionService.getAdministradorById(req.params.id);
+      return successResponse(res, admin, "Perfil de administrador obtenido con éxito", 200);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  crearAdministrador = async (req, res, next) => {
+    try {
+      const nuevoAdmin = await administracionService.crearAdministrador(req.body);
+      return successResponse(res, nuevoAdmin, "Administrador creado exitosamente", 201);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  updateAdministrador = async (req, res, next) => {
+    try {
+      const actualizado = await administracionService.updateAdministrador(req.params.id, req.body);
+      return successResponse(res, actualizado, "Administrador actualizado con éxito", 200);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  cambiarEstadoCuenta = async (req, res, next) => {
+    try {
+      const actorId = req.user?.idUsuario;
+      const resultado = await administracionService.cambiarEstadoCuenta(
+        req.params.id,
+        req.body,
+        actorId
+      );
+      return successResponse(
+        res,
+        resultado,
+        req.body.suspender ? "Cuenta suspendida exitosamente" : "Cuenta reactivada exitosamente",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * ==========================================
+   * CATÁLOGOS DINÁMICOS
+   * ==========================================
+   */
+
+  getCatalogo = async (req, res, next) => {
+    try {
+      const opciones = await administracionService.getCatalogo(req.params.tipo);
+      return successResponse(res, opciones, "Opciones de catálogo obtenidas con éxito", 200);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  crearOpcionCatalogo = async (req, res, next) => {
+    try {
+      const nueva = await administracionService.crearOpcionCatalogo(req.params.tipo, req.body);
+      return successResponse(res, nueva, "Opción creada con éxito en el catálogo", 201);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  updateOpcionCatalogo = async (req, res, next) => {
+    try {
+      const actualizada = await administracionService.updateOpcionCatalogo(
+        req.params.tipo,
+        req.params.id,
+        req.body
+      );
+      return successResponse(res, actualizada, "Opción de catálogo actualizada con éxito", 200);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * ==========================================
+   * MÉTRICAS CONSOLIDADAS DEL DASHBOARD
+   * ==========================================
+   */
+
+  getDashboardResumen = async (req, res, next) => {
+    try {
+      const resumen = await administracionService.getDashboardResumen(req.query.fecha);
+      return successResponse(res, resumen, "Resumen del panel obtenido con éxito", 200);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * GET /api/estado o /api/bootstrap
+   * Retorna el estado completo del sistema desde la base de datos para la hidratación del frontend.
+   */
+  getEstadoCompleto = async (req, res, next) => {
+    try {
+      const estado = await administracionService.getEstadoCompleto(req.user);
+      return successResponse(res, estado, "Estado completo del sistema obtenido con éxito", 200);
     } catch (error) {
       return next(error);
     }
