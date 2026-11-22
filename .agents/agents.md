@@ -161,8 +161,9 @@ Todas las fechas son ISO `YYYY-MM-DD` (sin hora ni zona horaria).
 | `idAlumno` | `string?` | Obligatorio solo si `rol === "alumno"` |
 | `estado` | `EstadoAlumno` | `"activo" \| "inactivo"` |
 
-`session.ts` expone un `usuarioActual` mock con rol administrador. No asumir que
-existe una sesión real.
+El sistema cuenta con autenticación real conectada a PostgreSQL mediante JWT en `/api/auth/login`. Las cuentas base se siembran con `npm run seed`:
+- **Administrador:** `ana@residencia.ar` / `Pérez123` (acceso a todos los módulos administrativos).
+- **Alumnos:** `alumno01@example.com` / `Fernández001`, `alumno02@example.com` / `López002`, etc. Criterio de clave: `[PrimerApellido][Últimos 3 dígitos del DNI]` (acceso exclusivo a `/estudiante`).
 
 ### 4.2 Alumno
 

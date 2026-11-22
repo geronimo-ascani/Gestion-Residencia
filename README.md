@@ -45,6 +45,37 @@ npm run dev
 
 ---
 
+## Cuentas y Credenciales de Prueba
+
+La base de datos se siembra mediante `npm run seed` con cuentas preconfiguradas para pruebas y desarrollo:
+
+### 1. Administrador (Gestión Integral)
+
+Cuenta con acceso completo a todos los módulos: alumnos, habitaciones, contratos, facturación, cobros, multas, limpieza, reclamos, parámetros y administración de usuarios.
+
+| Rol | Nombre | Correo Electrónico | Contraseña | Permisos Especiales |
+| --- | --- | --- | --- | --- |
+| **Administrador** | Ana Pérez | `ana@residencia.ar` | `Pérez123` | Gestión de administradores, parámetros y auditoría |
+
+### 2. Alumnos Residentes (Portal de Autogestión)
+
+Los alumnos autenticados acceden exclusivamente al portal `/estudiante`. Sus consultas y mutaciones están aisladas por titularidad y tienen bloqueadas todas las acciones administrativas (RBAC).
+
+> **Criterio de contraseña inicial:** `[PrimerApellido][Últimos 3 dígitos del DNI]` (respetando mayúsculas y acentos).
+
+| Alumno | Correo Electrónico | Contraseña | DNI | Habitación | Legajo |
+| --- | --- | --- | --- | --- | --- |
+| **Lucía Fernández** | `alumno01@example.com` | `Fernández001` | `46000001` | Hab. 1 | `2026-01` |
+| **Martina López** | `alumno02@example.com` | `López002` | `46000002` | Hab. 1 | `2026-02` |
+| **Tomás Gómez** | `alumno03@example.com` | `Gómez003` | `46000003` | Hab. 2 | `2026-03` |
+| **Mateo Rodríguez** | `alumno04@example.com` | `Rodríguez004` | `46000004` | Hab. 2 | `2026-04` |
+| **Valentina Martínez** | `alumno05@example.com` | `Martínez005` | `46000005` | Hab. 3 | `2026-05` |
+| **Camila Pérez** | `alumno06@example.com` | `Pérez006` | `46000006` | Hab. 3 | `2026-06` |
+| ... | *Correlativo hasta:* | | | | |
+| **Catalina Medina** | `alumno14@example.com` | `Medina014` | `46000014` | Hab. 5 | `2026-14` |
+
+---
+
 ## Scripts Disponibles (Raíz)
 
 * `npm run dev`: Inicia Frontend y Backend simultáneamente en paralelo.
