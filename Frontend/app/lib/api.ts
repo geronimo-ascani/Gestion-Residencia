@@ -261,6 +261,7 @@ export async function apiCrearAdministrador(input: {
   documento?: string;
   correo: string;
   telefono?: string;
+  contrasena?: string;
   gestionaAdministradores?: boolean;
 }): Promise<string | null> {
   const res = await request<{ idUsuario: number | string }>("/administracion/administradores", {

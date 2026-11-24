@@ -462,7 +462,7 @@ class AdministracionService {
     return admin;
   }
 
-  async crearAdministrador({ nombre, apellido, correo, contrasena, gestionaAdministradores = false }) {
+  async crearAdministrador({ nombre, apellido, documento, telefono, correo, contrasena, gestionaAdministradores = false }) {
     const correoLimpio = correo.toLowerCase().trim();
 
     const existe = await prisma.usuario.findUnique({
@@ -481,12 +481,27 @@ class AdministracionService {
       throw new NotFoundError("El rol de ADMINISTRADOR no está configurado en el sistema.");
     }
 
-    const contrasenaHash = await bcrypt.hash(contrasena || "Admin123!", 10);
+    // Si no se envía contraseña explícita, se calcula la clave inicial: [PrimerApellido][Últimos 3 dígitos del DNI]
+    let claveFinal = contrasena?.trim();
+    if (!claveFinal && apellido && documento) {
+      const primero = apellido.trim().split(/\s+/)[0];
+      const dni = String(documento).replace(/\D/g, "");
+      if (primero && dni.length >= 3) {
+        claveFinal = primero + dni.slice(-3);
+      }
+    }
+    if (!claveFinal) {
+      claveFinal = "Admin123!";
+    }
+
+    const contrasenaHash = await bcrypt.hash(claveFinal, 10);
 
     return await prisma.usuario.create({
       data: {
         nombre: nombre?.trim() || null,
         apellido: apellido?.trim() || null,
+        documento: documento ? String(documento).trim() : null,
+        telefono: telefono ? String(telefono).trim() : null,
         correo: correoLimpio,
         contrasenaHash,
         idRol: rolAdmin.idRol,
@@ -498,6 +513,8 @@ class AdministracionService {
         correo: true,
         nombre: true,
         apellido: true,
+        documento: true,
+        telefono: true,
         estado: true,
         gestionaAdministradores: true,
         fechaAlta: true,

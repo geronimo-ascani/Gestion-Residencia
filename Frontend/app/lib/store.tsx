@@ -399,14 +399,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         exigirAdministrador(state);
         if (!puedeGestionarAdministradores(state)) throw new Error("No tenés permiso para gestionar administradores.");
         if (!input.nombre.trim()) throw new Error("Ingresá el nombre completo.");
-        claveInicial(input.apellido, input.documento);
+        const clave = claveInicial(input.apellido, input.documento);
         validarCorreoCuenta(input.correo, state.usuarios);
         const idUsuario = nuevoId("U");
         setState((previo) => {
           validarCorreoCuenta(input.correo, previo.usuarios);
           return { ...previo, usuarios: [...previo.usuarios, { ...input, nombre: `${input.nombre.trim()} ${input.apellido.trim()}`, correo: input.correo.trim().toLowerCase(), idUsuario, rol: "administrador", estado: "activo", fechaAlta: FECHA_REFERENCIA }] };
         });
-        void apiCrearAdministrador(input);
+        void apiCrearAdministrador({ ...input, contrasena: clave });
         return idUsuario;
       },
       actualizarAdministrador(id, input) {

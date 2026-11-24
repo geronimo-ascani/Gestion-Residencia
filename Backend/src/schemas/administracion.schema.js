@@ -82,6 +82,8 @@ export const queryNotificacionesSchema = z.object({
 export const crearAdministradorSchema = z.object({
   nombre: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
   apellido: z.string().trim().min(2, "El apellido debe tener al menos 2 caracteres").max(100),
+  documento: z.string().trim().optional().nullable(),
+  telefono: z.string().trim().optional().nullable(),
   correo: z.string().trim().email("Formato de correo inválido").toLowerCase(),
   contrasena: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional(),
   gestionaAdministradores: z.boolean().optional().default(false),
