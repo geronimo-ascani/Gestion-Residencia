@@ -7,6 +7,7 @@ import {
   updateAmbienteSchema,
   ambienteIdParamSchema,
   agregarEquipamientoSchema,
+  updateEquipamientoSchema,
   equipamientoIdParamSchema,
   queryAmbienteSchema,
 } from "../schemas/limpieza.schema.js";
@@ -96,7 +97,10 @@ router.post(
 router.put(
   "/:id/equipamiento/:idEquipamiento",
   requireAdmin,
-  validate({ params: equipamientoIdParamSchema }),
+  validate({
+    params: equipamientoIdParamSchema,
+    body: updateEquipamientoSchema,
+  }),
   ambienteController.updateEquipamiento
 );
 

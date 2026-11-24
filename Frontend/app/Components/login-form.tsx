@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 
 import { signInWithEmail } from "../lib/auth";
+import { usuarioActual } from "../lib/session";
 import { validateEmail } from "../lib/validation";
 import type { FormErrorItem } from "./ui/form-error-summary";
 import { Button } from "./ui/button";
@@ -64,7 +65,8 @@ export function LoginForm() {
       return;
     }
 
-    const destino = resultado.rol === "alumno" ? "/estudiante" : "/";
+    const rol = resultado.rol ?? (usuarioActual.rol as "administrador" | "alumno");
+    const destino = rol === "alumno" ? "/estudiante" : "/";
     navigate(destino, { replace: true });
   }
 

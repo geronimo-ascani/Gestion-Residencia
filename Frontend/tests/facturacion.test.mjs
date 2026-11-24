@@ -9,7 +9,7 @@ registerHooks({
   },
 });
 const { aplicarCobro, correspondeCuota, estadoFactura, prepararFactura, saldoFactura, totalFactura } = await import("../app/lib/facturacion.ts");
-const { createInitialData } = await import("../app/lib/mock/data.ts");
+const { createInitialData } = await import("./fixtures/data.ts");
 const { FECHA_REFERENCIA } = await import("../app/lib/config.ts");
 const { formatARS } = await import("../app/lib/format.ts");
 

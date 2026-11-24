@@ -224,6 +224,19 @@ export const ambienteIdParamSchema = z.object({
 
 export const agregarEquipamientoSchema = equipamientoItemSchema;
 
+export const updateEquipamientoSchema = z
+  .object({
+    nombre: z.string().trim().min(1, "El nombre del equipamiento no puede estar vacío").optional(),
+    cantidad: z.coerce
+      .number()
+      .int("La cantidad debe ser un número entero")
+      .positive("La cantidad debe ser un entero positivo")
+      .optional(),
+  })
+  .refine((data) => data.nombre !== undefined || data.cantidad !== undefined, {
+    message: "Debe proporcionar al menos un campo para actualizar (nombre o cantidad)",
+  });
+
 export const equipamientoIdParamSchema = z.object({
   id: idCoerce,
   idEquipamiento: idCoerce,

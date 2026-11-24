@@ -690,12 +690,14 @@ class MultaService {
       throw new ConflictError("No se puede anular una multa cuya factura ya registra pagos.");
     }
 
+    const motivoFinal = motivo?.trim() || "Anulación de multa";
+
     const multaAnulada = await prisma.$transaction(async (tx) => {
       await tx.cambioMulta.create({
         data: {
           idMulta: id,
           accion: "edicion",
-          motivo: motivo?.trim() || "Anulación de multa",
+          motivo: motivoFinal,
           cambios: [
             { campo: "Estado", anterior: multa.estadoMulta, nuevo: "ANULADA" },
           ],

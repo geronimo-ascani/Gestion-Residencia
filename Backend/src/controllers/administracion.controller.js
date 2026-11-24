@@ -96,7 +96,7 @@ class AdministracionController {
       }
       const data = await administracionService.getNotificacionesUsuario(
         userId,
-        { soloNoLeidas: req.query.soloNoLeidas === "true" }
+        { soloNoLeidas: Boolean(req.query.soloNoLeidas) }
       );
       return successResponse(
         res,
@@ -196,6 +196,11 @@ class AdministracionController {
 
   crearAdministrador = async (req, res, next) => {
     try {
+      if (!req.user?.gestionaAdministradores) {
+        throw new ForbiddenError(
+          "Acceso denegado: solo los administradores con el permiso 'gestionaAdministradores' pueden crear nuevos administradores."
+        );
+      }
       const nuevoAdmin = await administracionService.crearAdministrador(req.body);
       return successResponse(res, nuevoAdmin, "Administrador creado exitosamente", 201);
     } catch (error) {

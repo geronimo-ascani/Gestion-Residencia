@@ -63,8 +63,8 @@ class AuthService {
       throw new ConflictError(`Ya existe una cuenta registrada con el correo: ${correo}`);
     }
 
-    // 2. Verificar o asignar Rol
-    const nombreRol = rol.toUpperCase();
+    // 2. Verificar o asignar Rol (en registro público siempre se asigna ALUMNO para evitar escalamiento de privilegios)
+    const nombreRol = "ALUMNO";
     let rolRegistro = await prisma.rol.findUnique({
       where: { rol: nombreRol },
     });

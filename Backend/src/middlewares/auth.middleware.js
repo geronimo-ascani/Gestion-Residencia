@@ -1,7 +1,12 @@
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { prisma } from "../config/database.js";
-import { UnauthorizedError, ForbiddenError } from "../utils/customErrors.js";
+import {
+  UnauthorizedError,
+  ForbiddenError,
+  BadRequestError,
+  NotFoundError,
+} from "../utils/customErrors.js";
 
 /**
  * Middleware de Autenticación.
@@ -149,8 +154,9 @@ export const requireOwnershipOrAdmin = (extractor) => {
     }
 
     if (!req.user) {
-      // Si no hay token en modo desarrollo o petición interna de bootstrap
-      return next();
+      return next(
+        new UnauthorizedError("Se requiere iniciar sesión para acceder a este recurso.")
+      );
     }
 
     const rol = (req.user.rol || "").toUpperCase();
@@ -232,7 +238,9 @@ export const requireEntityOwnershipOrAdmin = (modelName, options = {}) => {
       }
 
       if (!req.user) {
-        return next();
+        return next(
+          new UnauthorizedError("Se requiere iniciar sesión para acceder a este recurso.")
+        );
       }
 
       const rol = (req.user.rol || "").toUpperCase();
@@ -267,7 +275,7 @@ export const requireEntityOwnershipOrAdmin = (modelName, options = {}) => {
         });
 
         if (!record) {
-          return next();
+          return next(new NotFoundError(`No se encontró el recurso solicitado en ${modelName}.`));
         }
 
         if (Number(record.idAlumno) !== Number(alumnoSesion)) {

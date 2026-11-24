@@ -5,7 +5,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier.startsWith(".") && !specifier.match(/\.[a-z]+$/i) && context.parentURL?.endsWith(".ts")) return nextResolve(`${specifier}.ts`, context);
   return nextResolve(specifier, context);
 } });
-const { createInitialData } = await import("../app/lib/mock/data.ts");
+const { createInitialData } = await import("./fixtures/data.ts");
 const { cambiarEstadoCuenta, crearCuentaAlumno, estadoAcceso, puedeGestionarAdministradores, registrarCambios, validarCorreoCuenta } = await import("../app/lib/administracion.ts");
 const { FECHA_REFERENCIA } = await import("../app/lib/config.ts");
 function escenario() {

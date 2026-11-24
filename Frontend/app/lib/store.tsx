@@ -20,7 +20,7 @@ import { FECHA_REFERENCIA } from "./config";
 import { actualizarMultaFacturada, aplicarCancelacionFactura, aplicarCobro, aplicarEmisionFactura, facturaActivaDeMulta, prepararFactura } from "./facturacion";
 import type { ReemplazoFacturaInput, RegistrarCobroInput } from "./types";
 import { normalizar } from "./format";
-import { createInitialData } from "./mock/data";
+import { createInitialData } from "./initial-state";
 import {
   getEstadoCompleto,
   apiCrearAlumno,

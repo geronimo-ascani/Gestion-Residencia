@@ -1,12 +1,12 @@
-import { catalogoInicial } from "../catalogos";
-import { PARAMETROS_INICIALES } from "../parametros";
-import { TAREAS_LIMPIEZA } from "../domain";
-import type { DataState } from "../types";
-import { USUARIO_ADMIN_INICIAL } from "../session";
+import { catalogoInicial } from "./catalogos";
+import { PARAMETROS_INICIALES } from "./parametros";
+import { TAREAS_LIMPIEZA } from "./domain";
+import type { DataState } from "./types";
+import { USUARIO_ADMIN_INICIAL } from "./session";
 
 /**
- * Estado inicial limpio del sistema antes de sincronizar con la base de datos PostgreSQL.
- * Todos los datos operativos ahora residen y se gestionan directamente en la base de datos.
+ * Estado inicial limpio del sistema antes de sincronizar con PostgreSQL.
+ * Todas las colecciones operativas inician vacías hasta que se hidrata desde /api/estado.
  */
 export function createInitialData(): DataState {
   return {
@@ -30,3 +30,6 @@ export function createInitialData(): DataState {
     usuarios: [{ ...USUARIO_ADMIN_INICIAL }],
   };
 }
+
+export const createEmptyDataState = createInitialData;
+

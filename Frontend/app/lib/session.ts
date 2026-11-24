@@ -6,8 +6,8 @@ import type { Usuario } from "./types";
  * de alumno para el futuro portal del residente.
  */
 export const USUARIO_ADMIN_INICIAL: Usuario = {
-  idUsuario: "6",
-  nombre: "Ana",
+  idUsuario: "U1",
+  nombre: "Ana Pérez",
   apellido: "Pérez",
   documento: "30000123",
   correo: "ana@residencia.ar",
@@ -45,7 +45,7 @@ export function restaurarSesion(): string | null {
 }
 
 export function guardarSesion(usuario: Usuario, recordar = false) {
-  const referencia = JSON.stringify(usuario);
+  const referencia = JSON.stringify({ idUsuario: usuario.idUsuario });
   sessionStorage.setItem(SESION_KEY, referencia);
   if (recordar) localStorage.setItem(RECORDAR_KEY, referencia);
   else {

@@ -11,7 +11,7 @@ registerHooks({
   },
 });
 const { validarNuevoAmbiente } = await import("../app/lib/ambientes.ts");
-const { createInitialData } = await import("../app/lib/mock/data.ts");
+const { createInitialData } = await import("./fixtures/data.ts");
 const datos = { ambiente: "Sala de estudio 3", tipo: "Sala de estudio", ubicacion: "Sector patio", descripcion: "", equipamiento: [] };
 
 test("permite registrar espacios con o sin inventario inicial y de tipo Otro", () => {

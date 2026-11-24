@@ -84,7 +84,7 @@ export async function signInWithEmail(credentials: SignInCredentials): Promise<A
             if (credentials.remember) localStorage.setItem("residencia_token", json.data.token);
           } catch {}
         }
-        return { rol: rolNormalizado };
+        return {};
       }
     } else {
       const errorJson = await res.json().catch(() => null);
@@ -103,7 +103,7 @@ export async function signInWithEmail(credentials: SignInCredentials): Promise<A
     const esperado = u.passwordHash ?? await hashClave(claveInicial(u.apellido ?? "", u.documento ?? ""));
     if (await hashClave(credentials.password) !== esperado) return { error: "El correo o la contraseña no son correctos." };
     guardarSesion(u, credentials.remember);
-    return { rol: u.rol };
+    return {};
   } catch {
     return { error: "No se pudo iniciar sesión ni leer los datos guardados. Comprobá que el navegador permita guardar datos o contactá a administración." };
   }

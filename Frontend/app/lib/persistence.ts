@@ -1,5 +1,5 @@
 import { catalogoInicial } from "./catalogos";
-import { createInitialData } from "./mock/data";
+import { createInitialData } from "./initial-state";
 import { PARAMETROS_INICIALES, validarParametros } from "./parametros";
 import type { DataState } from "./types";
 

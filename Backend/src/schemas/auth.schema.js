@@ -42,7 +42,7 @@ export const registerSchema = z
     apellido: z.string().trim().optional(),
     documento: z.string().trim().optional(),
     telefono: z.string().trim().optional(),
-    rol: z.enum(["ADMINISTRADOR", "ALUMNO", "administrador", "alumno"]).default("ALUMNO"),
+    rol: z.enum(["ALUMNO", "alumno"]).default("ALUMNO"),
   })
   .refine((data) => data.correo || data.email, {
     message: "El correo electrónico es obligatorio",
@@ -70,7 +70,7 @@ export const registerSchema = z
       apellido: apellidoFinal,
       documento: data.documento,
       telefono: data.telefono,
-      rol: (data.rol || "ALUMNO").toUpperCase(),
+      rol: "ALUMNO",
     };
   });
 

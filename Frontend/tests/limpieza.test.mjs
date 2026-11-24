@@ -11,7 +11,7 @@ registerHooks({
   },
 });
 const { validarTareaLimpieza, semanaLimpieza, tareaLimpieza, validarGrupoLimpieza, actualizarIntegrantesLimpieza } = await import("../app/lib/domain.ts");
-const { createInitialData } = await import("../app/lib/mock/data.ts");
+const { createInitialData } = await import("./fixtures/data.ts");
 
 test("hay cuatro grupos y cada residente está en un único grupo; dos habitaciones comparten grupo", () => {
   const state = createInitialData();

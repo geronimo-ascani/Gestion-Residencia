@@ -5,7 +5,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier.startsWith(".") && !specifier.match(/\.[a-z]+$/i) && context.parentURL?.endsWith(".ts")) return nextResolve(`${specifier}.ts`, context);
   return nextResolve(specifier, context);
 } });
-const { createInitialData } = await import("../app/lib/mock/data.ts");
+const { createInitialData } = await import("./fixtures/data.ts");
 const { prepararReclamo, actualizarReclamo, reclamosVisibles, ubicacionesReclamo, validarReclamo, listarReclamosAdministracion } = await import("../app/lib/reclamos.ts");
 const { datosPortalAlumno } = await import("../app/lib/portal-alumno.ts");
 const alumno = (s, id = "A01") => s.usuarios.find((u) => u.idAlumno === id);

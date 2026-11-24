@@ -1,5 +1,7 @@
 import http from "node:http";
+import jwt from "jsonwebtoken";
 import app from "../app.js";
+import { env } from "../config/env.js";
 
 async function main() {
   const server = http.createServer(app);
@@ -19,10 +21,19 @@ async function main() {
     const dataEstado = await resEstado.json();
     console.log("✓ GET /estado recibido. Alumnos:", dataEstado.data.alumnos.length, "Habitaciones:", dataEstado.data.habitaciones.length);
 
-    // 3. Probar POST /api/reclamos
+    // 3. Probar POST /api/reclamos con autenticación
+    const adminToken = jwt.sign(
+      { idUsuario: 6, rol: "ADMINISTRADOR" },
+      env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
     const resReclamo = await fetch(`${baseUrl}/reclamos`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminToken}`,
+      },
       body: JSON.stringify({
         idAlumno: dataEstado.data.alumnos[0].idAlumno,
         tipo: "reclamo",
@@ -41,7 +52,10 @@ async function main() {
       const idRec = dataReclamo.data.idReclamo;
       const resResp = await fetch(`${baseUrl}/reclamos/${idRec}/respuestas`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
         body: JSON.stringify({
           mensaje: "Se ha derivado el reclamo al equipo de mantenimiento de plomería.",
           estado: "en_revision"

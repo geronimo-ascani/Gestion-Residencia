@@ -9,7 +9,7 @@ registerHooks({
   },
 });
 
-const { createInitialData } = await import("../app/lib/mock/data.ts");
+const { createInitialData } = await import("./fixtures/data.ts");
 const { editarContrato, editarHabitacion } = await import("../app/lib/gestiones.ts");
 const { editarEquipamiento } = await import("../app/lib/ambientes.ts");
 const { actualizarCatalogo } = await import("../app/lib/catalogos.ts");

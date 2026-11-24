@@ -9,7 +9,7 @@ registerHooks({
   },
 });
 const { datosPortalAlumno, rotacionMesAlumno } = await import("../app/lib/portal-alumno.ts");
-const { createInitialData } = await import("../app/lib/mock/data.ts");
+const { createInitialData } = await import("./fixtures/data.ts");
 const { aplicarCobro } = await import("../app/lib/facturacion.ts");
 const { FECHA_REFERENCIA } = await import("../app/lib/config.ts");
 const { proximaFacturaAlumno } = await import("../app/lib/proxima-factura.ts");

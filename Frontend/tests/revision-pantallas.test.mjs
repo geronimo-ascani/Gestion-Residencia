@@ -5,7 +5,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier.startsWith(".") && !specifier.match(/\.[a-z]+$/i) && context.parentURL?.endsWith(".ts")) return nextResolve(`${specifier}.ts`, context);
   return nextResolve(specifier, context);
 } });
-const { createInitialData } = await import("../app/lib/mock/data.ts");
+const { createInitialData } = await import("./fixtures/data.ts");
 const { cargarDatosGuardados } = await import("../app/lib/persistence.ts");
 const { aplicarAsignacionHabitacion, esFechaISO, validarAltaAlumno, validarAltaContrato, validarAltaHabitacion } = await import("../app/lib/gestiones.ts");
 const { guardarSesion, restaurarSesion, cerrarSesion, usuarioActual } = await import("../app/lib/session.ts");
