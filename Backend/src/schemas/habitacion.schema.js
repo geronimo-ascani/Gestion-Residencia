@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { idCoerce } from "./idHelper.js";
+import { FECHA_REFERENCIA } from "../config/constants.js";
 
 /**
  * Esquema de validación para la creación de una Habitación.
@@ -73,7 +74,7 @@ export const asignarAlumnoSchema = z
     idAlumno: idCoerce,
     fechaDesde: z.coerce
       .date({ invalid_type_error: "La fecha de inicio debe ser una fecha válida" })
-      .default(() => new Date()),
+      .default(() => new Date(FECHA_REFERENCIA)),
     fechaHasta: z.coerce
       .date({ invalid_type_error: "La fecha de fin debe ser una fecha válida" })
       .optional()
@@ -94,5 +95,5 @@ export const desasignarAlumnoSchema = z.object({
   idAlumno: idCoerce,
   fechaHasta: z.coerce
     .date({ invalid_type_error: "La fecha de egreso debe ser una fecha válida" })
-    .default(() => new Date()),
+    .default(() => new Date(FECHA_REFERENCIA)),
 });

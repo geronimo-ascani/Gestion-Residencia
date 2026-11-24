@@ -72,6 +72,19 @@ class AlumnoController {
   };
 
   /**
+   * POST /api/alumnos/:id/acceso
+   * Da de alta o actualiza la cuenta de acceso de un alumno con su contraseña inicial encriptada.
+   */
+  crearAcceso = async (req, res, next) => {
+    try {
+      const result = await alumnoService.crearOActualizarAcceso(req.params.id, req.body);
+      return successResponse(res, result, "Cuenta de acceso para el alumno creada/actualizada exitosamente", 200);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
    * POST /api/alumnos/:id/contactos-emergencia
    * Agrega un nuevo contacto de emergencia a un alumno.
    */

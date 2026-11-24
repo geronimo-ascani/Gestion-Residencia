@@ -24,6 +24,9 @@ app.use(express.urlencoded({ extended: true, limit: "20kb" }));
 // Middleware de autenticación contextual (extrae usuario si viene token Bearer)
 app.use(optionalAuthenticate);
 
+// Silenciar favicon para evitar logs 404 en la terminal
+app.get("/favicon.ico", (_req, res) => res.status(204).end());
+
 // Enrutador principal de la API
 app.use("/api", apiRouter);
 

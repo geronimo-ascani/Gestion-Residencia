@@ -9,7 +9,9 @@
     "dev:frontend": "npm --prefix Frontend run dev",
     "build": "npm --prefix Frontend run build",
     "typecheck": "npm --prefix Frontend run typecheck",
+    "test": "node Backend/src/scripts/test_wiring.mjs",
     "test:backend": "node Backend/src/scripts/test_wiring.mjs",
+    "check": "npm run typecheck && npm run test:backend",
     "seed": "npm --prefix Backend run seed"
   },
   "keywords": [

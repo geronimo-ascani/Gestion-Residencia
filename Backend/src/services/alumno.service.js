@@ -1,5 +1,18 @@
+import bcrypt from "bcryptjs";
 import { prisma } from "../config/database.js";
 import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
+import { FECHA_REFERENCIA } from "../config/constants.js";
+
+/**
+ * Calcula la contraseña inicial estándar según las reglas del sistema:
+ * Primer apellido seguido de los últimos 3 dígitos del documento.
+ */
+function calcularClaveInicial(apellido, documento) {
+  const primero = (apellido || "").trim().split(/\s+/)[0] || "Alumno";
+  const dni = String(documento || "").replace(/\D/g, "");
+  const ultimos3 = dni.length >= 3 ? dni.slice(-3) : "123";
+  return `${primero}${ultimos3}`;
+}
 
 /**
  * Capa de Servicio: Alumno
@@ -100,10 +113,14 @@ class AlumnoService {
           });
         }
 
+        const passPlano = contrasena || calcularClaveInicial(restoData.apellido, documentoLimpio);
+        const salt = await bcrypt.genSalt(10);
+        const contrasenaHash = await bcrypt.hash(passPlano, salt);
+
         const nuevoUsuario = await prisma.usuario.create({
           data: {
             correo: correo.toLowerCase().trim(),
-            contrasenaHash: contrasena || "default_hash",
+            contrasenaHash,
             idRol: rolAlumno.idRol,
             estado: "activo",
             nombre: restoData.nombre.trim(),
@@ -135,7 +152,7 @@ class AlumnoService {
       if (isNaN(fechaNacimientoObj.getTime())) {
         throw new BadRequestError("Formato de fecha de nacimiento inválido (YYYY-MM-DD)");
       }
-      if (fechaNacimientoObj > new Date()) {
+      if (fechaNacimientoObj > new Date(FECHA_REFERENCIA)) {
         throw new BadRequestError("La fecha de nacimiento no puede ser futura");
       }
     }
@@ -361,7 +378,7 @@ class AlumnoService {
         fechaNacimientoObj = null;
       } else {
         fechaNacimientoObj = new Date(`${fechaNacimiento}T00:00:00.000Z`);
-        if (isNaN(fechaNacimientoObj.getTime()) || fechaNacimientoObj > new Date()) {
+        if (isNaN(fechaNacimientoObj.getTime()) || fechaNacimientoObj > new Date(FECHA_REFERENCIA)) {
           throw new BadRequestError("Fecha de nacimiento inválida o futura");
         }
       }
@@ -525,6 +542,107 @@ class AlumnoService {
     return await prisma.contactoEmergencia.delete({
       where: { idContacto },
     });
+  }
+
+  /**
+   * Crea o actualiza la cuenta de acceso (Usuario) de un alumno.
+   * Si el usuario no existe, lo crea con la contraseña inicial derivada del apellido y DNI.
+   * Si ya existe, actualiza el correo y genera un nuevo hash de contraseña válido.
+   */
+  async crearOActualizarAcceso(idAlumnoInput, { correo, contrasena } = {}) {
+    const idAlumno = Number(idAlumnoInput);
+    if (isNaN(idAlumno)) {
+      throw new BadRequestError("ID de alumno inválido");
+    }
+
+    const alumno = await prisma.alumno.findUnique({
+      where: { idAlumno },
+      include: { usuario: true },
+    });
+
+    if (!alumno) {
+      throw new NotFoundError(`No se encontró el alumno con ID: ${idAlumno}`);
+    }
+
+    const correoFinal = (correo || alumno.correoContacto || "").toLowerCase().trim();
+    if (!correoFinal) {
+      throw new BadRequestError("Se requiere un correo para crear la cuenta de acceso");
+    }
+
+    // Verificar si otro usuario ya usa este correo
+    const usuarioConMismoCorreo = await prisma.usuario.findFirst({
+      where: {
+        correo: correoFinal,
+        idAlumno: { not: idAlumno },
+      },
+    });
+    if (usuarioConMismoCorreo) {
+      throw new ConflictError(`El correo ${correoFinal} ya está en uso por otro usuario`);
+    }
+
+    const clavePlana = contrasena || calcularClaveInicial(alumno.apellido, alumno.documento);
+    const salt = await bcrypt.genSalt(10);
+    const contrasenaHash = await bcrypt.hash(clavePlana, salt);
+
+    let rolAlumno = await prisma.rol.findUnique({
+      where: { rol: "ALUMNO" },
+    });
+    if (!rolAlumno) {
+      rolAlumno = await prisma.rol.create({ data: { rol: "ALUMNO" } });
+    }
+
+    let usuarioResult;
+    if (alumno.usuario) {
+      usuarioResult = await prisma.usuario.update({
+        where: { idUsuario: alumno.usuario.idUsuario },
+        data: {
+          correo: correoFinal,
+          contrasenaHash,
+          estado: "activo",
+        },
+        select: {
+          idUsuario: true,
+          idAlumno: true,
+          correo: true,
+          estado: true,
+          idRol: true,
+        },
+      });
+    } else {
+      usuarioResult = await prisma.usuario.create({
+        data: {
+          correo: correoFinal,
+          contrasenaHash,
+          idRol: rolAlumno.idRol,
+          estado: "activo",
+          nombre: alumno.nombre,
+          apellido: alumno.apellido,
+          documento: alumno.documento,
+          telefono: alumno.telefono,
+          idAlumno: alumno.idAlumno,
+        },
+        select: {
+          idUsuario: true,
+          idAlumno: true,
+          correo: true,
+          estado: true,
+          idRol: true,
+        },
+      });
+    }
+
+    // Sincronizar correoContacto en alumno si cambió
+    if (alumno.correoContacto !== correoFinal) {
+      await prisma.alumno.update({
+        where: { idAlumno },
+        data: { correoContacto: correoFinal },
+      });
+    }
+
+    return {
+      ...usuarioResult,
+      claveGenerada: contrasena ? undefined : clavePlana,
+    };
   }
 
   /**

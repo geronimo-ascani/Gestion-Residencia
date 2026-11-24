@@ -140,7 +140,7 @@ router.get("/dashboard/resumen", requireAdmin, administracionController.getDashb
  * ESTADO COMPLETO DEL SISTEMA
  * ==========================================
  */
-router.get("/estado", administracionController.getEstadoCompleto);
-router.get("/bootstrap", administracionController.getEstadoCompleto);
+router.get("/estado", optionalAuthenticate, administracionController.getEstadoCompleto);
+router.get("/bootstrap", optionalAuthenticate, administracionController.getEstadoCompleto);
 
 export default router;

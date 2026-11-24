@@ -4,6 +4,7 @@ import { estadoAcceso } from "./administracion";
 import { guardarSesion } from "./session";
 export interface AuthResult {
   error?: string;
+  rol?: "administrador" | "alumno";
 }
 
 interface ApiErrorBody {
@@ -64,6 +65,8 @@ export async function signInWithEmail(credentials: SignInCredentials): Promise<A
       const json = await res.json();
       if (json.data?.usuario) {
         const u = json.data.usuario;
+        const rolNormalizado: "administrador" | "alumno" =
+          u.rol?.toLowerCase() === "administrador" ? "administrador" : "alumno";
         guardarSesion({
           idUsuario: String(u.idUsuario),
           idAlumno: u.idAlumno ? String(u.idAlumno) : undefined,
@@ -71,7 +74,7 @@ export async function signInWithEmail(credentials: SignInCredentials): Promise<A
           apellido: u.apellido || "",
           documento: u.documento || "",
           correo: u.correo,
-          rol: u.rol?.toLowerCase() === "administrador" ? "administrador" : "alumno",
+          rol: rolNormalizado,
           estado: u.estado || "activo",
           gestionaAdministradores: Boolean(u.gestionaAdministradores),
         }, credentials.remember);
@@ -81,7 +84,7 @@ export async function signInWithEmail(credentials: SignInCredentials): Promise<A
             if (credentials.remember) localStorage.setItem("residencia_token", json.data.token);
           } catch {}
         }
-        return {};
+        return { rol: rolNormalizado };
       }
     } else {
       const errorJson = await res.json().catch(() => null);
@@ -96,11 +99,11 @@ export async function signInWithEmail(credentials: SignInCredentials): Promise<A
   try {
     const datos = cargarDatosGuardados(localStorage.getItem(DATOS_KEY));
     const u = datos.usuarios.find((u) => u.correo.toLowerCase() === credentials.email.trim().toLowerCase());
-    if (!u || estadoAcceso(u, datos) !== "activo") return { error: "Credenciales incorrectas o cuenta sin acceso habilitado." };
+    if (!u || u.estado !== "activo") return { error: "Credenciales incorrectas o cuenta sin acceso habilitado." };
     const esperado = u.passwordHash ?? await hashClave(claveInicial(u.apellido ?? "", u.documento ?? ""));
     if (await hashClave(credentials.password) !== esperado) return { error: "El correo o la contraseña no son correctos." };
     guardarSesion(u, credentials.remember);
-    return {};
+    return { rol: u.rol };
   } catch {
     return { error: "No se pudo iniciar sesión ni leer los datos guardados. Comprobá que el navegador permita guardar datos o contactá a administración." };
   }

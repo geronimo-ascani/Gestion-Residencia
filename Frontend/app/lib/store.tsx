@@ -1,3 +1,4 @@
+import { DataLoadingScreen, DataErrorScreen, ErrorGuardadoBanner } from "../Components/layout/data-loading-screen";
 import { aplicarAsignacionHabitacion, editarContrato, editarHabitacion, esFechaISO, validarAltaAlumno, validarAltaHabitacion, validarAltaContrato } from "./gestiones";
 import { cargarDatosGuardados, DATOS_KEY } from "./persistence";
 import { estadoAcceso } from "./administracion";
@@ -14,7 +15,7 @@ import { cambiarEstadoCuenta, crearCuentaAlumno, puedeGestionarAdministradores, 
 import { createContext, useContext, useMemo, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { calendarioMulta, conHistorialMulta, extenderMes, importeMulta, TIPOS_MULTA } from "./multas";
-import { estaActiva, actualizarIntegrantesLimpieza, validarGrupoLimpieza, validarTareaLimpieza, contratoVigente } from "./domain";
+import { estaActiva, asignacionActiva, actualizarIntegrantesLimpieza, validarGrupoLimpieza, validarTareaLimpieza, contratoVigente } from "./domain";
 import { FECHA_REFERENCIA } from "./config";
 import { actualizarMultaFacturada, aplicarCancelacionFactura, aplicarCobro, aplicarEmisionFactura, facturaActivaDeMulta, prepararFactura } from "./facturacion";
 import type { ReemplazoFacturaInput, RegistrarCobroInput } from "./types";
@@ -23,6 +24,7 @@ import { createInitialData } from "./mock/data";
 import {
   getEstadoCompleto,
   apiCrearAlumno,
+  apiCrearAccesoAlumno,
   apiActualizarAlumno,
   apiAsignarHabitacion,
   apiLiberarHabitacion,
@@ -190,7 +192,7 @@ const DataContext = createContext<DataContextValue | null>(null);
  */
 export function DataProvider({ children }: { children: ReactNode }) {
   const [state, setStateBase] = useState<DataState>(() => createInitialData());
-  const [sesionId, setSesionId] = useState<string | null>(null);
+  const [sesionId, setSesionId] = useState<string | null>(() => restaurarSesion());
   const [errorCarga, setErrorCarga] = useState("");
   const [errorGuardado, setErrorGuardado] = useState(false);
   function setState(actualizar: (previo: DataState) => DataState) {
@@ -204,15 +206,52 @@ export function DataProvider({ children }: { children: ReactNode }) {
     let cancelado = false;
 
     async function sincronizarConBaseDeDatos() {
+      const sesionActualId = restaurarSesion();
+
+      // 1. Carga inmediata desde almacenamiento local si existe
+      try {
+        const guardado = localStorage.getItem(DATOS_KEY);
+        if (guardado) {
+          const datosLocales = cargarDatosGuardados(guardado);
+          const cuenta = sesionActualId
+            ? datosLocales.usuarios.find(
+                (u) =>
+                  u.idUsuario === sesionActualId ||
+                  (usuarioActual.correo && u.correo?.toLowerCase() === usuarioActual.correo.toLowerCase())
+              )
+            : null;
+
+          if (!cancelado) {
+            setStateBase(datosLocales);
+            if (cuenta && cuenta.estado === "activo") {
+              sincronizarUsuario(cuenta);
+              setSesionId(cuenta.idUsuario);
+              setListo(true);
+            } else if (!sesionActualId) {
+              setListo(true);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("No se pudieron cargar datos locales:", err);
+      }
+
+      // 2. Sincronización en segundo plano con PostgreSQL
       try {
         const datosBD = await getEstadoCompleto();
         if (datosBD && !cancelado) {
           setStateBase(datosBD);
           const id = restaurarSesion();
-          const cuenta = datosBD.usuarios.find((u) => u.idUsuario === id);
-          if (cuenta && estadoAcceso(cuenta, datosBD) === "activo") {
+          const cuenta = datosBD.usuarios.find(
+            (u) =>
+              u.idUsuario === id ||
+              (usuarioActual.correo && u.correo?.toLowerCase() === usuarioActual.correo.toLowerCase())
+          );
+          if (cuenta && cuenta.estado === "activo") {
             sincronizarUsuario(cuenta);
             setSesionId(cuenta.idUsuario);
+          } else if (id && usuarioActual.idUsuario && usuarioActual.estado === "activo") {
+            setSesionId(id);
           }
           setListo(true);
           try {
@@ -225,15 +264,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const datos = cargarDatosGuardados(localStorage.getItem(DATOS_KEY));
-        const id = restaurarSesion();
-        const cuenta = datos.usuarios.find((u) => u.idUsuario === id);
-        if (cuenta && estadoAcceso(cuenta, datos) === "activo") {
-          sincronizarUsuario(cuenta);
-          setSesionId(cuenta.idUsuario);
-        }
-        if (!cancelado) {
-          setStateBase(datos);
+        const guardado = localStorage.getItem(DATOS_KEY);
+        if (guardado) {
+          const datos = cargarDatosGuardados(guardado);
+          const id = restaurarSesion();
+          const cuenta = datos.usuarios.find(
+            (u) =>
+              u.idUsuario === id ||
+              (usuarioActual.correo && u.correo?.toLowerCase() === usuarioActual.correo.toLowerCase())
+          );
+          if (cuenta && cuenta.estado === "activo") {
+            sincronizarUsuario(cuenta);
+            setSesionId(cuenta.idUsuario);
+          }
+          if (!cancelado) {
+            setStateBase(datos);
+            setListo(true);
+          }
+        } else if (!cancelado) {
           setListo(true);
         }
       } catch {
@@ -280,7 +328,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     return {
       ...state,
-      usuarioAutenticado: (() => { const u = state.usuarios.find((u) => u.idUsuario === sesionId); return u && estadoAcceso(u, state) === "activo" ? u : null; })(),
+      usuarioAutenticado: (() => {
+        const idBuscado = sesionId ?? restaurarSesion();
+        if (!idBuscado) return null;
+        const u = state.usuarios.find(
+          (user) =>
+            user.idUsuario === idBuscado ||
+            (usuarioActual.correo && user.correo?.toLowerCase() === usuarioActual.correo.toLowerCase())
+        );
+        if (u && u.estado === "activo") return u;
+        if (
+          usuarioActual &&
+          usuarioActual.idUsuario &&
+          (usuarioActual.idUsuario === idBuscado ||
+            (usuarioActual.correo && u?.correo && usuarioActual.correo.toLowerCase() === u.correo.toLowerCase())) &&
+          usuarioActual.estado === "activo"
+        ) {
+          return usuarioActual;
+        }
+        return null;
+      })(),
       crearReclamo(input) {
         const id = nuevoId("R");
         const fecha = new Date().toISOString();
@@ -355,6 +422,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const id = nuevoId("U");
         crearCuentaAlumno(state, idAlumno, correo, id);
         setState((previo) => crearCuentaAlumno(previo, idAlumno, correo, id));
+        void apiCrearAccesoAlumno(idAlumno, correo);
       },
       suspenderCuenta(id, suspender) {
         exigirAdministrador(state);
@@ -553,6 +621,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       liberarHabitacion(idAlumno) {
         exigirAdministrador(state);
+        const asignacion = asignacionActiva(state.asignaciones, idAlumno);
         setState((previo) => ({
           ...previo,
           asignaciones: previo.asignaciones.map((asignacion) =>
@@ -561,7 +630,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
               : asignacion,
           ),
         }));
-        void apiLiberarHabitacion(idAlumno);
+        if (asignacion?.idHabitacion) {
+          void apiLiberarHabitacion(idAlumno, asignacion.idHabitacion);
+        }
       },
 
       crearAlumno(input) {
@@ -773,8 +844,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
   }, [state, sesionId]);
 
-  if (errorCarga) return <main className="mx-auto max-w-xl space-y-5 p-8"><h1 className="text-2xl font-semibold">No pudimos abrir la residencia</h1><p role="alert" className="text-sm leadi-300 dark:text-slate-300">{errorCarga}</p><div className="flex flex-wrap gap-3"><button type="button" className="rounded-lg bg-brand-600 px-4 py-2 text-sm text-white" onClick={() => window.location.reload()}>Reintentar</button><button type="button" className="rounded-lg border border-slate-300 px-4 py-2 text-sm" onClick={() => { try { const copia = localStorage.getItem(DATOS_KEY); if (!copia) return; const url = URL.createObjectURL(new Blob([copia], { type: "application/json" })); const enlace = document.createElement("a"); enlace.href = url; enlace.download = "residencia-respaldo.json"; enlace.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch { setErrorCarga("El navegador no permite acceder a los datos guardados. Revisá sus permisos de almacenamiento."); } }}>Descargar copia de los datos</button></div></main>;
-  return <DataContext.Provider value={value}>{listo ? <>{errorGuardado ? <div role="alert" className="relative z-50 border-b border-red-200 bg-red-50 p-4 text-center text-sm text-red-800">No se pudieron guardar los últimos cambios. No cierres esta pestaña hasta recuperar el almacenamiento disponible.</div> : null}{children}</> : null}</DataContext.Provider>;
+  if (errorCarga) {
+    return <DataErrorScreen error={errorCarga} onErrorDismiss={setErrorCarga} />;
+  }
+
+  if (!listo) {
+    return <DataLoadingScreen />;
+  }
+
+  return (
+    <DataContext.Provider value={value}>
+      {errorGuardado ? <ErrorGuardadoBanner /> : null}
+      {children}
+    </DataContext.Provider>
+  );
 }
 
 export function useData(): DataContextValue {

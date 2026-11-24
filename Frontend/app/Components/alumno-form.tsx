@@ -11,6 +11,7 @@ import type { Alumno, BorradorContrato, ContactoEmergencia } from "../lib/types"
 import { TextField } from "./ui/text-field";
 import { useToast } from "./ui/toast";
 import { useData, type NuevoAlumnoInput } from "../lib/store";
+import { FECHA_REFERENCIA } from "../lib/config";
 
 interface Errores {
   nombre?: string;
@@ -88,7 +89,7 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
           ? "Ya existe otro alumno con este documento."
           : "Ya existe un alumno con este documento. Buscalo en Alumnos para registrar un reingreso.";
       }
-      if (datosIngreso.fechaNacimiento && datosIngreso.fechaNacimiento >= new Date().toISOString().slice(0, 10)) {
+      if (datosIngreso.fechaNacimiento && datosIngreso.fechaNacimiento >= FECHA_REFERENCIA) {
         setErrorIngreso("La fecha de nacimiento debe ser anterior a hoy.");
         return;
       }

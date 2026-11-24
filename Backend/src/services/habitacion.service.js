@@ -1,6 +1,7 @@
 import { prisma } from "../config/database.js";
 import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
 import { administracionService } from "./administracion.service.js";
+import { FECHA_REFERENCIA } from "../config/constants.js";
 
 /**
  * Capa de Servicio: Habitación y Asignación de Alumnos
@@ -31,7 +32,7 @@ class HabitacionService {
    * Calcula plazas ocupadas y disponibles en tiempo real.
    */
   async getAll({ page = 1, limit = 10, search, piso, soloDisponibles } = {}) {
-    const now = new Date();
+    const now = new Date(FECHA_REFERENCIA);
     const where = {};
 
     if (piso !== undefined) {
@@ -123,7 +124,7 @@ class HabitacionService {
    * Obtiene el detalle de una Habitación con sus ocupantes actuales y su historial completo.
    */
   async getById(id) {
-    const now = new Date();
+    const now = new Date(FECHA_REFERENCIA);
 
     const habitacion = await prisma.habitacion.findUnique({
       where: { idHabitacion: id },
@@ -199,7 +200,7 @@ class HabitacionService {
           where: {
             OR: [
               { fechaHasta: null },
-              { fechaHasta: { gt: new Date() } },
+              { fechaHasta: { gt: new Date(FECHA_REFERENCIA) } },
             ],
           },
         },
@@ -256,7 +257,7 @@ class HabitacionService {
           where: {
             OR: [
               { fechaHasta: null },
-              { fechaHasta: { gt: new Date() } },
+              { fechaHasta: { gt: new Date(FECHA_REFERENCIA) } },
             ],
           },
         },
@@ -309,7 +310,7 @@ class HabitacionService {
     }
 
     // 2. Transacción atómica: si el alumno ya tiene habitación activa en otro cuarto, cerrar asignación previa (mudanza directa)
-    const now = new Date();
+    const now = new Date(FECHA_REFERENCIA);
     const fechaInicio = fechaDesde ? new Date(fechaDesde) : now;
 
     const resultado = await prisma.$transaction(async (tx) => {
@@ -400,7 +401,7 @@ class HabitacionService {
       throw new NotFoundError(`No se encontró la habitación con ID: ${idHabitacion}`);
     }
 
-    const now = new Date();
+    const now = new Date(FECHA_REFERENCIA);
 
     // Buscar asignación activa
     const asignacion = await prisma.habitacionAlumno.findFirst({
@@ -465,7 +466,7 @@ class HabitacionService {
       throw new NotFoundError(`No se encontró la habitación con ID: ${idHabitacion}`);
     }
 
-    const now = new Date();
+    const now = new Date(FECHA_REFERENCIA);
 
     const asignaciones = await prisma.habitacionAlumno.findMany({
       where: {

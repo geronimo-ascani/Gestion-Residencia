@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/database.js";
 import { env } from "../config/env.js";
+import { FECHA_REFERENCIA } from "../config/constants.js";
 import {
   UnauthorizedError,
   ConflictError,
@@ -363,7 +364,8 @@ class AuthService {
             },
             habitacionesAlumnos: {
               where: {
-                OR: [{ fechaHasta: null }, { fechaHasta: { gt: new Date() } }],
+                fechaDesde: { lte: new Date(FECHA_REFERENCIA) },
+                OR: [{ fechaHasta: null }, { fechaHasta: { gt: new Date(FECHA_REFERENCIA) } }],
               },
               include: { habitacion: true },
             },

@@ -460,7 +460,7 @@ class FacturaService {
     const facturaCancelada = await prisma.factura.update({
       where: { idFactura },
       data: {
-        fechaCancelacion: new Date(),
+        fechaCancelacion: new Date(FECHA_REFERENCIA),
         motivoCancelacion: motivo?.trim() || "Cancelada administrativamente",
       },
       include: {
@@ -574,7 +574,7 @@ class FacturaService {
           idContrato: contrato.idContrato,
           idAlumno: contrato.idAlumno,
           periodo,
-          fechaEmision: new Date(),
+          fechaEmision: new Date(`${FECHA_REFERENCIA}T00:00:00.000Z`),
           fechaVence: fechaVenceObj,
           titular: `${contrato.alumno.apellido}, ${contrato.alumno.nombre}`,
           documento: contrato.alumno.documento,
@@ -614,7 +614,7 @@ class FacturaService {
             where: { idMulta: multa.idMulta },
             data: {
               estadoMulta: "PAGADA",
-              fechaPago: new Date(),
+              fechaPago: new Date(`${FECHA_REFERENCIA}T00:00:00.000Z`),
               montoPagado: Number(multa.monto),
             },
           });

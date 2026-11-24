@@ -1,5 +1,6 @@
 import { prisma } from "../config/database.js";
 import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
+import { FECHA_REFERENCIA } from "../config/constants.js";
 
 /**
  * Capa de Servicio: Cuota Mensual
@@ -39,7 +40,7 @@ class CuotaService {
         idAlumno: data.idAlumno,
         mesAsociado: data.mesAsociado,
         montoPagado: data.montoPagado,
-        fechaEmision: data.fechaEmision ? new Date(data.fechaEmision) : new Date(),
+        fechaEmision: data.fechaEmision ? new Date(data.fechaEmision) : new Date(FECHA_REFERENCIA),
         estadoCuota: data.estadoCuota || "PENDIENTE",
       },
       include: {
@@ -85,7 +86,7 @@ class CuotaService {
       };
     }
 
-    const fecha = fechaEmision ? new Date(fechaEmision) : new Date();
+    const fecha = fechaEmision ? new Date(fechaEmision) : new Date(FECHA_REFERENCIA);
     const creadas = [];
     const omitidas = [];
 
@@ -231,7 +232,8 @@ class CuotaService {
             usuario: { select: { correo: true } },
             habitacionesAlumnos: {
               where: {
-                OR: [{ fechaHasta: null }, { fechaHasta: { gt: new Date() } }],
+                fechaDesde: { lte: new Date(FECHA_REFERENCIA) },
+                OR: [{ fechaHasta: null }, { fechaHasta: { gt: new Date(FECHA_REFERENCIA) } }],
               },
               include: { habitacion: true },
             },

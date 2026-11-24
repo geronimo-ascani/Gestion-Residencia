@@ -718,10 +718,10 @@ class LimpiezaService {
       throw new NotFoundError(`No se encontró el ambiente con ID: ${idAmbiente}`);
     }
 
-    const fechaInicio = fechaDesde ? new Date(fechaDesde) : new Date();
+    const fechaInicio = fechaDesde ? new Date(fechaDesde) : new Date(FECHA_REFERENCIA);
     const fechaFin = fechaHasta ? new Date(fechaHasta) : null;
 
-    const ahora = new Date();
+    const ahora = new Date(FECHA_REFERENCIA);
     const asignacionSolapada = await prisma.grupoLimpiezaAmbiente.findFirst({
       where: {
         idAmbiente: ambienteId,
@@ -753,7 +753,7 @@ class LimpiezaService {
   async finalizarTurnoAmbiente(idGrupoLimpieza, idAmbiente, { fechaHasta } = {}) {
     const grupoId = Number(idGrupoLimpieza);
     const ambienteId = Number(idAmbiente);
-    const now = new Date();
+    const now = new Date(FECHA_REFERENCIA);
 
     const asignacion = await prisma.grupoLimpiezaAmbiente.findFirst({
       where: {
@@ -840,7 +840,7 @@ class LimpiezaService {
 
   async getAllAmbientes({ page = 1, limit = 50, search, tipo } = {}) {
     const skip = (page - 1) * limit;
-    const now = new Date();
+    const now = new Date(FECHA_REFERENCIA);
     const where = {};
 
     if (tipo) {
@@ -918,7 +918,7 @@ class LimpiezaService {
 
   async getAmbienteById(id) {
     const ambId = Number(id);
-    const now = new Date();
+    const now = new Date(FECHA_REFERENCIA);
 
     const amb = await prisma.ambiente.findUnique({
       where: { idAmbiente: ambId },

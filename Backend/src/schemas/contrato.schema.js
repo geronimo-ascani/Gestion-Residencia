@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { idCoerce } from "./idHelper.js";
+import { FECHA_REFERENCIA } from "../config/constants.js";
 
 export const ESTADOS_CONTRATO = ["VIGENTE", "FINALIZADO", "RESCINDIDO", "CANCELADO"];
 
@@ -11,7 +12,7 @@ export const createContratoSchema = z
     idAlumno: idCoerce,
     fechaDesde: z.coerce
       .date({ invalid_type_error: "La fecha de inicio debe ser una fecha válida" })
-      .default(() => new Date()),
+      .default(() => new Date(FECHA_REFERENCIA)),
     fechaHasta: z.coerce.date({
       required_error: "La fecha de finalización es obligatoria",
       invalid_type_error: "La fecha de finalización debe ser una fecha válida",

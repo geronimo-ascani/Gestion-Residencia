@@ -7,12 +7,17 @@ import { env } from "./env.js";
  */
 const globalForPrisma = globalThis;
 
+const dbUrl = env.DATABASE_URL.includes("connection_limit")
+  ? env.DATABASE_URL
+  : `${env.DATABASE_URL}${env.DATABASE_URL.includes("?") ? "&" : "?"}connection_limit=5`;
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
+    datasources: { db: { url: dbUrl } },
     log:
       env.NODE_ENV === "development"
-        ? ["query", "info", "warn", "error"]
+        ? ["warn", "error"]
         : ["error"],
   });
 

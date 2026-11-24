@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { idCoerce } from "./idHelper.js";
+import { FECHA_REFERENCIA } from "../config/constants.js";
 
 export const TIPOS_AMBIENTE_VALIDOS = [
   "Sala de estudio",
@@ -72,7 +73,7 @@ export const asignarAmbienteGrupoSchema = z
     idAmbiente: idCoerce,
     fechaDesde: z.coerce
       .date({ invalid_type_error: "La fecha de inicio debe ser válida" })
-      .default(() => new Date()),
+      .default(() => new Date(FECHA_REFERENCIA)),
     fechaHasta: z.coerce
       .date({ invalid_type_error: "La fecha de finalización debe ser válida" })
       .optional()
@@ -89,7 +90,7 @@ export const asignarAmbienteGrupoSchema = z
 export const finalizarAsignacionAmbienteSchema = z.object({
   fechaHasta: z.coerce
     .date({ invalid_type_error: "La fecha de cierre debe ser válida" })
-    .default(() => new Date()),
+    .default(() => new Date(FECHA_REFERENCIA)),
 });
 
 export const grupoAmbienteParamsSchema = z.object({

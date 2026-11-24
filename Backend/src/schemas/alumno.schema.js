@@ -195,3 +195,16 @@ export const queryAlumnoSchema = z.object({
   localidad: z.string().trim().optional(),
   provincia: z.string().trim().optional(),
 });
+
+/**
+ * Esquema de validación para alta o actualización de cuenta de acceso (Usuario) de un alumno.
+ */
+export const crearAccesoAlumnoSchema = z.object({
+  correo: z
+    .string()
+    .trim()
+    .email("Formato de correo electrónico inválido")
+    .toLowerCase()
+    .optional(),
+  contrasena: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional(),
+});

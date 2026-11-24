@@ -9,6 +9,7 @@ import {
   queryAlumnoSchema,
   contactoEmergenciaSchema,
   contactoEmergenciaParamSchema,
+  crearAccesoAlumnoSchema,
 } from "../schemas/alumno.schema.js";
 
 const router = Router();
@@ -66,6 +67,17 @@ router.delete(
   requireAdmin,
   validate({ params: alumnoIdParamSchema }),
   alumnoController.delete
+);
+
+/**
+ * @route   POST /api/alumnos/:id/acceso
+ * @desc    Crear o actualizar la cuenta de acceso y contraseña inicial del alumno (solo administradores)
+ */
+router.post(
+  "/:id/acceso",
+  requireAdmin,
+  validate({ params: alumnoIdParamSchema, body: crearAccesoAlumnoSchema }),
+  alumnoController.crearAcceso
 );
 
 /**

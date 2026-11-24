@@ -52,19 +52,20 @@ export function LoginForm() {
     if (Object.keys(nextErrors).length > 0) return;
 
     setIsSubmitting(true);
-    const { error } = await signInWithEmail({
+    const resultado = await signInWithEmail({
       email: email.trim(),
       password,
       remember,
     });
-    setIsSubmitting(false);
 
-    if (error) {
-      setFormError(error);
+    if (resultado.error) {
+      setIsSubmitting(false);
+      setFormError(resultado.error);
       return;
     }
 
-    navigate("/", { replace: true });
+    const destino = resultado.rol === "alumno" ? "/estudiante" : "/";
+    navigate(destino, { replace: true });
   }
 
   return (

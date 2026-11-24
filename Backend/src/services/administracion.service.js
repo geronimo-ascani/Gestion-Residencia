@@ -32,10 +32,14 @@ class AdministracionService {
    * ==========================================
    */
 
+  #parametrosAsegurados = false;
+  #catalogosAsegurados = false;
+
   /**
    * Inicializa los parámetros del sistema si aún no existen en la base de datos.
    */
   async #asegurarParametros() {
+    if (this.#parametrosAsegurados) return;
     const total = await prisma.parametroSistema.count();
     if (total === 0) {
       for (const [clave, valor] of Object.entries(PARAMETROS_DEFAULT)) {
@@ -46,6 +50,7 @@ class AdministracionService {
         });
       }
     }
+    this.#parametrosAsegurados = true;
   }
 
   /**
@@ -626,6 +631,7 @@ class AdministracionService {
    */
 
   async asegurarCatalogos() {
+    if (this.#catalogosAsegurados) return;
     const total = await prisma.opcionCatalogo.count();
     if (total === 0) {
       const carreras = [
@@ -651,6 +657,7 @@ class AdministracionService {
         });
       }
     }
+    this.#catalogosAsegurados = true;
   }
 
   async getCatalogo(tipo) {
@@ -910,36 +917,71 @@ class AdministracionService {
     const whereAlumno = esAlumno && alumnoId ? { idAlumno: alumnoId } : undefined;
     const whereUsuario = esAlumno && usuarioId ? { idUsuario: usuarioId } : undefined;
 
+    // Lote 1: Catálogos, infraestructura y parámetros base
     const [
-      alumnosRaw,
-      habitacionesRaw,
-      asignacionesRaw,
-      contratosRaw,
-      facturasRaw,
-      pagosRaw,
-      multasRaw,
-      gruposRaw,
-      grupoAlumnosRaw,
-      ambientesRaw,
-      grupoAmbientesRaw,
-      usuariosRaw,
-      tareasLimpiezaRaw,
       carrerasRaw,
       vinculosRaw,
       parametrosRaw,
-      cambiosRaw,
-      reclamosRaw,
+      tareasLimpiezaRaw,
+      habitacionesRaw,
+      ambientesRaw,
     ] = await Promise.all([
+      prisma.opcionCatalogo.findMany({
+        where: { catalogo: "carreras" },
+        orderBy: { id: "asc" },
+      }),
+      prisma.opcionCatalogo.findMany({
+        where: { catalogo: "vinculos" },
+        orderBy: { id: "asc" },
+      }),
+      prisma.parametroSistema.findMany(),
+      prisma.tareaLimpieza.findMany({ orderBy: { numero: "asc" } }),
+      prisma.habitacion.findMany({ orderBy: { numeroHabitacion: "asc" } }),
+      prisma.ambiente.findMany({
+        include: { equipamiento: { orderBy: { idEquipamiento: "asc" } } },
+        orderBy: { idAmbiente: "asc" },
+      }),
+    ]);
+
+    // Lote 2: Limpieza, residentes y usuarios
+    const [
+      gruposRaw,
+      grupoAlumnosRaw,
+      grupoAmbientesRaw,
+      usuariosRaw,
+      alumnosRaw,
+      asignacionesRaw,
+    ] = await Promise.all([
+      prisma.grupoDeLimpieza.findMany({ orderBy: { posicionInicial: "asc" } }),
+      prisma.grupoLimpiezaAlumno.findMany({
+        where: whereAlumno,
+      }),
+      prisma.grupoLimpiezaAmbiente.findMany({ orderBy: { fechaDesde: "asc" } }),
+      prisma.usuario.findMany({
+        where: whereUsuario,
+        include: { rol: true },
+        orderBy: { idUsuario: "asc" },
+      }),
       prisma.alumno.findMany({
         where: whereAlumno,
         include: { contactosEmergencia: { orderBy: { orden: "asc" } }, usuario: true },
         orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
       }),
-      prisma.habitacion.findMany({ orderBy: { numeroHabitacion: "asc" } }),
       prisma.habitacionAlumno.findMany({
         where: whereAlumno,
         orderBy: { fechaDesde: "asc" },
       }),
+    ]);
+
+    // Lote 3: Contratos, facturas, cobros, multas y reclamos
+    const [
+      contratosRaw,
+      facturasRaw,
+      pagosRaw,
+      multasRaw,
+      cambiosRaw,
+      reclamosRaw,
+    ] = await Promise.all([
       prisma.contrato.findMany({
         where: whereAlumno,
         orderBy: { fechaDesde: "asc" },
@@ -957,30 +999,6 @@ class AdministracionService {
         where: whereAlumno,
         orderBy: { fechaEmision: "desc" },
       }),
-      prisma.grupoDeLimpieza.findMany({ orderBy: { posicionInicial: "asc" } }),
-      prisma.grupoLimpiezaAlumno.findMany({
-        where: whereAlumno,
-      }),
-      prisma.ambiente.findMany({
-        include: { equipamiento: { orderBy: { idEquipamiento: "asc" } } },
-        orderBy: { idAmbiente: "asc" },
-      }),
-      prisma.grupoLimpiezaAmbiente.findMany({ orderBy: { fechaDesde: "asc" } }),
-      prisma.usuario.findMany({
-        where: whereUsuario,
-        include: { rol: true },
-        orderBy: { idUsuario: "asc" },
-      }),
-      prisma.tareaLimpieza.findMany({ orderBy: { numero: "asc" } }),
-      prisma.opcionCatalogo.findMany({
-        where: { catalogo: "carreras" },
-        orderBy: { id: "asc" },
-      }),
-      prisma.opcionCatalogo.findMany({
-        where: { catalogo: "vinculos" },
-        orderBy: { id: "asc" },
-      }),
-      prisma.parametroSistema.findMany(),
       esAlumno
         ? Promise.resolve([])
         : prisma.cambioAdministrativo.findMany({

@@ -1,6 +1,7 @@
 import { prisma } from "../config/database.js";
 import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
 import { administracionService } from "./administracion.service.js";
+import { FECHA_REFERENCIA } from "../config/constants.js";
 
 /**
  * Capa de Servicio: Contrato
@@ -101,9 +102,8 @@ class ContratoService {
     }
 
     if (porVencerDias) {
-      const now = new Date();
-      const fechaLimite = new Date();
-      fechaLimite.setDate(now.getDate() + porVencerDias);
+      const now = new Date(`${FECHA_REFERENCIA}T00:00:00.000Z`);
+      const fechaLimite = new Date(now.getTime() + porVencerDias * 24 * 60 * 60 * 1000);
 
       where.estado = "VIGENTE";
       where.fechaHasta = {

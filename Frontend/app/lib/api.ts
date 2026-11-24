@@ -16,6 +16,7 @@ import type {
 } from "./store";
 import type { NuevoAmbienteInput } from "./ambientes";
 import type { Parametros } from "./parametros";
+import { FECHA_REFERENCIA } from "./config";
 
 const API_BASE = "/api";
 
@@ -66,32 +67,57 @@ export async function apiCrearAlumno(input: NuevoAlumnoInput): Promise<string | 
   return res ? String(res.idAlumno) : null;
 }
 
+export async function apiCrearAccesoAlumno(idAlumno: string, correo: string): Promise<boolean> {
+  const idNumerico = idAlumno.replace(/\D/g, "");
+  const res = await request(`/alumnos/${idNumerico}/acceso`, {
+    method: "POST",
+    body: JSON.stringify({ correo }),
+  });
+  return res !== null;
+}
+
 export async function apiActualizarAlumno(idAlumno: string, input: Partial<NuevoAlumnoInput>): Promise<void> {
-  await request(`/alumnos/${idAlumno}`, {
+  const aluId = idAlumno.replace(/\D/g, "");
+  await request(`/alumnos/${aluId || idAlumno}`, {
     method: "PUT",
     body: JSON.stringify(input),
   });
 }
 
 export async function apiAsignarHabitacion(idAlumno: string, idHabitacion: string): Promise<void> {
-  await request(`/habitaciones/${idHabitacion}/asignar`, {
+  const habId = idHabitacion.replace(/\D/g, "");
+  const aluId = idAlumno.replace(/\D/g, "");
+  await request(`/habitaciones/${habId || idHabitacion}/asignar`, {
     method: "POST",
-    body: JSON.stringify({ idAlumno, fechaDesde: new Date().toISOString().slice(0, 10) }),
+    body: JSON.stringify({
+      idAlumno: aluId ? Number(aluId) : idAlumno,
+      fechaDesde: FECHA_REFERENCIA,
+    }),
   });
 }
 
 export async function apiLiberarHabitacion(idAlumno: string, idHabitacion?: string): Promise<void> {
-  const ruta = idHabitacion ? `/habitaciones/${idHabitacion}/desasignar` : `/habitaciones/1/desasignar`;
-  await request(ruta, {
+  if (!idHabitacion) return;
+  const habId = idHabitacion.replace(/\D/g, "");
+  const aluId = idAlumno.replace(/\D/g, "");
+  await request(`/habitaciones/${habId || idHabitacion}/desasignar`, {
     method: "PUT",
-    body: JSON.stringify({ idAlumno, fechaHasta: new Date().toISOString().slice(0, 10) }),
+    body: JSON.stringify({
+      idAlumno: aluId ? Number(aluId) : idAlumno,
+      fechaHasta: FECHA_REFERENCIA,
+    }),
   });
 }
 
 export async function apiCrearContrato(input: NuevoContratoInput): Promise<string | null> {
+  const aluId = input.idAlumno.replace(/\D/g, "");
   const res = await request<{ idContrato: number | string }>("/contratos", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      ...input,
+      idAlumno: aluId ? Number(aluId) : input.idAlumno,
+      fechaDesde: input.fechaDesde || FECHA_REFERENCIA,
+    }),
   });
   return res ? String(res.idContrato) : null;
 }
@@ -128,7 +154,8 @@ export async function apiGenerarFactura(idContrato: string, periodo: string, ree
 }
 
 export async function apiCancelarFactura(idFactura: string, motivo: string): Promise<void> {
-  await request(`/facturas/${idFactura}/cancelar`, {
+  const fId = idFactura.replace(/\D/g, "");
+  await request(`/facturas/${fId || idFactura}/cancelar`, {
     method: "POST",
     body: JSON.stringify({ motivo }),
   });
@@ -180,22 +207,29 @@ export async function apiCrearGrupoLimpieza(input: NuevoGrupoLimpiezaInput): Pro
 }
 
 export async function apiActualizarGrupoLimpieza(idGrupoLimpieza: string, nombreDelGrupo: string): Promise<void> {
-  await request(`/grupos-limpieza/${idGrupoLimpieza}`, {
+  const gId = idGrupoLimpieza.replace(/\D/g, "");
+  await request(`/grupos-limpieza/${gId || idGrupoLimpieza}`, {
     method: "PUT",
     body: JSON.stringify({ nombreDelGrupo }),
   });
 }
 
 export async function apiEliminarGrupoLimpieza(idGrupoLimpieza: string): Promise<void> {
-  await request(`/grupos-limpieza/${idGrupoLimpieza}`, {
+  const gId = idGrupoLimpieza.replace(/\D/g, "");
+  await request(`/grupos-limpieza/${gId || idGrupoLimpieza}`, {
     method: "DELETE",
   });
 }
 
 export async function apiGuardarAlumnosGrupo(idGrupoLimpieza: string, idAlumnos: string[]): Promise<void> {
-  await request(`/grupos-limpieza/${idGrupoLimpieza}/integrantes`, {
+  const gId = idGrupoLimpieza.replace(/\D/g, "");
+  const alumnosIds = idAlumnos.map((a) => {
+    const num = a.replace(/\D/g, "");
+    return num ? Number(num) : a;
+  });
+  await request(`/grupos-limpieza/${gId || idGrupoLimpieza}/integrantes`, {
     method: "PUT",
-    body: JSON.stringify({ idAlumnos }),
+    body: JSON.stringify({ idAlumnos: alumnosIds }),
   });
 }
 
@@ -211,7 +245,8 @@ export async function apiCrearReclamo(input: NuevoReclamoInput & { idAlumno: str
 }
 
 export async function apiResponderReclamo(idReclamo: string, mensaje: string, estado?: string): Promise<void> {
-  await request(`/reclamos/${idReclamo}/respuestas`, {
+  const rId = idReclamo.replace(/\D/g, "");
+  await request(`/reclamos/${rId || idReclamo}/respuestas`, {
     method: "POST",
     body: JSON.stringify({ mensaje, ...(estado ? { estado } : {}) }),
   });
@@ -275,7 +310,8 @@ export async function apiCrearHabitacion(input: NuevaHabitacionInput): Promise<s
 }
 
 export async function apiActualizarHabitacion(idHabitacion: string, input: Partial<NuevaHabitacionInput>): Promise<void> {
-  await request(`/habitaciones/${idHabitacion}`, {
+  const hId = idHabitacion.replace(/\D/g, "");
+  await request(`/habitaciones/${hId || idHabitacion}`, {
     method: "PUT",
     body: JSON.stringify(input),
   });
@@ -285,18 +321,25 @@ export async function apiActualizarHabitacion(idHabitacion: string, input: Parti
 // CONTRATOS
 // ==========================================
 export async function apiActualizarContrato(idContrato: string, input: Partial<NuevoContratoInput>): Promise<void> {
-  await request(`/contratos/${idContrato}`, {
+  const cId = idContrato.replace(/\D/g, "");
+  const payload = { ...input };
+  if (payload.idAlumno) {
+    const aluId = String(payload.idAlumno).replace(/\D/g, "");
+    payload.idAlumno = (aluId ? Number(aluId) : payload.idAlumno) as unknown as string;
+  }
+  await request(`/contratos/${cId || idContrato}`, {
     method: "PUT",
-    body: JSON.stringify(input),
+    body: JSON.stringify(payload),
   });
 }
 
 export async function apiCancelarContrato(idContrato: string, fecha: string, motivo: string): Promise<void> {
-  await request(`/contratos/${idContrato}/estado`, {
+  const cId = idContrato.replace(/\D/g, "");
+  await request(`/contratos/${cId || idContrato}/estado`, {
     method: "PATCH",
     body: JSON.stringify({
       estado: "CANCELADO",
-      fechaCancelacion: fecha,
+      fechaCancelacion: fecha || FECHA_REFERENCIA,
       motivoCancelacion: motivo,
     }),
   });
@@ -306,28 +349,32 @@ export async function apiCancelarContrato(idContrato: string, fecha: string, mot
 // MULTAS
 // ==========================================
 export async function apiActualizarMulta(input: EditarMultaInput): Promise<void> {
-  await request(`/multas/${input.idMulta}`, {
+  const mId = input.idMulta.replace(/\D/g, "");
+  await request(`/multas/${mId || input.idMulta}`, {
     method: "PUT",
     body: JSON.stringify(input),
   });
 }
 
 export async function apiProrrogarMulta(idMulta: string, motivo: string, nuevaFechaVence?: string): Promise<void> {
-  await request(`/multas/${idMulta}/prorrogar`, {
+  const mId = idMulta.replace(/\D/g, "");
+  await request(`/multas/${mId || idMulta}/prorrogar`, {
     method: "POST",
     body: JSON.stringify({ motivo, ...(nuevaFechaVence ? { nuevaFechaVence } : {}) }),
   });
 }
 
 export async function apiAnularMulta(idMulta: string, motivo = "Anulada por administración"): Promise<void> {
-  await request(`/multas/${idMulta}/anular`, {
+  const mId = idMulta.replace(/\D/g, "");
+  await request(`/multas/${mId || idMulta}/anular`, {
     method: "POST",
     body: JSON.stringify({ motivo }),
   });
 }
 
 export async function apiRegistrarPagoMulta(idMulta: string): Promise<void> {
-  await request(`/multas/${idMulta}/estado`, {
+  const mId = idMulta.replace(/\D/g, "");
+  await request(`/multas/${mId || idMulta}/estado`, {
     method: "PATCH",
     body: JSON.stringify({ estadoMulta: "PAGADA" }),
   });
@@ -350,16 +397,20 @@ export async function apiActualizarTareaLimpieza(numero: number, input: NuevaTar
   });
 }
 
-export async function apiAsignarAmbienteGrupo(idGrupoLimpieza: string, idAmbiente: string, fechaDesde: string): Promise<void> {
-  await request(`/grupos-limpieza/${idGrupoLimpieza}/ambientes`, {
+export async function apiAsignarAmbienteGrupo(idGrupoLimpieza: string, idAmbiente: string, fechaDesde?: string): Promise<void> {
+  const gId = idGrupoLimpieza.replace(/\D/g, "");
+  const aId = idAmbiente.replace(/\D/g, "");
+  await request(`/grupos-limpieza/${gId || idGrupoLimpieza}/ambientes`, {
     method: "POST",
-    body: JSON.stringify({ idAmbiente, fechaDesde }),
+    body: JSON.stringify({ idAmbiente: aId ? Number(aId) : idAmbiente, fechaDesde: fechaDesde || FECHA_REFERENCIA }),
   });
 }
 
-export async function apiLiberarAmbienteGrupo(idGrupoLimpieza: string, idAmbiente: string, fechaHasta: string): Promise<void> {
-  await request(`/grupos-limpieza/${idGrupoLimpieza}/ambientes/${idAmbiente}/finalizar`, {
+export async function apiLiberarAmbienteGrupo(idGrupoLimpieza: string, idAmbiente: string, fechaHasta?: string): Promise<void> {
+  const gId = idGrupoLimpieza.replace(/\D/g, "");
+  const aId = idAmbiente.replace(/\D/g, "");
+  await request(`/grupos-limpieza/${gId || idGrupoLimpieza}/ambientes/${aId || idAmbiente}/finalizar`, {
     method: "PUT",
-    body: JSON.stringify({ fechaHasta }),
+    body: JSON.stringify({ fechaHasta: fechaHasta || FECHA_REFERENCIA }),
   });
 }

@@ -1,0 +1,4 @@
+{
+  "tailwindCSS.experimental.configFile": "app/app.css",
+  "tailwindCSS.lint.cssConflict": "ignore"
+}

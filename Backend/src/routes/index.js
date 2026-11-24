@@ -12,6 +12,7 @@ import ambienteRoutes from "./ambiente.routes.js";
 import reclamoRoutes from "./reclamo.routes.js";
 import administracionRoutes from "./administracion.routes.js";
 import { administracionController } from "../controllers/administracion.controller.js";
+import { optionalAuthenticate } from "../middlewares/auth.middleware.js";
 
 const apiRouter = Router();
 
@@ -25,8 +26,8 @@ apiRouter.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-apiRouter.get("/estado", administracionController.getEstadoCompleto);
-apiRouter.get("/bootstrap", administracionController.getEstadoCompleto);
+apiRouter.get("/estado", optionalAuthenticate, administracionController.getEstadoCompleto);
+apiRouter.get("/bootstrap", optionalAuthenticate, administracionController.getEstadoCompleto);
 
 /**
  * Enrutadores por módulo del sistema
