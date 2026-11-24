@@ -1,5 +1,4 @@
 import { BrandMark } from "../brand";
-import { DATOS_KEY } from "../../lib/persistence";
 
 export function DataLoadingScreen() {
   return (
@@ -39,13 +38,7 @@ export function DataLoadingScreen() {
   );
 }
 
-export function DataErrorScreen({
-  error,
-  onErrorDismiss,
-}: {
-  error: string;
-  onErrorDismiss: (msg: string) => void;
-}) {
+export function DataErrorScreen({ error }: { error: string }) {
   return (
     <main className="mx-auto max-w-xl space-y-5 p-8">
       <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">
@@ -62,28 +55,6 @@ export function DataErrorScreen({
         >
           Reintentar
         </button>
-        <button
-          type="button"
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-          onClick={() => {
-            try {
-              const copia = localStorage.getItem(DATOS_KEY);
-              if (!copia) return;
-              const url = URL.createObjectURL(new Blob([copia], { type: "application/json" }));
-              const enlace = document.createElement("a");
-              enlace.href = url;
-              enlace.download = "residencia-respaldo.json";
-              enlace.click();
-              setTimeout(() => URL.revokeObjectURL(url), 1000);
-            } catch {
-              onErrorDismiss(
-                "El navegador no permite acceder a los datos guardados. Revisá sus permisos de almacenamiento."
-              );
-            }
-          }}
-        >
-          Descargar copia de los datos
-        </button>
       </div>
     </main>
   );
@@ -95,7 +66,7 @@ export function ErrorGuardadoBanner() {
       role="alert"
       className="relative z-50 border-b border-red-200 bg-red-50 p-4 text-center text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300"
     >
-      No se pudieron guardar los últimos cambios. No cierres esta pestaña hasta recuperar el almacenamiento disponible.
+      No se pudieron guardar los últimos cambios en el servidor. Recargá la página para comprobar el estado actual.
     </div>
   );
 }

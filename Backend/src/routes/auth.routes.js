@@ -1,7 +1,10 @@
 import { Router } from "express";
+import { z } from "zod";
 import { authController } from "../controllers/auth.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
+import { limitAuthRequests } from "../middlewares/authRateLimit.middleware.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import { idCoerce } from "../schemas/idHelper.js";
 import {
   registerSchema,
   loginSchema,
@@ -11,6 +14,8 @@ import {
 } from "../schemas/auth.schema.js";
 
 const router = Router();
+const limitLogin = limitAuthRequests(30, 15 * 60 * 1000);
+const limitAccountRequests = limitAuthRequests(15, 15 * 60 * 1000);
 
 /**
  * @route   POST /api/auth/register (y /api/auth/sign-up/email)
@@ -18,11 +23,13 @@ const router = Router();
  */
 router.post(
   "/register",
+  limitAccountRequests,
   validate({ body: registerSchema }),
   authController.register
 );
 router.post(
   "/sign-up/email",
+  limitAccountRequests,
   validate({ body: registerSchema }),
   authController.register
 );
@@ -33,11 +40,13 @@ router.post(
  */
 router.post(
   "/login",
+  limitLogin,
   validate({ body: loginSchema }),
   authController.login
 );
 router.post(
   "/sign-in/email",
+  limitLogin,
   validate({ body: loginSchema }),
   authController.login
 );
@@ -47,6 +56,9 @@ router.post(
  * @desc    Obtener datos del usuario actualmente autenticado
  */
 router.get("/me", authenticate, authController.me);
+router.get("/sesion", authenticate, (req, res) => {
+  res.json({ data: { rol: req.user.rol } });
+});
 
 /**
  * @route   PUT /api/auth/change-password
@@ -63,8 +75,8 @@ router.put(
  * @route   POST /api/auth/logout (y /api/auth/sign-out)
  * @desc    Cerrar sesión revocando la sesión activa
  */
-router.post("/logout", authController.logout);
-router.post("/sign-out", authController.logout);
+router.post("/logout", authenticate, authController.logout);
+router.post("/sign-out", authenticate, authController.logout);
 
 /**
  * @route   GET /api/auth/sesiones
@@ -76,7 +88,12 @@ router.get("/sesiones", authenticate, authController.listarSesiones);
  * @route   DELETE /api/auth/sesiones/:idSesion
  * @desc    Revocar una sesión activa del usuario
  */
-router.delete("/sesiones/:idSesion", authenticate, authController.revocarSesion);
+router.delete(
+  "/sesiones/:idSesion",
+  authenticate,
+  validate({ params: z.object({ idSesion: idCoerce }) }),
+  authController.revocarSesion
+);
 
 /**
  * @route   POST /api/auth/forget-password (y /api/auth/recuperar-clave)
@@ -84,11 +101,13 @@ router.delete("/sesiones/:idSesion", authenticate, authController.revocarSesion)
  */
 router.post(
   "/forget-password",
+  limitAccountRequests,
   validate({ body: forgetPasswordSchema }),
   authController.forgetPassword
 );
 router.post(
   "/recuperar-clave",
+  limitAccountRequests,
   validate({ body: forgetPasswordSchema }),
   authController.forgetPassword
 );
@@ -99,11 +118,13 @@ router.post(
  */
 router.post(
   "/reset-password",
+  limitAccountRequests,
   validate({ body: resetPasswordSchema }),
   authController.resetPassword
 );
 router.post(
   "/restablecer-clave",
+  limitAccountRequests,
   validate({ body: resetPasswordSchema }),
   authController.resetPassword
 );

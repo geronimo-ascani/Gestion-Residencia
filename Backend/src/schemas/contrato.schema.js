@@ -11,34 +11,31 @@ export const createContratoSchema = z
   .object({
     idAlumno: idCoerce,
     fechaDesde: z.coerce
-      .date({ invalid_type_error: "La fecha de inicio debe ser una fecha válida" })
+      .date({ error: "La fecha de inicio debe ser una fecha válida" })
       .default(() => new Date(FECHA_REFERENCIA)),
     fechaHasta: z.coerce.date({
-      required_error: "La fecha de finalización es obligatoria",
-      invalid_type_error: "La fecha de finalización debe ser una fecha válida",
+      error: "La fecha de finalización debe ser una fecha válida",
     }),
     estado: z
       .enum(ESTADOS_CONTRATO, {
-        errorMap: () => ({
-          message: `El estado debe ser uno de: ${ESTADOS_CONTRATO.join(", ")}`,
-        }),
+        error: `El estado debe ser uno de: ${ESTADOS_CONTRATO.join(", ")}`,
       })
       .default("VIGENTE"),
     fechaFirma: z.coerce.date().optional().nullable(),
     montoMensual: z.coerce
-      .number({ invalid_type_error: "El monto mensual debe ser un número" })
+      .number({ error: "El monto mensual debe ser un número" })
       .positive("El monto mensual debe ser positivo")
       .max(100000000, "El monto mensual no puede superar 100.000.000")
       .optional()
       .default(180000),
     depositoGarantia: z.coerce
-      .number({ invalid_type_error: "El depósito debe ser un número" })
+      .number({ error: "El depósito debe ser un número" })
       .min(0, "El depósito no puede ser negativo")
       .max(100000000, "El depósito no puede superar 100.000.000")
       .optional()
       .default(0),
     diaVencimientoPago: z.coerce
-      .number({ invalid_type_error: "El día de vencimiento debe ser un número" })
+      .number({ error: "El día de vencimiento debe ser un número" })
       .int("El día de vencimiento debe ser un entero")
       .min(1, "El día debe estar entre 1 y 31")
       .max(31, "El día debe estar entre 1 y 31")
@@ -57,31 +54,29 @@ export const createContratoSchema = z
 export const updateContratoSchema = z
   .object({
     fechaDesde: z.coerce
-      .date({ invalid_type_error: "La fecha de inicio debe ser una fecha válida" })
+      .date({ error: "La fecha de inicio debe ser una fecha válida" })
       .optional(),
     fechaHasta: z.coerce
-      .date({ invalid_type_error: "La fecha de finalización debe ser una fecha válida" })
+      .date({ error: "La fecha de finalización debe ser una fecha válida" })
       .optional(),
     estado: z
       .enum(ESTADOS_CONTRATO, {
-        errorMap: () => ({
-          message: `El estado debe ser uno de: ${ESTADOS_CONTRATO.join(", ")}`,
-        }),
+        error: `El estado debe ser uno de: ${ESTADOS_CONTRATO.join(", ")}`,
       })
       .optional(),
     fechaFirma: z.coerce.date().optional().nullable(),
     montoMensual: z.coerce
-      .number({ invalid_type_error: "El monto mensual debe ser un número" })
+      .number({ error: "El monto mensual debe ser un número" })
       .positive("El monto mensual debe ser positivo")
       .max(100000000, "El monto mensual no puede superar 100.000.000")
       .optional(),
     depositoGarantia: z.coerce
-      .number({ invalid_type_error: "El depósito debe ser un número" })
+      .number({ error: "El depósito debe ser un número" })
       .min(0, "El depósito no puede ser negativo")
       .max(100000000, "El depósito no puede superar 100.000.000")
       .optional(),
     diaVencimientoPago: z.coerce
-      .number({ invalid_type_error: "El día de vencimiento debe ser un número" })
+      .number({ error: "El día de vencimiento debe ser un número" })
       .int("El día de vencimiento debe ser un entero")
       .min(1, "El día debe estar entre 1 y 31")
       .max(31, "El día debe estar entre 1 y 31")
@@ -111,9 +106,7 @@ export const updateContratoSchema = z
  */
 export const cambiarEstadoContratoSchema = z.object({
   estado: z.enum(ESTADOS_CONTRATO, {
-    errorMap: () => ({
-      message: `El estado debe ser uno de: ${ESTADOS_CONTRATO.join(", ")}`,
-    }),
+    error: `El estado debe ser uno de: ${ESTADOS_CONTRATO.join(", ")}`,
   }),
   fechaCancelacion: z.coerce.date().optional().nullable(),
   motivoCancelacion: z.string().trim().max(500).optional().nullable(),

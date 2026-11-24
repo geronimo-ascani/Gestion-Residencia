@@ -1,5 +1,5 @@
 import { prisma } from "../config/database.js";
-import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
+import { NotFoundError, ConflictError, BadRequestError, ForbiddenError } from "../utils/customErrors.js";
 import { administracionService } from "./administracion.service.js";
 
 /**
@@ -88,9 +88,9 @@ class ReclamoService {
       throw new BadRequestError("Solo un alumno con estado activo puede crear una presentación.");
     }
 
-    const autorNombre = data.autor?.trim() || usuarioSesion?.nombre || `${alumno.nombre} ${alumno.apellido}`;
-    const autorId = data.idAutor ? Number(data.idAutor) : usuarioSesion?.idUsuario || null;
-    const autorRol = usuarioSesion?.rol || "alumno";
+    const autorNombre = usuarioSesion?.nombre || `${alumno.nombre} ${alumno.apellido}`;
+    const autorId = usuarioSesion?.idUsuario ?? null;
+    const autorRol = usuarioSesion?.rol.toLowerCase() ?? "alumno";
 
     const resultado = await prisma.$transaction(async (tx) => {
       const nuevoReclamo = await tx.reclamo.create({
@@ -341,7 +341,10 @@ class ReclamoService {
       throw new ConflictError("Esta presentación ya está cerrada y no admite cambios.");
     }
 
-    const rol = data.rol || usuarioSesion?.rol || "administrador";
+    const rol = usuarioSesion?.rol.toLowerCase();
+    if (rol !== "alumno" && rol !== "administrador") {
+      throw new ForbiddenError("No tenés permiso para responder esta presentación.");
+    }
 
     // Validar permisos según el rol
     if (data.estado !== undefined && data.estado !== reclamo.estado) {
@@ -357,8 +360,8 @@ class ReclamoService {
     const cambioEstado = Boolean(data.estado && data.estado !== reclamo.estado);
     const tipoSeguimiento = cambioEstado ? "estado" : "comentario";
 
-    const autorNombre = data.autor?.trim() || usuarioSesion?.nombre || (rol === "alumno" ? "Alumno" : "Administración");
-    const autorId = data.idAutor ? Number(data.idAutor) : usuarioSesion?.idUsuario || null;
+    const autorNombre = usuarioSesion?.nombre || (rol === "alumno" ? "Alumno" : "Administración");
+    const autorId = usuarioSesion?.idUsuario ?? null;
 
     const resultado = await prisma.$transaction(async (tx) => {
       // 1. Agregar hito al historial

@@ -8,109 +8,82 @@ import {
   NotFoundError,
 } from "../utils/customErrors.js";
 
-/**
- * Middleware de Autenticación.
- * Extrae y valida el token Bearer JWT desde los headers de la petición.
- * Carga el usuario autenticado y su rol en `req.user`.
- */
+import { hashToken, sessionCookie } from "../utils/session.js";
+
+// La API acepta Bearer para clientes externos y una cookie HttpOnly para el navegador.
 export const authenticate = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new UnauthorizedError("Token de autenticación no proporcionado. Debe usar 'Bearer <token>'");
+    const authorization = req.get("Authorization");
+    const cookie = req.get("Cookie")?.split(";")
+      .map((value) => value.trim())
+      .find((value) => value.startsWith(`${sessionCookie}=`));
+    const token = authorization
+      ? /^Bearer ([^\s]+)$/i.exec(authorization)?.[1]
+      : cookie?.slice(sessionCookie.length + 1);
+
+    if (!token) throw new UnauthorizedError("Se requiere una sesión válida.");
+    if (!authorization && !["GET", "HEAD", "OPTIONS"].includes(req.method) &&
+        req.get("X-Residencia-Request") !== "browser") {
+      throw new ForbiddenError("Solicitud de navegador no autorizada.");
     }
 
-    const token = authHeader.split(" ")[1];
     let payload;
-
     try {
-      payload = jwt.verify(token, env.JWT_SECRET);
-    } catch (jwtError) {
-      if (jwtError.name === "TokenExpiredError") {
-        throw new UnauthorizedError("El token de sesión ha expirado. Por favor inicia sesión nuevamente.");
-      }
-      throw new UnauthorizedError("Token de autenticación inválido.");
+      payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] });
+    } catch {
+      throw new UnauthorizedError("La sesión es inválida o ha expirado.");
+    }
+    if (!Number.isSafeInteger(payload?.idUsuario) || payload.idUsuario <= 0) {
+      throw new UnauthorizedError("La sesión es inválida.");
     }
 
-    // Verificar que el usuario continúe existiendo en la base de datos
-    const usuario = await prisma.usuario.findUnique({
-      where: { idUsuario: payload.idUsuario },
-      include: {
-        rol: true,
-        alumno: {
+    const sesion = await prisma.sesion.findUnique({
+      where: { tokenHash: hashToken(token) },
+      select: {
+        idSesion: true,
+        idUsuario: true,
+        expiraEn: true,
+        revocadaEn: true,
+        usuario: {
           select: {
-            idAlumno: true,
+            correo: true,
             nombre: true,
             apellido: true,
+            idRol: true,
             estado: true,
+            gestionaAdministradores: true,
+            rol: { select: { rol: true } },
+            alumno: { select: { idAlumno: true, nombre: true, apellido: true, estado: true } },
           },
         },
       },
     });
-
-    if (!usuario) {
-      throw new UnauthorizedError("El usuario asociado al token ya no existe en el sistema.");
+    if (!sesion || sesion.idUsuario !== payload.idUsuario || sesion.revocadaEn ||
+        sesion.expiraEn <= new Date() || sesion.usuario.estado !== "activo") {
+      throw new UnauthorizedError("La sesión es inválida o ha expirado.");
     }
 
-    // Inyectar en req.user
+    const usuario = sesion.usuario;
+    const cuentaEsperada = req.get("X-Residencia-Account");
+    if (cuentaEsperada && cuentaEsperada !== String(sesion.idUsuario)) {
+      throw new UnauthorizedError("La cuenta de esta pestaña cambió. Volvé a iniciar sesión.");
+    }
+    const rol = usuario.rol.rol.toUpperCase();
+    if (rol !== "ADMINISTRADOR" && (rol !== "ALUMNO" || !usuario.alumno ||
+        usuario.alumno.estado !== "activo")) {
+      throw new ForbiddenError("La cuenta no está habilitada para acceder.");
+    }
     req.user = {
-      idUsuario: usuario.idUsuario,
+      idUsuario: sesion.idUsuario,
+      idSesion: sesion.idSesion,
       correo: usuario.correo,
+      nombre: [usuario.alumno?.nombre ?? usuario.nombre, usuario.alumno?.apellido ?? usuario.apellido]
+        .filter(Boolean).join(" "),
       idRol: usuario.idRol,
-      rol: usuario.rol.rol,
+      rol,
       gestionaAdministradores: usuario.gestionaAdministradores,
       alumno: usuario.alumno,
     };
-
-    return next();
-  } catch (error) {
-    return next(error);
-  }
-};
-
-/**
- * Middleware de Autenticación Opcional.
- * Si se envía un token válido, inyecta req.user. Si no, continúa sin bloquear.
- */
-export const optionalAuthenticate = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return next();
-    }
-
-    const token = authHeader.split(" ")[1];
-    try {
-      const payload = jwt.verify(token, env.JWT_SECRET);
-      const usuario = await prisma.usuario.findUnique({
-        where: { idUsuario: payload.idUsuario },
-        include: {
-          rol: true,
-          alumno: {
-            select: {
-              idAlumno: true,
-              nombre: true,
-              apellido: true,
-              estado: true,
-            },
-          },
-        },
-      });
-
-      if (usuario) {
-        req.user = {
-          idUsuario: usuario.idUsuario,
-          correo: usuario.correo,
-          idRol: usuario.idRol,
-          rol: usuario.rol.rol,
-          gestionaAdministradores: usuario.gestionaAdministradores,
-          alumno: usuario.alumno,
-        };
-      }
-    } catch {
-      // Token inválido o expirado en modo opcional no interrumpe
-    }
-
     return next();
   } catch (error) {
     return next(error);
@@ -148,11 +121,7 @@ export const authorize = (...rolesPermitidos) => {
  * @param {Function} [extractor] - Función opcional (req) => idAlumno
  */
 export const requireOwnershipOrAdmin = (extractor) => {
-  return async (req, res, next) => {
-    if (!req.user) {
-      await new Promise((resolve) => optionalAuthenticate(req, res, resolve));
-    }
-
+  return (req, res, next) => {
     if (!req.user) {
       return next(
         new UnauthorizedError("Se requiere iniciar sesión para acceder a este recurso.")
@@ -174,14 +143,15 @@ export const requireOwnershipOrAdmin = (extractor) => {
         targetId = req.params.idAlumno || req.params.id || req.query.idAlumno || req.body?.idAlumno;
       }
 
-      if (targetId && Number(targetId) !== Number(alumnoSesion)) {
+      if (!alumnoSesion || (targetId != null && Number(targetId) !== alumnoSesion) ||
+          (targetId == null && req.method !== "GET" && req.method !== "HEAD")) {
         return next(
           new ForbiddenError("Acceso denegado: solo puedes consultar o gestionar tus propios datos.")
         );
       }
 
       // Si no se pasó ID específico en una consulta GET, auto-filtrar por su propio ID
-      if (!targetId && req.method === "GET") {
+      if (targetId == null) {
         req.query.idAlumno = alumnoSesion;
       }
 
@@ -197,11 +167,7 @@ export const requireOwnershipOrAdmin = (extractor) => {
  * Si el usuario es un alumno (o no es administrador), rechaza con 403 Forbidden.
  * Si no está autenticado, rechaza con 401 Unauthorized.
  */
-export const requireAdmin = async (req, res, next) => {
-  if (!req.user) {
-    await new Promise((resolve) => optionalAuthenticate(req, res, resolve));
-  }
-
+export const requireAdmin = (req, res, next) => {
   if (!req.user) {
     return next(
       new UnauthorizedError("Se requiere iniciar sesión como administrador para realizar esta acción.")
@@ -233,10 +199,6 @@ export const requireEntityOwnershipOrAdmin = (modelName, options = {}) => {
 
   return async (req, res, next) => {
     try {
-      if (!req.user) {
-        await new Promise((resolve) => optionalAuthenticate(req, res, resolve));
-      }
-
       if (!req.user) {
         return next(
           new UnauthorizedError("Se requiere iniciar sesión para acceder a este recurso.")

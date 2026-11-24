@@ -25,26 +25,26 @@ export const createReclamoSchema = z.object({
   idAlumno: idCoerce,
   tipo: z
     .enum(["reclamo", "solicitud", "problema"], {
-      errorMap: () => ({ message: "Elegí el tipo de presentación: reclamo, solicitud o problema" }),
+      error: "Elegí el tipo de presentación: reclamo, solicitud o problema",
     })
     .default("reclamo"),
   categoria: z
     .enum(["mantenimiento", "limpieza", "convivencia", "administracion", "otro"], {
-      errorMap: () => ({ message: "Elegí una categoría válida" }),
+      error: "Elegí una categoría válida",
     })
     .default("mantenimiento"),
   asunto: z
-    .string({ required_error: "El asunto es obligatorio" })
+    .string({ error: "El asunto es obligatorio" })
     .trim()
     .min(5, "El asunto debe tener entre 5 y 100 caracteres")
     .max(100, "El asunto no puede superar los 100 caracteres"),
   descripcion: z
-    .string({ required_error: "La descripción es obligatoria" })
+    .string({ error: "La descripción es obligatoria" })
     .trim()
     .min(20, "La descripción debe tener entre 20 y 3000 caracteres")
     .max(3000, "La descripción no puede superar los 3000 caracteres"),
   ubicacion: z
-    .string({ required_error: "La ubicación es obligatoria" })
+    .string({ error: "La ubicación es obligatoria" })
     .trim()
     .min(2, "Elegí una ubicación válida"),
   detalleUbicacion: z
@@ -55,11 +55,9 @@ export const createReclamoSchema = z.object({
     .default(""),
   prioridad: z
     .enum(["normal", "alta"], {
-      errorMap: () => ({ message: "La prioridad debe ser normal o alta" }),
+      error: "La prioridad debe ser normal o alta",
     })
     .default("normal"),
-  autor: z.string().trim().optional(),
-  idAutor: idCoerce.optional(),
 });
 
 /**
@@ -67,20 +65,13 @@ export const createReclamoSchema = z.object({
  */
 export const responderReclamoSchema = z.object({
   mensaje: z
-    .string({ required_error: "El mensaje es obligatorio" })
+    .string({ error: "El mensaje es obligatorio" })
     .trim()
     .min(5, "Escribí un mensaje de entre 5 y 2000 caracteres")
     .max(2000, "El mensaje no puede superar los 2000 caracteres"),
   estado: z
     .enum(["pendiente", "en_revision", "resuelto", "rechazado", "cancelado"])
     .optional(),
-  autor: z.string().trim().optional(),
-  idAutor: idCoerce.optional(),
-  rol: z
-    .enum(["administrador", "alumno"], {
-      errorMap: () => ({ message: "El rol debe ser 'administrador' o 'alumno'" }),
-    })
-    .default("administrador"),
 });
 
 /**

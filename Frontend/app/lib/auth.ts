@@ -1,7 +1,5 @@
-import { cargarDatosGuardados, DATOS_KEY } from "./persistence";
-import { claveInicial, hashClave } from "./credenciales";
-import { estadoAcceso } from "./administracion";
-import { guardarSesion } from "./session";
+import { limpiarDatosDeSesionAnteriores, notificarCambioDeSesion } from "./session";
+
 export interface AuthResult {
   error?: string;
   rol?: "administrador" | "alumno";
@@ -11,12 +9,6 @@ interface ApiErrorBody {
   message?: string;
 }
 
-/**
- * Thin wrapper around the auth HTTP API.
- *
- * Paths follow the Better Auth conventions (`/api/auth/...`), so wiring the
- * backend later only requires mounting the handler — no changes here.
- */
 async function post(
   path: string,
   body: unknown,
@@ -26,7 +18,7 @@ async function post(
     const response = await fetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
+      credentials: "same-origin",
       body: JSON.stringify(body),
     });
 
@@ -52,60 +44,23 @@ export async function signInWithEmail(credentials: SignInCredentials): Promise<A
   try {
     const res = await fetch("/api/auth/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        email: credentials.email,
-        password: credentials.password,
-        remember: credentials.remember,
-      }),
+      headers: { "Content-Type": "application/json", "X-Residencia-Request": "browser" },
+      credentials: "same-origin",
+      body: JSON.stringify(credentials),
     });
 
-    if (res.ok) {
-      const json = await res.json();
-      if (json.data?.usuario) {
-        const u = json.data.usuario;
-        const rolNormalizado: "administrador" | "alumno" =
-          u.rol?.toLowerCase() === "administrador" ? "administrador" : "alumno";
-        guardarSesion({
-          idUsuario: String(u.idUsuario),
-          idAlumno: u.idAlumno ? String(u.idAlumno) : undefined,
-          nombre: u.nombre || u.correo,
-          apellido: u.apellido || "",
-          documento: u.documento || "",
-          correo: u.correo,
-          rol: rolNormalizado,
-          estado: u.estado || "activo",
-          gestionaAdministradores: Boolean(u.gestionaAdministradores),
-        }, credentials.remember);
-        if (json.data.token) {
-          try {
-            sessionStorage.setItem("residencia_token", json.data.token);
-            if (credentials.remember) localStorage.setItem("residencia_token", json.data.token);
-          } catch {}
-        }
-        return {};
-      }
-    } else {
-      const errorJson = await res.json().catch(() => null);
-      if (errorJson?.message) {
-        return { error: errorJson.message };
-      }
-    }
-  } catch {
-    // Si no responde el servidor, fallback de respaldo local
-  }
+    const json = await res.json().catch(() => null);
+    if (!res.ok) return { error: json?.message ?? "No se pudo iniciar sesión." };
 
-  try {
-    const datos = cargarDatosGuardados(localStorage.getItem(DATOS_KEY));
-    const u = datos.usuarios.find((u) => u.correo.toLowerCase() === credentials.email.trim().toLowerCase());
-    if (!u || u.estado !== "activo") return { error: "Credenciales incorrectas o cuenta sin acceso habilitado." };
-    const esperado = u.passwordHash ?? await hashClave(claveInicial(u.apellido ?? "", u.documento ?? ""));
-    if (await hashClave(credentials.password) !== esperado) return { error: "El correo o la contraseña no son correctos." };
-    guardarSesion(u, credentials.remember);
-    return {};
+    const rol = json?.data?.usuario?.rol?.toLowerCase();
+    if (rol !== "administrador" && rol !== "alumno") {
+      return { error: "No se pudo verificar la cuenta." };
+    }
+    limpiarDatosDeSesionAnteriores();
+    notificarCambioDeSesion();
+    return { rol };
   } catch {
-    return { error: "No se pudo iniciar sesión ni leer los datos guardados. Comprobá que el navegador permita guardar datos o contactá a administración." };
+    return { error: "No se pudo conectar con el servicio. Volvé a intentar." };
   }
 }
 

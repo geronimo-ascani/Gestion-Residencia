@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { administracionController } from "../controllers/administracion.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
-import { optionalAuthenticate, requireAdmin } from "../middlewares/auth.middleware.js";
+import { requireAdmin } from "../middlewares/auth.middleware.js";
+import { z } from "zod";
+import { idCoerce } from "../schemas/idHelper.js";
 import {
   updateParametrosSchema,
   crearCambioAdministrativoSchema,
@@ -16,13 +18,14 @@ import {
 } from "../schemas/administracion.schema.js";
 
 const router = Router();
+const validarId = validate({ params: z.object({ id: idCoerce }) });
 
 /**
  * ==========================================
  * PARÁMETROS DEL SISTEMA
  * ==========================================
  */
-router.get("/parametros", administracionController.getParametros);
+router.get("/parametros", requireAdmin, administracionController.getParametros);
 router.put(
   "/parametros",
   requireAdmin,
@@ -61,7 +64,6 @@ router.post(
  */
 router.get(
   "/notificaciones",
-  optionalAuthenticate,
   validate({ query: queryNotificacionesSchema }),
   administracionController.getNotificaciones
 );
@@ -73,13 +75,11 @@ router.post(
 );
 router.patch(
   "/notificaciones/:id/leida",
-  optionalAuthenticate,
   validate({ params: notificacionIdParamSchema }),
   administracionController.marcarLeida
 );
 router.post(
   "/notificaciones/marcar-todas-leidas",
-  optionalAuthenticate,
   administracionController.marcarTodasLeidas
 );
 
@@ -89,7 +89,7 @@ router.post(
  * ==========================================
  */
 router.get("/administradores", requireAdmin, administracionController.getAdministradores);
-router.get("/administradores/:id", requireAdmin, administracionController.getAdministradorById);
+router.get("/administradores/:id", requireAdmin, validarId, administracionController.getAdministradorById);
 router.post(
   "/administradores",
   requireAdmin,
@@ -99,12 +99,14 @@ router.post(
 router.put(
   "/administradores/:id",
   requireAdmin,
+  validarId,
   validate({ body: updateAdministradorSchema }),
   administracionController.updateAdministrador
 );
 router.patch(
   "/usuarios/:id/estado",
   requireAdmin,
+  validarId,
   validate({ body: cambiarEstadoCuentaSchema }),
   administracionController.cambiarEstadoCuenta
 );
@@ -114,7 +116,7 @@ router.patch(
  * CATÁLOGOS DINÁMICOS (CARRERAS Y VÍNCULOS)
  * ==========================================
  */
-router.get("/catalogos/:tipo", administracionController.getCatalogo);
+router.get("/catalogos/:tipo", requireAdmin, administracionController.getCatalogo);
 router.post(
   "/catalogos/:tipo",
   requireAdmin,
@@ -140,7 +142,7 @@ router.get("/dashboard/resumen", requireAdmin, administracionController.getDashb
  * ESTADO COMPLETO DEL SISTEMA
  * ==========================================
  */
-router.get("/estado", optionalAuthenticate, administracionController.getEstadoCompleto);
-router.get("/bootstrap", optionalAuthenticate, administracionController.getEstadoCompleto);
+router.get("/estado", administracionController.getEstadoCompleto);
+router.get("/bootstrap", administracionController.getEstadoCompleto);
 
 export default router;

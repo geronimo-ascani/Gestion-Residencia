@@ -12,7 +12,7 @@ import ambienteRoutes from "./ambiente.routes.js";
 import reclamoRoutes from "./reclamo.routes.js";
 import administracionRoutes from "./administracion.routes.js";
 import { administracionController } from "../controllers/administracion.controller.js";
-import { optionalAuthenticate } from "../middlewares/auth.middleware.js";
+import { authenticate, requireAdmin } from "../middlewares/auth.middleware.js";
 
 const apiRouter = Router();
 
@@ -26,15 +26,17 @@ apiRouter.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-apiRouter.get("/estado", optionalAuthenticate, administracionController.getEstadoCompleto);
-apiRouter.get("/bootstrap", optionalAuthenticate, administracionController.getEstadoCompleto);
+apiRouter.use("/auth", authRoutes);
+apiRouter.use(authenticate);
+
+apiRouter.get("/estado", administracionController.getEstadoCompleto);
+apiRouter.get("/bootstrap", administracionController.getEstadoCompleto);
 
 /**
  * Enrutadores por módulo del sistema
  */
-apiRouter.use("/auth", authRoutes);
 apiRouter.use("/alumnos", alumnoRoutes);
-apiRouter.use("/habitaciones", habitacionRoutes);
+apiRouter.use("/habitaciones", requireAdmin, habitacionRoutes);
 apiRouter.use("/contratos", contratoRoutes);
 apiRouter.use("/facturas", facturaRoutes);
 apiRouter.use("/facturacion", facturaRoutes);
@@ -42,10 +44,10 @@ apiRouter.use("/pagos", pagoRoutes);
 apiRouter.use("/cobros", pagoRoutes);
 apiRouter.use("/cuotas", cuotaRoutes);
 apiRouter.use("/multas", multaRoutes);
-apiRouter.use("/grupos-limpieza", grupoLimpiezaRoutes);
-apiRouter.use("/limpieza", grupoLimpiezaRoutes);
-apiRouter.use("/tareas-limpieza", grupoLimpiezaRoutes);
-apiRouter.use("/ambientes", ambienteRoutes);
+apiRouter.use("/grupos-limpieza", requireAdmin, grupoLimpiezaRoutes);
+apiRouter.use("/limpieza", requireAdmin, grupoLimpiezaRoutes);
+apiRouter.use("/tareas-limpieza", requireAdmin, grupoLimpiezaRoutes);
+apiRouter.use("/ambientes", requireAdmin, ambienteRoutes);
 apiRouter.use("/reclamos", reclamoRoutes);
 apiRouter.use("/administracion", administracionRoutes);
 apiRouter.use("/", administracionRoutes);

@@ -7,7 +7,7 @@ import { idCoerce } from "./idHelper.js";
 export const generarFacturaSchema = z.object({
   idContrato: idCoerce,
   periodo: z
-    .string({ required_error: "El período es obligatorio" })
+    .string({ error: "El período es obligatorio" })
     .trim()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "El período debe tener el formato YYYY-MM"),
 });
@@ -17,7 +17,7 @@ export const generarFacturaSchema = z.object({
  */
 export const generarFacturasMesSchema = z.object({
   periodo: z
-    .string({ required_error: "El período es obligatorio" })
+    .string({ error: "El período es obligatorio" })
     .trim()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "El período debe tener el formato YYYY-MM"),
 });
@@ -60,20 +60,20 @@ export const emitirReemplazoSchema = z.object({
   idFacturaOrigen: idCoerce,
   idContrato: idCoerce,
   periodo: z
-    .string({ required_error: "El período es obligatorio" })
+    .string({ error: "El período es obligatorio" })
     .trim()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "El período debe tener el formato YYYY-MM"),
   concepto: z
-    .string({ required_error: "El concepto es obligatorio" })
+    .string({ error: "El concepto es obligatorio" })
     .trim()
     .min(1, "El concepto no puede estar vacío")
     .max(200, "El concepto no puede exceder 200 caracteres"),
   monto: z.coerce
-    .number({ required_error: "El monto es obligatorio" })
+    .number({ error: "El monto es obligatorio" })
     .positive("El importe debe ser mayor a cero")
     .max(100000000, "El importe no puede superar 100.000.000"),
   fechaVence: z
-    .string({ required_error: "La fecha de vencimiento es obligatoria" })
+    .string({ error: "La fecha de vencimiento es obligatoria" })
     .trim()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha de vencimiento inválido (YYYY-MM-DD)"),
 });

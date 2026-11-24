@@ -31,8 +31,8 @@ router.post(
  */
 router.get(
   "/",
-  requireOwnershipOrAdmin(),
   validate({ query: queryAlumnoSchema }),
+  requireOwnershipOrAdmin(),
   alumnoController.getAll
 );
 

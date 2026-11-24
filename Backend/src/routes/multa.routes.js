@@ -31,8 +31,8 @@ router.post(
  */
 router.get(
   "/",
-  requireOwnershipOrAdmin(),
   validate({ query: queryMultaSchema }),
+  requireOwnershipOrAdmin(),
   multaController.getAll
 );
 

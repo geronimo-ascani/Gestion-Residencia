@@ -1,55 +1,27 @@
 import http from "node:http";
-import jwt from "jsonwebtoken";
 import app from "../app.js";
 import { prisma } from "../config/database.js";
-import { env } from "../config/env.js";
+import { iniciarSesionDePrueba } from "./sesion-prueba.mjs";
 
 async function main() {
   const server = http.createServer(app);
-  await new Promise((resolve) => server.listen(3097, resolve));
-  const baseUrl = "http://localhost:3097/api";
+  await new Promise((resolve) => server.listen(3097, "127.0.0.1", resolve));
+  const baseUrl = "http://127.0.0.1:3097/api";
 
   console.log("=== INICIANDO AUDITORÍA Y TESTS DE SEGURIDAD RBAC ===");
 
   try {
-    // 1. Obtener dos alumnos y un administrador
-    const alumnos = await prisma.usuario.findMany({
-      where: { idAlumno: { not: null } },
-      include: { alumno: true },
-      take: 2,
-    });
-
-    const admin = await prisma.usuario.findFirst({
-      where: { rol: { rol: "ADMINISTRADOR" } },
-    });
-
-    if (alumnos.length < 2 || !admin) {
-      throw new Error("Se requieren al menos 2 alumnos y 1 admin en la BD para probar aislamiento.");
+    const [sesionA, sesionB, sesionAdmin] = await Promise.all([
+      iniciarSesionDePrueba(baseUrl, "ALUMNO_A", "ALUMNO"),
+      iniciarSesionDePrueba(baseUrl, "ALUMNO_B", "ALUMNO"),
+      iniciarSesionDePrueba(baseUrl, "ADMIN", "ADMINISTRADOR"),
+    ]);
+    const { token: tokenAlumnoA, usuario: { alumno: alumnoA } } = sesionA;
+    const { token: tokenAlumnoB, usuario: { alumno: alumnoB } } = sesionB;
+    const { token: tokenAdmin } = sesionAdmin;
+    if (alumnoA.idAlumno === alumnoB.idAlumno) {
+      throw new Error("La prueba requiere dos residentes distintos.");
     }
-
-    const [alumnoA, alumnoB] = alumnos;
-
-    const tokenAlumnoA = jwt.sign(
-      { idUsuario: alumnoA.idUsuario, rol: "ALUMNO", idAlumno: alumnoA.idAlumno },
-      env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    const tokenAlumnoB = jwt.sign(
-      { idUsuario: alumnoB.idUsuario, rol: "ALUMNO", idAlumno: alumnoB.idAlumno },
-      env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    const tokenAdmin = jwt.sign(
-      { idUsuario: admin.idUsuario, rol: "ADMINISTRADOR" },
-      env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    console.log(`Alumno A: ${alumnoA.alumno.nombre} ${alumnoA.alumno.apellido} (ID: ${alumnoA.idAlumno})`);
-    console.log(`Alumno B: ${alumnoB.alumno.nombre} ${alumnoB.alumno.apellido} (ID: ${alumnoB.idAlumno})`);
-    console.log(`Admin: ID ${admin.idUsuario}\n`);
 
     // Helper para verificar código esperado
     async function assertEndpoint(nombre, url, options, expectedStatus) {

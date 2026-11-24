@@ -21,7 +21,7 @@ export const TIPOS_AMBIENTE_VALIDOS = [
 export const createGrupoSchema = z
   .object({
     nombreDelGrupo: z
-      .string({ required_error: "El nombre del grupo es obligatorio" })
+      .string({ error: "El nombre del grupo es obligatorio" })
       .trim()
       .min(2, "El nombre del grupo debe tener al menos 2 caracteres")
       .max(100, "El nombre del grupo no puede exceder 100 caracteres"),
@@ -59,7 +59,7 @@ export const agregarAlumnoGrupoSchema = z.object({
 
 export const guardarIntegrantesSchema = z.object({
   idAlumnos: z.array(idCoerce, {
-    required_error: "Debe proporcionar la lista de IDs de alumnos integrantes",
+    error: "Debe proporcionar la lista de IDs de alumnos integrantes",
   }),
 });
 
@@ -72,10 +72,10 @@ export const asignarAmbienteGrupoSchema = z
   .object({
     idAmbiente: idCoerce,
     fechaDesde: z.coerce
-      .date({ invalid_type_error: "La fecha de inicio debe ser válida" })
+      .date({ error: "La fecha de inicio debe ser válida" })
       .default(() => new Date(FECHA_REFERENCIA)),
     fechaHasta: z.coerce
-      .date({ invalid_type_error: "La fecha de finalización debe ser válida" })
+      .date({ error: "La fecha de finalización debe ser válida" })
       .optional()
       .nullable(),
   })
@@ -89,7 +89,7 @@ export const asignarAmbienteGrupoSchema = z
 
 export const finalizarAsignacionAmbienteSchema = z.object({
   fechaHasta: z.coerce
-    .date({ invalid_type_error: "La fecha de cierre debe ser válida" })
+    .date({ error: "La fecha de cierre debe ser válida" })
     .default(() => new Date(FECHA_REFERENCIA)),
 });
 
@@ -108,7 +108,7 @@ export const createTareaLimpiezaSchema = z
   .object({
     numero: z.coerce.number().int().positive().optional(),
     nombre: z
-      .string({ required_error: "El nombre de la tarea es obligatorio" })
+      .string({ error: "El nombre de la tarea es obligatorio" })
       .trim()
       .min(2, "El nombre de la tarea debe tener al menos 2 caracteres")
       .max(100, "El nombre de la tarea no puede exceder 100 caracteres"),
@@ -146,7 +146,7 @@ export const updateTareaLimpiezaSchema = z
 
 export const tareaNumeroParamSchema = z.object({
   numero: z.coerce
-    .number({ invalid_type_error: "El número de tarea debe ser un entero positivo" })
+    .number({ error: "El número de tarea debe ser un entero positivo" })
     .int()
     .positive(),
 });
@@ -159,11 +159,11 @@ export const tareaNumeroParamSchema = z.object({
 
 export const equipamientoItemSchema = z.object({
   nombre: z
-    .string({ required_error: "El nombre del equipamiento u objeto es obligatorio" })
+    .string({ error: "El nombre del equipamiento u objeto es obligatorio" })
     .trim()
     .min(1, "El nombre no puede estar vacío"),
   cantidad: z.coerce
-    .number({ required_error: "La cantidad es obligatoria" })
+    .number({ error: "La cantidad es obligatoria" })
     .int("La cantidad debe ser un número entero")
     .positive("La cantidad debe ser un entero positivo"),
 });
@@ -174,7 +174,7 @@ export const createAmbienteSchema = z
     nombre: z.string().trim().min(2).max(100).optional(),
     tipo: z
       .enum(["Sala de estudio", "Baño", "Cocina", "Duchas", "Comedor", "Lavadero", "Otro"], {
-        errorMap: () => ({ message: "Seleccioná un tipo de ambiente válido" }),
+        error: "Seleccioná un tipo de ambiente válido",
       })
       .optional()
       .nullable(),

@@ -2,7 +2,6 @@ import { catalogoInicial } from "./catalogos";
 import { PARAMETROS_INICIALES } from "./parametros";
 import { TAREAS_LIMPIEZA } from "./domain";
 import type { DataState } from "./types";
-import { USUARIO_ADMIN_INICIAL } from "./session";
 
 /**
  * Estado inicial limpio del sistema antes de sincronizar con PostgreSQL.
@@ -27,7 +26,7 @@ export function createInitialData(): DataState {
     grupoAmbientes: [],
     parametros: { ...PARAMETROS_INICIALES },
     historialAdministrativo: [],
-    usuarios: [{ ...USUARIO_ADMIN_INICIAL }],
+    usuarios: [],
   };
 }
 

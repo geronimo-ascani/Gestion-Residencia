@@ -12,10 +12,10 @@ export const emitirMultaSchema = z
     idAlumno: idCoerce.optional(),
     idAlumnos: z.array(idCoerce).optional(),
     tipo: z.enum(["leve", "moderada", "grave", "extraordinaria"], {
-      errorMap: () => ({ message: "El tipo de multa debe ser leve, moderada, grave o extraordinaria" }),
+      error: "El tipo de multa debe ser leve, moderada, grave o extraordinaria",
     }),
     motivo: z
-      .string({ required_error: "El motivo de la sanción es obligatorio" })
+      .string({ error: "El motivo de la sanción es obligatorio" })
       .trim()
       .min(3, "El motivo debe tener al menos 3 caracteres")
       .max(4000, "El motivo no puede exceder 4000 caracteres"),
@@ -23,7 +23,7 @@ export const emitirMultaSchema = z
     huboDanios: z.boolean().default(false),
     detalleDanios: z.string().trim().max(4000).optional().default(""),
     montoSancion: z.coerce
-      .number({ required_error: "El importe de la sanción es obligatorio" })
+      .number({ error: "El importe de la sanción es obligatorio" })
       .positive("El importe de la sanción debe ser mayor a 0"),
     montoDanios: z.coerce.number().min(0, "El importe de daños no puede ser negativo").optional().default(0),
     recargoPorcentaje: z.coerce.number().min(0).max(100).optional().default(20),
@@ -84,7 +84,7 @@ export const updateMultaSchema = z
  */
 export const prorrogarMultaSchema = z.object({
   motivo: z
-    .string({ required_error: "El motivo de la prórroga es obligatorio" })
+    .string({ error: "El motivo de la prórroga es obligatorio" })
     .trim()
     .min(3, "El motivo debe tener al menos 3 caracteres")
     .max(500, "El motivo no puede exceder 500 caracteres"),
@@ -97,7 +97,7 @@ export const prorrogarMultaSchema = z.object({
  */
 export const anularMultaSchema = z.object({
   motivo: z
-    .string({ required_error: "El motivo de la anulación es obligatorio" })
+    .string({ error: "El motivo de la anulación es obligatorio" })
     .trim()
     .min(3, "El motivo debe tener al menos 3 caracteres")
     .max(500, "El motivo no puede exceder 500 caracteres"),

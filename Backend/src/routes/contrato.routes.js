@@ -29,8 +29,8 @@ router.post(
  */
 router.get(
   "/",
-  requireOwnershipOrAdmin(),
   validate({ query: queryContratoSchema }),
+  requireOwnershipOrAdmin(),
   contratoController.getAll
 );
 

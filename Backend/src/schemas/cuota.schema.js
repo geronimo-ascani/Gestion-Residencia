@@ -8,30 +8,26 @@ export const ESTADOS_CUOTA = ["PENDIENTE", "PAGADA", "VENCIDA", "ANULADA"];
 export const createCuotaSchema = z.object({
   idAlumno: z.coerce
     .number({
-      required_error: "El ID del alumno es obligatorio",
-      invalid_type_error: "El ID del alumno debe ser un entero",
+      error: "El ID del alumno debe ser un entero",
     })
     .int("El ID del alumno debe ser un entero")
     .positive("El ID del alumno debe ser positivo"),
   mesAsociado: z
-    .string({ required_error: "El mes asociado es obligatorio" })
+    .string({ error: "El mes asociado es obligatorio" })
     .trim()
     .min(3, "El mes asociado debe tener al menos 3 caracteres")
     .max(30, "El mes asociado no puede exceder 30 caracteres"),
   montoPagado: z.coerce
     .number({
-      required_error: "El monto es obligatorio",
-      invalid_type_error: "El monto debe ser un número válido",
+      error: "El monto debe ser un número válido",
     })
     .min(0, "El monto no puede ser negativo"),
   fechaEmision: z.coerce
-    .date({ invalid_type_error: "La fecha de emisión debe ser una fecha válida" })
+    .date({ error: "La fecha de emisión debe ser una fecha válida" })
     .optional(),
   estadoCuota: z
     .enum(ESTADOS_CUOTA, {
-      errorMap: () => ({
-        message: `El estado debe ser uno de: ${ESTADOS_CUOTA.join(", ")}`,
-      }),
+      error: `El estado debe ser uno de: ${ESTADOS_CUOTA.join(", ")}`,
     })
     .default("PENDIENTE"),
 });
@@ -41,14 +37,13 @@ export const createCuotaSchema = z.object({
  */
 export const generarCuotasMesSchema = z.object({
   mesAsociado: z
-    .string({ required_error: "El mes asociado es obligatorio (ej: 2026-03 o Marzo 2026)" })
+    .string({ error: "El mes asociado es obligatorio (ej: 2026-03 o Marzo 2026)" })
     .trim()
     .min(3, "El mes asociado debe tener al menos 3 caracteres")
     .max(30, "El mes asociado no puede exceder 30 caracteres"),
   monto: z.coerce
     .number({
-      required_error: "El monto de la cuota es obligatorio",
-      invalid_type_error: "El monto debe ser un número",
+      error: "El monto debe ser un número",
     })
     .positive("El monto debe ser mayor a 0"),
   fechaEmision: z.coerce.date().optional(),
@@ -63,9 +58,7 @@ export const updateCuotaSchema = z
     montoPagado: z.coerce.number().min(0).optional(),
     estadoCuota: z
       .enum(ESTADOS_CUOTA, {
-        errorMap: () => ({
-          message: `El estado debe ser uno de: ${ESTADOS_CUOTA.join(", ")}`,
-        }),
+        error: `El estado debe ser uno de: ${ESTADOS_CUOTA.join(", ")}`,
       })
       .optional(),
   })
@@ -78,7 +71,7 @@ export const updateCuotaSchema = z
  */
 export const registrarPagoCuotaSchema = z.object({
   montoPagado: z.coerce
-    .number({ invalid_type_error: "El monto debe ser un número" })
+    .number({ error: "El monto debe ser un número" })
     .min(0, "El monto no puede ser negativo")
     .optional(),
 });
@@ -88,7 +81,7 @@ export const registrarPagoCuotaSchema = z.object({
  */
 export const cuotaIdParamSchema = z.object({
   id: z.coerce
-    .number({ invalid_type_error: "El ID debe ser un número entero válido" })
+    .number({ error: "El ID debe ser un número entero válido" })
     .int("El ID debe ser un número entero")
     .positive("El ID debe ser un número positivo"),
 });

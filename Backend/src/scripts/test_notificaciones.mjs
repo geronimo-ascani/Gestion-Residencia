@@ -1,40 +1,22 @@
 import http from "node:http";
-import jwt from "jsonwebtoken";
 import app from "../app.js";
-import { prisma } from "../config/database.js";
-import { env } from "../config/env.js";
+import { iniciarSesionDePrueba } from "./sesion-prueba.mjs";
 
 async function main() {
   const server = http.createServer(app);
-  await new Promise((resolve) => server.listen(3098, resolve));
-  const baseUrl = "http://localhost:3098/api";
+  await new Promise((resolve) => server.listen(3098, "127.0.0.1", resolve));
+  const baseUrl = "http://127.0.0.1:3098/api";
 
-  console.log("Servidor de pruebas de notificaciones activo en http://localhost:3098");
+  console.log("Servidor de pruebas de notificaciones activo en http://127.0.0.1:3098");
 
   try {
-    // 1. Obtener un alumno con usuario y un administrador
-    const [usuarioAlumno, usuarioAdmin] = await Promise.all([
-      prisma.usuario.findFirst({
-        where: { idAlumno: { not: null } },
-        include: { alumno: true },
-      }),
-      prisma.usuario.findFirst({
-        where: { rol: { rol: "ADMINISTRADOR" } },
-      }),
+    const [sesionAlumno, sesionAdmin] = await Promise.all([
+      iniciarSesionDePrueba(baseUrl, "ALUMNO_A", "ALUMNO"),
+      iniciarSesionDePrueba(baseUrl, "ADMIN", "ADMINISTRADOR"),
     ]);
-
-    if (!usuarioAlumno || !usuarioAdmin) {
-      console.warn("No se encontró usuario de alumno o administrador para probar notificaciones.");
-      return;
-    }
-
-    const adminToken = jwt.sign(
-      { idUsuario: usuarioAdmin.idUsuario, rol: "ADMINISTRADOR" },
-      env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    console.log(`Probando con alumno: ${usuarioAlumno.alumno.nombre} ${usuarioAlumno.alumno.apellido} (idAlumno: ${usuarioAlumno.idAlumno}, idUsuario: ${usuarioAlumno.idUsuario})`);
+    const { alumno: usuarioAlumno } = sesionAlumno.usuario;
+    const { token: adminToken } = sesionAdmin;
+    const headersAlumno = { Authorization: `Bearer ${sesionAlumno.token}` };
 
     // 2. Emitir una multa para este alumno y verificar que se genere la notificación (requiere admin)
     const resMulta = await fetch(`${baseUrl}/multas`, {
@@ -51,14 +33,15 @@ async function main() {
         montoDanios: 0,
       }),
     });
-    const dataMulta = await resMulta.json();
+    if (!resMulta.ok) throw new Error(`No se pudo emitir la multa de prueba: ${resMulta.status}`);
     console.log("✓ Multa emitida status:", resMulta.status);
 
     // Esperar un breve instante para que la promesa en segundo plano asiente en BD
     await new Promise((r) => setTimeout(r, 2000));
 
     // 3. Consultar notificaciones del alumno
-    const resNotifs = await fetch(`${baseUrl}/notificaciones?idUsuario=${usuarioAlumno.idUsuario}`);
+    const resNotifs = await fetch(`${baseUrl}/notificaciones`, { headers: headersAlumno });
+    if (!resNotifs.ok) throw new Error(`No se pudieron consultar las notificaciones: ${resNotifs.status}`);
     const dataNotifs = await resNotifs.json();
     const notificaciones = dataNotifs.data?.notificaciones || [];
     console.log("✓ Notificaciones recuperadas para el alumno:", notificaciones.length);
@@ -70,9 +53,9 @@ async function main() {
       // 4. Marcar como leída
       const resLeida = await fetch(`${baseUrl}/notificaciones/${notifMulta.idNotificacion}/leida`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idUsuario: usuarioAlumno.idUsuario }),
+        headers: headersAlumno,
       });
+      if (!resLeida.ok) throw new Error(`No se pudo marcar la notificación: ${resLeida.status}`);
       const dataLeida = await resLeida.json();
       console.log("✓ Marcar leída status:", resLeida.status, dataLeida.message);
     } else {

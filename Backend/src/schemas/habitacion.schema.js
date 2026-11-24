@@ -7,19 +7,18 @@ import { FECHA_REFERENCIA } from "../config/constants.js";
  */
 export const createHabitacionSchema = z.object({
   numeroHabitacion: z
-    .string({ required_error: "El número de habitación es obligatorio" })
+    .string({ error: "El número de habitación es obligatorio" })
     .trim()
     .min(1, "El número de habitación no puede estar vacío")
     .max(20, "El número de habitación no puede exceder 20 caracteres"),
   capacidadMaxima: z.coerce
     .number({
-      required_error: "La capacidad máxima es obligatoria",
-      invalid_type_error: "La capacidad máxima debe ser un número entero",
+      error: "La capacidad máxima debe ser un número entero",
     })
     .int("La capacidad máxima debe ser un número entero")
     .positive("La capacidad máxima debe ser al menos de 1 plaza"),
   pisoHabitacion: z.coerce
-    .number({ invalid_type_error: "El piso debe ser un número entero" })
+    .number({ error: "El piso debe ser un número entero" })
     .int("El piso debe ser un número entero")
     .optional()
     .nullable(),
@@ -73,10 +72,10 @@ export const asignarAlumnoSchema = z
   .object({
     idAlumno: idCoerce,
     fechaDesde: z.coerce
-      .date({ invalid_type_error: "La fecha de inicio debe ser una fecha válida" })
+      .date({ error: "La fecha de inicio debe ser una fecha válida" })
       .default(() => new Date(FECHA_REFERENCIA)),
     fechaHasta: z.coerce
-      .date({ invalid_type_error: "La fecha de fin debe ser una fecha válida" })
+      .date({ error: "La fecha de fin debe ser una fecha válida" })
       .optional()
       .nullable(),
   })
@@ -94,6 +93,6 @@ export const asignarAlumnoSchema = z
 export const desasignarAlumnoSchema = z.object({
   idAlumno: idCoerce,
   fechaHasta: z.coerce
-    .date({ invalid_type_error: "La fecha de egreso debe ser una fecha válida" })
+    .date({ error: "La fecha de egreso debe ser una fecha válida" })
     .default(() => new Date(FECHA_REFERENCIA)),
 });

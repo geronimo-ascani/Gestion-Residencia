@@ -1,8 +1,10 @@
-import { Navigate } from "react-router";
+import { useToast } from "../ui/toast";
 import { StudentShell } from "./student-shell";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   Link,
+  matchPath,
+  Navigate,
   NavLink,
   Outlet,
   useLocation,
@@ -117,7 +119,7 @@ export function AppShell() {
 
   if (!usuarioAutenticado) return <Navigate to="/login" replace />;
   const esAlumno = usuarioAutenticado.rol === "alumno";
-  const rutaAlumno = location.pathname === "/estudiante" || location.pathname.startsWith("/estudiante/");
+  const rutaAlumno = matchPath("/estudiante/*", location.pathname);
   if (esAlumno && !rutaAlumno) return <Navigate to="/estudiante" replace />;
   if (!esAlumno && rutaAlumno) return <Navigate to="/" replace />;
   if (esAlumno) return <StudentShell />;
@@ -201,10 +203,16 @@ function SidebarContent({
     setGrupoAbierto(grupoDeRuta(pathname));
   }, [pathname]);
 
-  function cerrarSesion() {
-    finalizarSesion();
-    onNavigate?.();
-    navigate("/login");
+  const { toast } = useToast();
+
+  async function cerrarSesion() {
+    try {
+      await finalizarSesion();
+      onNavigate?.();
+      navigate("/login", { replace: true });
+    } catch {
+      toast({ title: "No pudimos cerrar la sesión", description: "Volvé a intentar." });
+    }
   }
 
   return (

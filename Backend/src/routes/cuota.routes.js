@@ -41,8 +41,8 @@ router.post(
  */
 router.get(
   "/",
-  requireOwnershipOrAdmin(),
   validate({ query: queryCuotaSchema }),
+  requireOwnershipOrAdmin(),
   cuotaController.getAll
 );
 

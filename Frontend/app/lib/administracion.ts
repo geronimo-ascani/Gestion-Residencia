@@ -1,4 +1,3 @@
-import { claveInicial } from "./credenciales";
 import { contratoVigente } from "./domain";
 import { FECHA_REFERENCIA } from "./config";
 import { usuarioActual } from "./session";
@@ -73,7 +72,6 @@ export function crearCuentaAlumno(datos: DataState, idAlumno: string, correo: st
   if (datos.usuarios.some((u) => u.idAlumno === idAlumno)) throw new Error("El alumno ya tiene una cuenta.");
   if (!contratoVigente(datos.contratos, idAlumno)) throw new Error("Se necesita un contrato vigente para crear el acceso.");
   validarCorreoCuenta(correo, datos.usuarios);
-  claveInicial(alumno.apellido, alumno.documento);
   return { ...datos, alumnos: datos.alumnos.map((a) => a.idAlumno === idAlumno ? { ...a, correo: correo.trim().toLowerCase() } : a), usuarios: [...datos.usuarios, { idUsuario, idAlumno, apellido: alumno.apellido, documento: alumno.documento, nombre: `${alumno.nombre} ${alumno.apellido}`, correo: correo.trim().toLowerCase(), rol: "alumno", estado: "activo", fechaAlta: FECHA_REFERENCIA }] };
 }
 

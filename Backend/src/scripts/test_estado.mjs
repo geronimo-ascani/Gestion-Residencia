@@ -1,8 +1,11 @@
-import { administracionService } from "../services/administracion.service.js";
-import { prisma } from "../config/database.js";
+import { iniciarSesionDePrueba } from "./sesion-prueba.mjs";
 
 async function main() {
-  const estado = await administracionService.getEstadoCompleto();
+  const baseUrl = "http://127.0.0.1:3000/api";
+  const { token } = await iniciarSesionDePrueba(baseUrl, "ADMIN", "ADMINISTRADOR");
+  const respuesta = await fetch(`${baseUrl}/estado`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!respuesta.ok) throw new Error(`No se pudo consultar el estado: ${respuesta.status}`);
+  const { data: estado } = await respuesta.json();
   console.log("Keys in estado:", Object.keys(estado));
   console.log("Counts in estado:", {
     alumnos: estado.alumnos.length,
@@ -21,9 +24,9 @@ async function main() {
     vinculos: estado.vinculos.length,
     parametros: Object.keys(estado.parametros).length,
   });
-  console.log("Primer alumno:", estado.alumnos[0]?.nombre, estado.alumnos[0]?.apellido, estado.alumnos[0]?.correo);
-  console.log("Primer contrato:", estado.contratos[0]);
-  console.log("Primera habitacion:", estado.habitaciones[0]);
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+main().catch((error) => {
+  console.error(error.message);
+  process.exitCode = 1;
+});

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nuevaClaveSchema } from "./auth.schema.js";
 import { idCoerce } from "./idHelper.js";
 
 /**
@@ -7,17 +8,17 @@ import { idCoerce } from "./idHelper.js";
 export const contactoEmergenciaSchema = z.object({
   idContacto: z.coerce.number().int().positive().optional(),
   nombre: z
-    .string({ required_error: "El nombre del contacto es obligatorio" })
+    .string({ error: "El nombre del contacto es obligatorio" })
     .trim()
     .min(1, "El nombre del contacto no puede estar vacío")
     .max(100, "El nombre del contacto no puede exceder 100 caracteres"),
   vinculo: z
-    .string({ required_error: "El vínculo es obligatorio" })
+    .string({ error: "El vínculo es obligatorio" })
     .trim()
     .min(1, "El vínculo no puede estar vacío")
     .max(50, "El vínculo no puede exceder 50 caracteres"),
   telefono: z
-    .string({ required_error: "El teléfono del contacto es obligatorio" })
+    .string({ error: "El teléfono del contacto es obligatorio" })
     .trim()
     .min(1, "El teléfono del contacto no puede estar vacío")
     .max(50, "El teléfono del contacto no puede exceder 50 caracteres"),
@@ -27,20 +28,20 @@ export const contactoEmergenciaSchema = z.object({
 /**
  * Esquema de validación para la creación de un Alumno con datos extendidos de perfil.
  */
-export const createAlumnoSchema = z.object({
+const datosAlumnoSchema = z.object({
   // Identificación y datos personales
   nombre: z
-    .string({ required_error: "El nombre es obligatorio" })
+    .string({ error: "El nombre es obligatorio" })
     .trim()
     .min(2, "El nombre debe tener al menos 2 caracteres")
     .max(100, "El nombre no puede exceder 100 caracteres"),
   apellido: z
-    .string({ required_error: "El apellido es obligatorio" })
+    .string({ error: "El apellido es obligatorio" })
     .trim()
     .min(2, "El apellido debe tener al menos 2 caracteres")
     .max(100, "El apellido no puede exceder 100 caracteres"),
   documento: z
-    .string({ required_error: "El número de documento es obligatorio" })
+    .string({ error: "El número de documento es obligatorio" })
     .trim()
     .min(4, "El documento debe tener al menos 4 caracteres")
     .max(30, "El documento no puede exceder 30 caracteres"),
@@ -66,9 +67,8 @@ export const createAlumnoSchema = z.object({
     .nullable(),
   estado: z
     .enum(["activo", "inactivo", "ACTIVO", "INACTIVO"], {
-      errorMap: () => ({ message: "El estado debe ser 'activo' o 'inactivo'" }),
-    })
-    .default("activo"),
+      error: "El estado debe ser 'activo' o 'inactivo'",
+    }),
   fechaNacimiento: z
     .string()
     .trim()
@@ -156,13 +156,17 @@ export const createAlumnoSchema = z.object({
 
   // Vinculación o aprovisionamiento opcional de usuario
   idUsuario: z.coerce.number().int().positive().optional(),
-  contrasena: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional(),
+  contrasena: nuevaClaveSchema.optional(),
 });
 
 /**
  * Esquema de validación para actualización parcial de un Alumno o una de sus secciones.
  */
-export const updateAlumnoSchema = createAlumnoSchema
+export const createAlumnoSchema = datosAlumnoSchema.extend({
+  estado: datosAlumnoSchema.shape.estado.default("activo"),
+});
+
+export const updateAlumnoSchema = datosAlumnoSchema
   .partial()
   .refine((data) => Object.keys(data).length > 0, {
     message: "Debe proporcionar al menos un campo para actualizar",
@@ -187,6 +191,7 @@ export const contactoEmergenciaParamSchema = z.object({
  * Esquema de validación para filtros y paginación en listado de Alumnos.
  */
 export const queryAlumnoSchema = z.object({
+  idAlumno: idCoerce.optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10),
   search: z.string().trim().optional(),
@@ -206,5 +211,5 @@ export const crearAccesoAlumnoSchema = z.object({
     .email("Formato de correo electrónico inválido")
     .toLowerCase()
     .optional(),
-  contrasena: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional(),
+  contrasena: nuevaClaveSchema.optional(),
 });

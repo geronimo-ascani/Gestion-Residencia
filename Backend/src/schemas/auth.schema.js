@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+export const nuevaClaveSchema = z.string()
+  .min(12, "La contraseña debe tener al menos 12 caracteres")
+  .refine((clave) => Buffer.byteLength(clave, "utf8") <= 72, "La contraseña supera el tamaño permitido.");
+
 /**
  * Esquema de validación para inicio de sesión (Login).
  * Acepta 'correo' o 'email', y 'contrasena' o 'password'.
@@ -35,8 +39,8 @@ export const registerSchema = z
   .object({
     correo: z.string().trim().email("Formato de correo electrónico inválido").toLowerCase().optional(),
     email: z.string().trim().email("Formato de correo electrónico inválido").toLowerCase().optional(),
-    contrasena: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional(),
-    password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional(),
+    contrasena: nuevaClaveSchema.optional(),
+    password: nuevaClaveSchema.optional(),
     nombre: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres").optional(),
     name: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres").optional(),
     apellido: z.string().trim().optional(),
@@ -79,9 +83,7 @@ export const registerSchema = z
  */
 export const changePasswordSchema = z.object({
   contrasenaActual: z.string().min(1, "La contraseña actual es obligatoria"),
-  nuevaContrasena: z
-    .string()
-    .min(6, "La nueva contraseña debe tener al menos 6 caracteres"),
+  nuevaContrasena: nuevaClaveSchema,
 });
 
 /**
@@ -107,9 +109,9 @@ export const forgetPasswordSchema = z
  */
 export const resetPasswordSchema = z
   .object({
-    token: z.string({ required_error: "El token de restablecimiento es obligatorio" }).min(1),
-    newPassword: z.string().min(6, "La nueva contraseña debe tener al menos 6 caracteres").optional(),
-    nuevaContrasena: z.string().min(6, "La nueva contraseña debe tener al menos 6 caracteres").optional(),
+    token: z.string().trim().regex(/^[a-f0-9]{64}$/, "El código de recuperación no es válido."),
+    newPassword: nuevaClaveSchema.optional(),
+    nuevaContrasena: nuevaClaveSchema.optional(),
   })
   .refine((data) => data.newPassword || data.nuevaContrasena, {
     message: "La nueva contraseña es obligatoria",

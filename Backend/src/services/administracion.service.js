@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "../config/database.js";
 import { FECHA_REFERENCIA } from "../config/constants.js";
@@ -6,6 +7,7 @@ import {
   BadRequestError,
   ConflictError,
   ForbiddenError,
+  UnauthorizedError,
 } from "../utils/customErrors.js";
 
 /**
@@ -481,22 +483,10 @@ class AdministracionService {
       throw new NotFoundError("El rol de ADMINISTRADOR no está configurado en el sistema.");
     }
 
-    // Si no se envía contraseña explícita, se calcula la clave inicial: [PrimerApellido][Últimos 3 dígitos del DNI]
-    let claveFinal = contrasena?.trim();
-    if (!claveFinal && apellido && documento) {
-      const primero = apellido.trim().split(/\s+/)[0];
-      const dni = String(documento).replace(/\D/g, "");
-      if (primero && dni.length >= 3) {
-        claveFinal = primero + dni.slice(-3);
-      }
-    }
-    if (!claveFinal) {
-      claveFinal = "Admin123!";
-    }
-
+    const claveFinal = contrasena ?? randomBytes(18).toString("base64url");
     const contrasenaHash = await bcrypt.hash(claveFinal, 10);
 
-    return await prisma.usuario.create({
+    const cuenta = await prisma.usuario.create({
       data: {
         nombre: nombre?.trim() || null,
         apellido: apellido?.trim() || null,
@@ -520,38 +510,49 @@ class AdministracionService {
         fechaAlta: true,
       },
     });
+    return { ...cuenta, claveGenerada: contrasena ? undefined : claveFinal };
   }
 
   async updateAdministrador(id, { nombre, apellido, telefono, gestionaAdministradores, estado }) {
     const idUsuario = Number(id);
 
-    const admin = await prisma.usuario.findUnique({
-      where: { idUsuario },
+    const admin = await prisma.usuario.findFirst({
+      where: { idUsuario, rol: { rol: "ADMINISTRADOR" } },
+      select: { idUsuario: true },
     });
 
     if (!admin) {
       throw new NotFoundError(`No se encontró el administrador con ID: ${id}`);
     }
 
-    return await prisma.usuario.update({
-      where: { idUsuario },
-      data: {
-        ...(nombre !== undefined ? { nombre: nombre?.trim() || null } : {}),
-        ...(apellido !== undefined ? { apellido: apellido?.trim() || null } : {}),
-        ...(telefono !== undefined ? { telefono: telefono?.trim() || null } : {}),
-        ...(gestionaAdministradores !== undefined ? { gestionaAdministradores: Boolean(gestionaAdministradores) } : {}),
-        ...(estado !== undefined ? { estado: estado.toLowerCase() } : {}),
-      },
-      select: {
-        idUsuario: true,
-        correo: true,
-        nombre: true,
-        apellido: true,
-        telefono: true,
-        estado: true,
-        gestionaAdministradores: true,
-        fechaAlta: true,
-      },
+    return await prisma.$transaction(async (tx) => {
+      const cuenta = await tx.usuario.update({
+        where: { idUsuario },
+        data: {
+          ...(nombre !== undefined ? { nombre: nombre?.trim() || null } : {}),
+          ...(apellido !== undefined ? { apellido: apellido?.trim() || null } : {}),
+          ...(telefono !== undefined ? { telefono: telefono?.trim() || null } : {}),
+          ...(gestionaAdministradores !== undefined ? { gestionaAdministradores: Boolean(gestionaAdministradores) } : {}),
+          ...(estado !== undefined ? { estado: estado.toLowerCase() } : {}),
+        },
+        select: {
+          idUsuario: true,
+          correo: true,
+          nombre: true,
+          apellido: true,
+          telefono: true,
+          estado: true,
+          gestionaAdministradores: true,
+          fechaAlta: true,
+        },
+      });
+      if (estado && estado !== "activo") {
+        await tx.sesion.updateMany({
+          where: { idUsuario, revocadaEn: null },
+          data: { revocadaEn: new Date() },
+        });
+      }
+      return cuenta;
     });
   }
 
@@ -923,16 +924,21 @@ class AdministracionService {
    * ESTADO COMPLETO DEL SISTEMA (BOOTSTRAP FRONTEND)
    * ==========================================
    */
-  async getEstadoCompleto(usuarioSesion = null) {
+  async getEstadoCompleto(usuarioSesion) {
+    if (!usuarioSesion?.idUsuario) throw new UnauthorizedError("Se requiere una sesión válida.");
+
+    const esAlumno = usuarioSesion.rol === "ALUMNO";
+    const alumnoId = usuarioSesion.alumno?.idAlumno;
+    if (usuarioSesion.rol !== "ADMINISTRADOR" && (!esAlumno || !alumnoId)) {
+      throw new ForbiddenError("La cuenta no está habilitada para consultar el estado.");
+    }
+
     await this.#asegurarParametros();
     await this.asegurarCatalogos();
 
-    const esAlumno = (usuarioSesion?.rol || "").toUpperCase() === "ALUMNO";
-    const alumnoId = usuarioSesion?.alumno?.idAlumno ? Number(usuarioSesion.alumno.idAlumno) : null;
-    const usuarioId = usuarioSesion?.idUsuario ? Number(usuarioSesion.idUsuario) : null;
-
-    const whereAlumno = esAlumno && alumnoId ? { idAlumno: alumnoId } : undefined;
-    const whereUsuario = esAlumno && usuarioId ? { idUsuario: usuarioId } : undefined;
+    const whereAlumno = esAlumno ? { idAlumno: alumnoId } : undefined;
+    const whereUsuario = esAlumno ? { idUsuario: usuarioSesion.idUsuario } : undefined;
+    const whereGrupo = esAlumno ? { gruposLimpiezaAlumnos: { some: whereAlumno } } : undefined;
 
     // Lote 1: Catálogos, infraestructura y parámetros base
     const [
@@ -953,8 +959,12 @@ class AdministracionService {
       }),
       prisma.parametroSistema.findMany(),
       prisma.tareaLimpieza.findMany({ orderBy: { numero: "asc" } }),
-      prisma.habitacion.findMany({ orderBy: { numeroHabitacion: "asc" } }),
+      prisma.habitacion.findMany({
+        where: esAlumno ? { habitacionesAlumnos: { some: whereAlumno } } : undefined,
+        orderBy: { numeroHabitacion: "asc" },
+      }),
       prisma.ambiente.findMany({
+        where: esAlumno ? { gruposLimpiezaAmbientes: { some: { grupoLimpieza: whereGrupo } } } : undefined,
         include: { equipamiento: { orderBy: { idEquipamiento: "asc" } } },
         orderBy: { idAmbiente: "asc" },
       }),
@@ -969,11 +979,14 @@ class AdministracionService {
       alumnosRaw,
       asignacionesRaw,
     ] = await Promise.all([
-      prisma.grupoDeLimpieza.findMany({ orderBy: { posicionInicial: "asc" } }),
+      prisma.grupoDeLimpieza.findMany({ where: whereGrupo, orderBy: { posicionInicial: "asc" } }),
       prisma.grupoLimpiezaAlumno.findMany({
         where: whereAlumno,
       }),
-      prisma.grupoLimpiezaAmbiente.findMany({ orderBy: { fechaDesde: "asc" } }),
+      prisma.grupoLimpiezaAmbiente.findMany({
+        where: esAlumno ? { grupoLimpieza: whereGrupo } : undefined,
+        orderBy: { fechaDesde: "asc" },
+      }),
       prisma.usuario.findMany({
         where: whereUsuario,
         include: { rol: true },
@@ -981,7 +994,7 @@ class AdministracionService {
       }),
       prisma.alumno.findMany({
         where: whereAlumno,
-        include: { contactosEmergencia: { orderBy: { orden: "asc" } }, usuario: true },
+        include: { contactosEmergencia: { orderBy: { orden: "asc" } }, usuario: { select: { correo: true } } },
         orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
       }),
       prisma.habitacionAlumno.findMany({
@@ -1019,7 +1032,7 @@ class AdministracionService {
       esAlumno
         ? Promise.resolve([])
         : prisma.cambioAdministrativo.findMany({
-            include: { actor: true },
+            include: { actor: { select: { nombre: true, correo: true } } },
             orderBy: { fecha: "desc" },
             take: 100,
           }),

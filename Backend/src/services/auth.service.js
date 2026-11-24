@@ -3,13 +3,17 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/database.js";
 import { env } from "../config/env.js";
+import { hashToken } from "../utils/session.js";
 import { FECHA_REFERENCIA } from "../config/constants.js";
 import {
   UnauthorizedError,
   ConflictError,
+  ForbiddenError,
   NotFoundError,
   BadRequestError,
 } from "../utils/customErrors.js";
+
+const HASH_DE_COMPARACION = bcrypt.hashSync(crypto.randomBytes(32).toString("hex"), 10);
 
 /**
  * Capa de Servicio: Autenticación, Sesiones y Recuperación de Acceso
@@ -28,16 +32,15 @@ class AuthService {
 
     const expiresIn = remember ? "30d" : env.JWT_EXPIRES_IN;
 
-    return jwt.sign(payload, env.JWT_SECRET, { expiresIn });
+    return jwt.sign(payload, env.JWT_SECRET, { expiresIn, algorithm: "HS256", jwtid: crypto.randomUUID() });
   }
 
   /**
    * Registra una sesión activa en la base de datos vinculada al token JWT emitido.
    */
-  async #registrarSesion(idUsuario, token, remember = false) {
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    const duracionMs = remember ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-    const expiraEn = new Date(Date.now() + duracionMs);
+  async #registrarSesion(idUsuario, token) {
+    const tokenHash = hashToken(token);
+    const expiraEn = new Date(jwt.decode(token).exp * 1000);
 
     return await prisma.sesion.create({
       data: {
@@ -52,7 +55,10 @@ class AuthService {
    * Registra un nuevo usuario en el sistema y crea su sesión inicial.
    */
   async register(data) {
-    const { correo, contrasena, nombre, apellido, documento, telefono, rol } = data;
+    if (env.NODE_ENV === "production") {
+      throw new ForbiddenError("Solicitá tu cuenta a la administración de la residencia.");
+    }
+    const { correo, contrasena, nombre, apellido, documento, telefono } = data;
 
     // 1. Verificar si el correo ya existe
     const usuarioExistente = await prisma.usuario.findUnique({
@@ -127,7 +133,7 @@ class AuthService {
 
     // 6. Generar token JWT y registrar sesión
     const token = this.#generarToken(resultado.nuevoUsuario, rolRegistro.rol);
-    await this.#registrarSesion(resultado.nuevoUsuario.idUsuario, token, false);
+    await this.#registrarSesion(resultado.nuevoUsuario.idUsuario, token);
 
     return {
       token,
@@ -162,27 +168,20 @@ class AuthService {
       },
     });
 
-    if (!usuario) {
-      throw new UnauthorizedError("El correo electrónico o la contraseña no son correctos");
-    }
-
-    if (usuario.estado === "suspendido" || usuario.estado === "inactivo") {
-      throw new UnauthorizedError("Tu cuenta se encuentra suspendida o inactiva. Contactá a administración.");
-    }
-
-    // 2. Comparar hash de contraseña
-    const passwordValida = await bcrypt.compare(contrasena, usuario.contrasenaHash);
-
-    if (!passwordValida) {
-      throw new UnauthorizedError("El correo electrónico o la contraseña no son correctos");
+    const passwordValida = await bcrypt.compare(contrasena, usuario?.contrasenaHash ?? HASH_DE_COMPARACION);
+    const rol = usuario?.rol.rol.toUpperCase();
+    if (!passwordValida || usuario?.estado !== "activo" ||
+        (rol !== "ADMINISTRADOR" && (rol !== "ALUMNO" || usuario.alumno?.estado !== "activo"))) {
+      throw new UnauthorizedError("El correo electrónico o la contraseña no son correctos, o la cuenta no está habilitada.");
     }
 
     // 3. Generar token JWT y persistir sesión
     const token = this.#generarToken(usuario, usuario.rol.rol, remember);
-    await this.#registrarSesion(usuario.idUsuario, token, remember);
+    const { expiraEn } = await this.#registrarSesion(usuario.idUsuario, token);
 
     return {
       token,
+      expiraEn,
       usuario: {
         idUsuario: usuario.idUsuario,
         correo: usuario.correo,
@@ -197,18 +196,12 @@ class AuthService {
   /**
    * Cierra sesión revocando el token activo en la base de datos.
    */
-  async logout(tokenString) {
-    if (tokenString) {
-      const raw = tokenString.startsWith("Bearer ") ? tokenString.slice(7) : tokenString;
-      const tokenHash = crypto.createHash("sha256").update(raw.trim()).digest("hex");
-
-      await prisma.sesion.updateMany({
-        where: { tokenHash, revocadaEn: null },
-        data: { revocadaEn: new Date() },
-      });
-    }
-
-    return { ok: true, message: "Sesión cerrada exitosamente" };
+  async logout(idSesion) {
+    await prisma.sesion.updateMany({
+      where: { idSesion, revocadaEn: null },
+      data: { revocadaEn: new Date() },
+    });
+    return { ok: true };
   }
 
   /**
@@ -245,6 +238,7 @@ class AuthService {
     return await prisma.sesion.update({
       where: { idSesion: Number(idSesion) },
       data: { revocadaEn: new Date() },
+      select: { idSesion: true, revocadaEn: true },
     });
   }
 
@@ -252,21 +246,18 @@ class AuthService {
    * Solicita el restablecimiento de contraseña generando un token temporal.
    */
   async solicitarRestablecimiento({ correo }) {
+    const respuesta = { ok: true, message: "Si necesitás recuperar el acceso, contactá a la administración." };
+    // La entrega de enlaces requiere un canal de correo que todavía no está configurado.
+    if (env.NODE_ENV !== "test") return respuesta;
+
     const usuario = await prisma.usuario.findUnique({
       where: { correo: correo.toLowerCase().trim() },
     });
-
-    // Respuesta neutra por prevención de enumeración de cuentas
-    if (!usuario) {
-      return {
-        ok: true,
-        message: "Si el correo está registrado, se enviará un enlace de recuperación.",
-      };
-    }
+    if (usuario?.estado !== "activo") return respuesta;
 
     // Generar token criptográfico seguro
     const rawToken = crypto.randomBytes(32).toString("hex");
-    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const tokenHash = hashToken(rawToken);
     const expiraEn = new Date(Date.now() + 60 * 60 * 1000); // 1 hora de validez
 
     await prisma.tokenRestablecimiento.create({
@@ -277,21 +268,17 @@ class AuthService {
       },
     });
 
-    // Simular el canal de despacho seguro (consola/logs) sin exponer el token abiertamente en producción
-    console.log(`[AUTH-EMAIL-SIMULATOR] Enlace de restablecimiento para ${usuario.correo}: /reset-password?token=${rawToken}`);
-
-    return {
-      ok: true,
-      message: "Si el correo está registrado, se enviará un enlace de recuperación.",
-      ...(env.NODE_ENV === "development" || env.NODE_ENV === "test" ? { resetToken: rawToken } : {}),
-    };
+    return { ...respuesta, resetToken: rawToken };
   }
 
   /**
    * Restablece la contraseña utilizando un token válido.
    */
   async restablecerContrasena({ token, nuevaContrasena }) {
-    const tokenHash = crypto.createHash("sha256").update(token.trim()).digest("hex");
+    if (env.NODE_ENV !== "test") {
+      throw new ForbiddenError("Contactá a la administración para recuperar tu cuenta.");
+    }
+    const tokenHash = hashToken(token.trim());
     const ahora = new Date();
 
     const registroToken = await prisma.tokenRestablecimiento.findFirst({
@@ -310,16 +297,19 @@ class AuthService {
     const nuevaHash = await bcrypt.hash(nuevaContrasena, salt);
 
     await prisma.$transaction(async (tx) => {
-      // 1. Actualizar contraseña del usuario
-      await tx.usuario.update({
-        where: { idUsuario: registroToken.idUsuario },
+      const actualizado = await tx.usuario.updateMany({
+        where: { idUsuario: registroToken.idUsuario, estado: "activo" },
         data: { contrasenaHash: nuevaHash },
       });
+      if (!actualizado.count) throw new BadRequestError("El enlace de recuperación es inválido o ha expirado.");
 
-      // 2. Marcar token como consumido
-      await tx.tokenRestablecimiento.update({
-        where: { idToken: registroToken.idToken },
+      const consumido = await tx.tokenRestablecimiento.updateMany({
+        where: { idToken: registroToken.idToken, usadoEn: null, expiraEn: { gt: new Date() } },
         data: { usadoEn: ahora },
+      });
+      if (!consumido.count) throw new BadRequestError("El enlace de recuperación es inválido o ha expirado.");
+      await tx.tokenRestablecimiento.deleteMany({
+        where: { idUsuario: registroToken.idUsuario, usadoEn: null },
       });
 
       // 3. Revocar sesiones activas por seguridad
@@ -384,7 +374,7 @@ class AuthService {
   /**
    * Cambia la contraseña de un usuario autenticado.
    */
-  async changePassword(idUsuario, { contrasenaActual, nuevaContrasena }) {
+  async changePassword(idUsuario, { contrasenaActual, nuevaContrasena }, idSesion) {
     const usuario = await prisma.usuario.findUnique({
       where: { idUsuario },
     });
@@ -401,9 +391,18 @@ class AuthService {
     const salt = await bcrypt.genSalt(10);
     const nuevaHash = await bcrypt.hash(nuevaContrasena, salt);
 
-    await prisma.usuario.update({
-      where: { idUsuario },
-      data: { contrasenaHash: nuevaHash },
+    await prisma.$transaction(async (tx) => {
+      const actualizado = await tx.usuario.updateMany({
+        where: { idUsuario, estado: "activo", contrasenaHash: usuario.contrasenaHash },
+        data: { contrasenaHash: nuevaHash },
+      });
+      if (!actualizado.count) throw new ConflictError("La contraseña cambió. Volvé a intentar.");
+
+      await tx.sesion.updateMany({
+        where: { idUsuario, idSesion: { not: idSesion }, revocadaEn: null },
+        data: { revocadaEn: new Date() },
+      });
+      await tx.tokenRestablecimiento.deleteMany({ where: { idUsuario, usadoEn: null } });
     });
 
     return { message: "Contraseña actualizada exitosamente" };

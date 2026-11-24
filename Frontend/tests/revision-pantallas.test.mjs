@@ -8,7 +8,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
 const { createInitialData } = await import("./fixtures/data.ts");
 const { cargarDatosGuardados } = await import("../app/lib/persistence.ts");
 const { aplicarAsignacionHabitacion, esFechaISO, validarAltaAlumno, validarAltaContrato, validarAltaHabitacion } = await import("../app/lib/gestiones.ts");
-const { guardarSesion, restaurarSesion, cerrarSesion, usuarioActual } = await import("../app/lib/session.ts");
+const { limpiarDatosDeSesionAnteriores, sincronizarUsuario, cerrarSesion, usuarioActual } = await import("../app/lib/session.ts");
 const { importeMulta } = await import("../app/lib/multas.ts");
 const { prepararFactura } = await import("../app/lib/facturacion.ts");
 const { requestPasswordReset } = await import("../app/lib/auth.ts");
@@ -25,31 +25,50 @@ test("persistencia recupera datos válidos y migra campos nuevos sin reemplazar 
   assert.deepEqual(migrados.alumnos, data.alumnos);
   assert.deepEqual(migrados.reclamos, []);
   assert.equal(typeof migrados.parametros.cuotaMensual, "number");
-  assert.equal(cargarDatosGuardados(null).usuarios[0].idUsuario, "U1");
+  assert.equal(cargarDatosGuardados(null).usuarios.length, 0);
 });
 test("datos dañados producen un error recuperable y nunca se reemplazan por ejemplos", () => {
   for (const valor of ["{", "null", "[]", "{}", JSON.stringify({ ...createInitialData(), alumnos: [null] }), JSON.stringify({ ...createInitialData(), facturas: [{ idFactura: "X" }] })]) {
     assert.throws(() => cargarDatosGuardados(valor));
   }
 });
-test("sesión guarda solo identidad; recordar es opcional y cerrar borra datos de la cuenta anterior", () => {
+test("elimina copias anteriores sin restaurar identidad desde el navegador", () => {
   const anteriorLocal = globalThis.localStorage, anteriorSesion = globalThis.sessionStorage;
   try {
-    globalThis.localStorage = almacenamiento(); globalThis.sessionStorage = almacenamiento();
-    assert.equal(restaurarSesion(), null);
-    guardarSesion({ ...createInitialData().usuarios[0], passwordHash: "secreto" });
-    assert.deepEqual(JSON.parse(sessionStorage.getItem("residencia-sesion")), { idUsuario: "U1" });
+    globalThis.localStorage = almacenamiento();
+    globalThis.sessionStorage = almacenamiento();
+    localStorage.setItem("residencia-datos-v1", "copia anterior");
+    localStorage.setItem("residencia-recordar-sesion", "cuenta anterior");
+    localStorage.setItem("residencia_token", "token anterior");
+    sessionStorage.setItem("residencia_token", "token anterior");
+    sessionStorage.setItem("residencia-sesion", "cuenta anterior");
+    limpiarDatosDeSesionAnteriores();
+    assert.equal(localStorage.getItem("residencia-datos-v1"), null);
     assert.equal(localStorage.getItem("residencia-recordar-sesion"), null);
-    assert.equal(restaurarSesion(), "U1");
-    guardarSesion({ idUsuario: "TEST", idAlumno: "A03", nombre: "Alumno", correo: "test@example.com", rol: "alumno", estado: "activo" }, true);
-    assert.equal(usuarioActual.passwordHash, undefined);
-    sessionStorage.removeItem("residencia-sesion");
-    assert.equal(restaurarSesion(), "TEST");
-    cerrarSesion();
-    assert.equal(restaurarSesion(), null); assert.equal(usuarioActual.idAlumno, undefined); assert.equal(usuarioActual.idUsuario, "");
-    sessionStorage.setItem("residencia-sesion", "{malformado");
-    assert.equal(restaurarSesion(), null);
-  } finally { globalThis.localStorage = anteriorLocal; globalThis.sessionStorage = anteriorSesion; }
+    assert.equal(localStorage.getItem("residencia_token"), null);
+    assert.equal(sessionStorage.getItem("residencia_token"), null);
+    assert.equal(sessionStorage.getItem("residencia-sesion"), null);
+    assert.equal(usuarioActual.idUsuario, "");
+  } finally {
+    globalThis.localStorage = anteriorLocal;
+    globalThis.sessionStorage = anteriorSesion;
+  }
+});
+
+test("el cierre de sesión espera confirmación del servidor antes de limpiar la cuenta", async (t) => {
+  sincronizarUsuario(createInitialData().usuarios[0]);
+  t.after(() => sincronizarUsuario(null));
+  const fetch = t.mock.method(globalThis, "fetch", async () => new Response(null, { status: 503 }));
+  await assert.rejects(cerrarSesion(), /cerrar la sesión/);
+  assert.equal(usuarioActual.idUsuario, "U1");
+
+  fetch.mock.mockImplementation(async (path, options) => {
+    assert.equal(path, "/api/auth/logout");
+    assert.equal(options.headers["X-Residencia-Account"], "U1");
+    return new Response(null, { status: 204 });
+  });
+  await cerrarSesion();
+  assert.equal(usuarioActual.idUsuario, "");
 });
 test("altas rechazan documento repetido y habitación duplicada aunque el formato cambie", () => {
   const data = createInitialData();

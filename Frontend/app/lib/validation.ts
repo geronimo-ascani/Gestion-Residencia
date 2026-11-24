@@ -24,9 +24,9 @@ export interface PasswordRule {
 export const PASSWORD_RULES: PasswordRule[] = [
   {
     id: "length",
-    label: "Al menos 8 caracteres",
-    failure: "Debe tener al menos 8 caracteres.",
-    test: (value) => value.length >= 8,
+    label: "Al menos 12 caracteres",
+    failure: "Debe tener al menos 12 caracteres.",
+    test: (value) => value.length >= 12,
   },
   {
     id: "letter",

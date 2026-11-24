@@ -1,5 +1,6 @@
 import { administracionService } from "../services/administracion.service.js";
 import { successResponse } from "../utils/apiResponse.js";
+import { ForbiddenError } from "../utils/customErrors.js";
 
 /**
  * Capa de Controlador: Parámetros del Sistema, Auditoría y Notificaciones
@@ -65,7 +66,7 @@ class AdministracionController {
    */
   registrarCambio = async (req, res, next) => {
     try {
-      const actorId = req.body.idActor || req.user?.idUsuario;
+      const actorId = req.user.idUsuario;
       const cambio = await administracionService.registrarCambio({
         ...req.body,
         idActor: actorId,
@@ -86,14 +87,7 @@ class AdministracionController {
    */
   getNotificaciones = async (req, res, next) => {
     try {
-      let userId = req.user?.idUsuario || req.query.idUsuario;
-      const rol = (req.user?.rol || "").toUpperCase();
-      if (rol === "ALUMNO" && req.user?.idUsuario) {
-        userId = req.user.idUsuario;
-      }
-      if (!userId) {
-        return res.status(400).json({ status: "error", message: "Debe estar autenticado o indicar idUsuario" });
-      }
+      const userId = req.user.idUsuario;
       const data = await administracionService.getNotificacionesUsuario(
         userId,
         { soloNoLeidas: Boolean(req.query.soloNoLeidas) }
@@ -131,11 +125,7 @@ class AdministracionController {
    */
   marcarLeida = async (req, res, next) => {
     try {
-      let userId = req.user?.idUsuario || req.body.idUsuario;
-      const rol = (req.user?.rol || "").toUpperCase();
-      if (rol === "ALUMNO" && req.user?.idUsuario) {
-        userId = req.user.idUsuario;
-      }
+      const userId = req.user.idUsuario;
       const notif = await administracionService.marcarLeida(req.params.id, userId);
       return successResponse(
         res,
@@ -153,11 +143,7 @@ class AdministracionController {
    */
   marcarTodasLeidas = async (req, res, next) => {
     try {
-      let userId = req.user?.idUsuario || req.body.idUsuario;
-      const rol = (req.user?.rol || "").toUpperCase();
-      if (rol === "ALUMNO" && req.user?.idUsuario) {
-        userId = req.user.idUsuario;
-      }
+      const userId = req.user.idUsuario;
       const resultado = await administracionService.marcarTodasLeidas(userId);
       return successResponse(
         res,
@@ -210,7 +196,12 @@ class AdministracionController {
 
   updateAdministrador = async (req, res, next) => {
     try {
-      const actualizado = await administracionService.updateAdministrador(req.params.id, req.body);
+      const id = Number(req.params.id);
+      if (!req.user.gestionaAdministradores &&
+          (id !== req.user.idUsuario || req.body.gestionaAdministradores !== undefined || req.body.estado !== undefined)) {
+        throw new ForbiddenError("No tenés permiso para editar los privilegios o el estado de una cuenta administrativa.");
+      }
+      const actualizado = await administracionService.updateAdministrador(id, req.body);
       return successResponse(res, actualizado, "Administrador actualizado con éxito", 200);
     } catch (error) {
       return next(error);
@@ -295,7 +286,9 @@ class AdministracionController {
   getEstadoCompleto = async (req, res, next) => {
     try {
       const estado = await administracionService.getEstadoCompleto(req.user);
-      return successResponse(res, estado, "Estado completo del sistema obtenido con éxito", 200);
+      return successResponse(
+        res, { ...estado, idUsuarioSesion: String(req.user.idUsuario) }, "Estado de la sesión obtenido con éxito", 200
+      );
     } catch (error) {
       return next(error);
     }

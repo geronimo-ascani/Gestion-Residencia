@@ -45,16 +45,6 @@ const gracefulShutdown = async (signal) => {
   }, 10000);
 };
 
-// Manejo para reinicios limpios con nodemon (SIGUSR2) sin fugar conexiones
-process.once("SIGUSR2", async () => {
-  server.close(async () => {
-    try {
-      await prisma.$disconnect();
-    } catch {}
-    process.kill(process.pid, "SIGUSR2");
-  });
-});
-
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 

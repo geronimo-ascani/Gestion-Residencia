@@ -1,4 +1,5 @@
 import { authService } from "../services/auth.service.js";
+import { sessionCookie, sessionCookieOptions } from "../utils/session.js";
 import { successResponse } from "../utils/apiResponse.js";
 
 /**
@@ -27,7 +28,15 @@ class AuthController {
    */
   login = async (req, res, next) => {
     try {
-      const data = await authService.login(req.body);
+      const { token, usuario, expiraEn } = await authService.login(req.body);
+      const esNavegador = req.get("X-Residencia-Request") === "browser";
+      if (esNavegador) {
+        res.cookie(sessionCookie, token, {
+          ...sessionCookieOptions,
+          ...(req.body.remember ? { expires: expiraEn } : {}),
+        });
+      }
+      const data = esNavegador ? { usuario } : { token, usuario };
       return successResponse(
         res,
         data,
@@ -63,7 +72,8 @@ class AuthController {
     try {
       const result = await authService.changePassword(
         req.user.idUsuario,
-        req.body
+        req.body,
+        req.user.idSesion
       );
       return successResponse(
         res,
@@ -81,8 +91,8 @@ class AuthController {
    */
   logout = async (req, res, next) => {
     try {
-      const authHeader = req.headers.authorization;
-      const resultado = await authService.logout(authHeader);
+      const resultado = await authService.logout(req.user.idSesion);
+      res.clearCookie(sessionCookie, sessionCookieOptions);
       return successResponse(
         res,
         resultado,

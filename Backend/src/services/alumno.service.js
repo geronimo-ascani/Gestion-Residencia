@@ -1,18 +1,8 @@
+import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "../config/database.js";
 import { NotFoundError, ConflictError, BadRequestError } from "../utils/customErrors.js";
 import { FECHA_REFERENCIA } from "../config/constants.js";
-
-/**
- * Calcula la contraseña inicial estándar según las reglas del sistema:
- * Primer apellido seguido de los últimos 3 dígitos del documento.
- */
-function calcularClaveInicial(apellido, documento) {
-  const primero = (apellido || "").trim().split(/\s+/)[0] || "Alumno";
-  const dni = String(documento || "").replace(/\D/g, "");
-  const ultimos3 = dni.length >= 3 ? dni.slice(-3) : "123";
-  return `${primero}${ultimos3}`;
-}
 
 /**
  * Capa de Servicio: Alumno
@@ -88,16 +78,18 @@ class AlumnoService {
 
     // 3. Resolver cuenta de usuario si se especificó correo o idUsuario
     let finalIdUsuario = idUsuario;
+    let claveGenerada;
+    let cuentaNueva;
     const correoFinal = (correoContacto || correo || "").toLowerCase().trim() || null;
 
     if (!finalIdUsuario && correo) {
       const existingUser = await prisma.usuario.findUnique({
         where: { correo: correo.toLowerCase().trim() },
-        include: { alumno: true },
+        include: { rol: true },
       });
 
       if (existingUser) {
-        if (existingUser.idAlumno) {
+        if (existingUser.idAlumno || existingUser.rol.rol !== "ALUMNO") {
           throw new ConflictError(
             `El usuario con correo ${correo} ya está asociado a otro perfil de alumno`
           );
@@ -113,32 +105,31 @@ class AlumnoService {
           });
         }
 
-        const passPlano = contrasena || calcularClaveInicial(restoData.apellido, documentoLimpio);
+        claveGenerada = contrasena ? undefined : randomBytes(18).toString("base64url");
+        const passPlano = contrasena ?? claveGenerada;
         const salt = await bcrypt.genSalt(10);
         const contrasenaHash = await bcrypt.hash(passPlano, salt);
 
-        const nuevoUsuario = await prisma.usuario.create({
-          data: {
-            correo: correo.toLowerCase().trim(),
-            contrasenaHash,
-            idRol: rolAlumno.idRol,
-            estado: "activo",
-            nombre: restoData.nombre.trim(),
-            apellido: restoData.apellido.trim(),
-            documento: documentoLimpio,
-            telefono: restoData.telefono?.trim() || null,
-          },
-        });
-        finalIdUsuario = nuevoUsuario.idUsuario;
+        cuentaNueva = {
+          correo: correo.toLowerCase().trim(),
+          contrasenaHash,
+          idRol: rolAlumno.idRol,
+          estado: "activo",
+          nombre: restoData.nombre.trim(),
+          apellido: restoData.apellido.trim(),
+          documento: documentoLimpio,
+          telefono: restoData.telefono?.trim() || null,
+        };
       }
     } else if (finalIdUsuario) {
       const usuario = await prisma.usuario.findUnique({
         where: { idUsuario: finalIdUsuario },
+        include: { rol: true },
       });
       if (!usuario) {
         throw new NotFoundError(`No se encontró el usuario con ID: ${finalIdUsuario}`);
       }
-      if (usuario.idAlumno) {
+      if (usuario.idAlumno || usuario.rol.rol !== "ALUMNO") {
         throw new ConflictError(
           `El usuario con ID ${finalIdUsuario} ya tiene asignado un perfil de alumno`
         );
@@ -183,11 +174,14 @@ class AlumnoService {
       }
 
       // Si existe un usuario vinculado, actualizar idAlumno en el usuario
-      if (finalIdUsuario) {
-        await tx.usuario.update({
-          where: { idUsuario: finalIdUsuario },
+      if (cuentaNueva) {
+        await tx.usuario.create({ data: { ...cuentaNueva, idAlumno: alumno.idAlumno } });
+      } else if (finalIdUsuario) {
+        const vinculada = await tx.usuario.updateMany({
+          where: { idUsuario: finalIdUsuario, idAlumno: null, rol: { rol: "ALUMNO" } },
           data: { idAlumno: alumno.idAlumno },
         });
+        if (!vinculada.count) throw new ConflictError("La cuenta ya no está disponible para vincular.");
       }
 
       return await tx.alumno.findUnique({
@@ -207,15 +201,15 @@ class AlumnoService {
       });
     });
 
-    return this.#enriquecerAlumno(nuevoAlumno);
+    return { ...this.#enriquecerAlumno(nuevoAlumno), ...(claveGenerada && { claveGenerada }) };
   }
 
   /**
    * Obtiene la lista paginada de Alumnos con filtros por búsqueda, estado, carrera o localidad.
    */
-  async getAll({ page = 1, limit = 10, search, estado, carrera, localidad, provincia } = {}) {
+  async getAll({ page = 1, limit = 10, search, estado, carrera, localidad, provincia, idAlumno } = {}) {
     const skip = (page - 1) * limit;
-    const where = {};
+    const where = idAlumno === undefined ? {} : { idAlumno };
 
     if (estado) {
       where.estado = { equals: estado.toLowerCase(), mode: "insensitive" };
@@ -546,7 +540,7 @@ class AlumnoService {
 
   /**
    * Crea o actualiza la cuenta de acceso (Usuario) de un alumno.
-   * Si el usuario no existe, lo crea con la contraseña inicial derivada del apellido y DNI.
+   * Genera una contraseña inicial aleatoria si no se indica una.
    * Si ya existe, actualiza el correo y genera un nuevo hash de contraseña válido.
    */
   async crearOActualizarAcceso(idAlumnoInput, { correo, contrasena } = {}) {
@@ -580,9 +574,8 @@ class AlumnoService {
       throw new ConflictError(`El correo ${correoFinal} ya está en uso por otro usuario`);
     }
 
-    const clavePlana = contrasena || calcularClaveInicial(alumno.apellido, alumno.documento);
-    const salt = await bcrypt.genSalt(10);
-    const contrasenaHash = await bcrypt.hash(clavePlana, salt);
+    const clavePlana = contrasena ?? randomBytes(18).toString("base64url");
+    const contrasenaHash = await bcrypt.hash(clavePlana, 10);
 
     let rolAlumno = await prisma.rol.findUnique({
       where: { rol: "ALUMNO" },
@@ -591,58 +584,41 @@ class AlumnoService {
       rolAlumno = await prisma.rol.create({ data: { rol: "ALUMNO" } });
     }
 
-    let usuarioResult;
-    if (alumno.usuario) {
-      usuarioResult = await prisma.usuario.update({
-        where: { idUsuario: alumno.usuario.idUsuario },
-        data: {
-          correo: correoFinal,
-          contrasenaHash,
-          estado: "activo",
-        },
-        select: {
-          idUsuario: true,
-          idAlumno: true,
-          correo: true,
-          estado: true,
-          idRol: true,
-        },
-      });
-    } else {
-      usuarioResult = await prisma.usuario.create({
-        data: {
-          correo: correoFinal,
-          contrasenaHash,
-          idRol: rolAlumno.idRol,
-          estado: "activo",
-          nombre: alumno.nombre,
-          apellido: alumno.apellido,
-          documento: alumno.documento,
-          telefono: alumno.telefono,
-          idAlumno: alumno.idAlumno,
-        },
-        select: {
-          idUsuario: true,
-          idAlumno: true,
-          correo: true,
-          estado: true,
-          idRol: true,
-        },
-      });
-    }
+    const select = { idUsuario: true, idAlumno: true, correo: true, estado: true, idRol: true };
+    return prisma.$transaction(async (tx) => {
+      const cuenta = alumno.usuario
+        ? await tx.usuario.update({
+            where: { idUsuario: alumno.usuario.idUsuario, idRol: rolAlumno.idRol },
+            data: { correo: correoFinal, contrasenaHash, estado: "activo" },
+            select,
+          })
+        : await tx.usuario.create({
+            data: {
+              correo: correoFinal,
+              contrasenaHash,
+              idRol: rolAlumno.idRol,
+              estado: "activo",
+              nombre: alumno.nombre,
+              apellido: alumno.apellido,
+              documento: alumno.documento,
+              telefono: alumno.telefono,
+              idAlumno: alumno.idAlumno,
+            },
+            select,
+          });
 
-    // Sincronizar correoContacto en alumno si cambió
-    if (alumno.correoContacto !== correoFinal) {
-      await prisma.alumno.update({
-        where: { idAlumno },
-        data: { correoContacto: correoFinal },
-      });
-    }
-
-    return {
-      ...usuarioResult,
-      claveGenerada: contrasena ? undefined : clavePlana,
-    };
+      if (alumno.usuario) {
+        await tx.sesion.updateMany({
+          where: { idUsuario: cuenta.idUsuario, revocadaEn: null },
+          data: { revocadaEn: new Date() },
+        });
+        await tx.tokenRestablecimiento.deleteMany({ where: { idUsuario: cuenta.idUsuario, usadoEn: null } });
+      }
+      if (alumno.correoContacto !== correoFinal) {
+        await tx.alumno.update({ where: { idAlumno }, data: { correoContacto: correoFinal } });
+      }
+      return { ...cuenta, claveGenerada: contrasena ? undefined : clavePlana };
+    });
   }
 
   /**

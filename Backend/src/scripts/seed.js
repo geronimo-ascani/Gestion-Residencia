@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../config/database.js";
+import { env } from "../config/env.js";
 import { PARAMETROS_DEFAULT } from "../services/administracion.service.js";
 
 const CAPACIDADES = [2, 2, 4, 4, 5];
@@ -127,6 +128,10 @@ function claveInicial(apellido, documento) {
 }
 
 export async function seedDatabase() {
+  if (env.NODE_ENV === "production") {
+    throw new Error("La carga de demostración solo está habilitada en entornos de prueba o desarrollo.");
+  }
+
   console.log("🌱 Iniciando migración y poblado de la base de datos...");
 
   // 1. Limpieza de datos transaccionales para una carga limpia

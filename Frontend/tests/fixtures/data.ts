@@ -2,7 +2,19 @@ import { CARRERAS_INICIALES, catalogoInicial } from "../../app/lib/catalogos";
 import { PARAMETROS_INICIALES } from "../../app/lib/parametros";
 import { TAREAS_LIMPIEZA } from "../../app/lib/domain";
 import type { Alumno, Ambiente, Contrato, DataState, Habitacion, HabitacionAlumno } from "../../app/lib/types";
-import { USUARIO_ADMIN_INICIAL } from "../../app/lib/session";
+import type { Usuario } from "../../app/lib/types";
+
+const USUARIO_ADMIN_INICIAL: Usuario = {
+  idUsuario: "U1",
+  nombre: "Ana Pérez",
+  apellido: "Pérez",
+  documento: "30000123",
+  correo: "ana@residencia.ar",
+  rol: "administrador",
+  estado: "activo",
+  gestionaAdministradores: true,
+  fechaAlta: "2026-01-01",
+};
 
 const CAPACIDADES = [2, 2, 4, 4, 5] as const;
 

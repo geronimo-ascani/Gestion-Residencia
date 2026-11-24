@@ -17,7 +17,7 @@ export const errorHandler = (err, req, res, _next) => {
   if (err instanceof ZodError) {
     statusCode = 400;
     message = "Error de validación en los datos de la petición";
-    errors = err.errors.map((e) => ({
+    errors = err.issues.map((e) => ({
       field: e.path.join("."),
       message: e.message,
     }));
@@ -67,7 +67,12 @@ export const errorHandler = (err, req, res, _next) => {
 
   // Log de errores en el servidor (únicamente errores 500 no controlados)
   if (statusCode >= 500) {
-    console.error("[ERROR 500 NO CONTROLADO]:", err);
+    if (env.NODE_ENV === "development") console.error("[ERROR DEL SERVIDOR]:", err);
+    else console.error("[ERROR DEL SERVIDOR]", statusCode, err.name, err.code ?? "");
+    if (env.NODE_ENV === "production") {
+      message = statusCode === 503 ? "Servicio temporalmente no disponible." : "Error interno del servidor.";
+      errors = null;
+    }
   }
 
   // Respuesta HTTP formateada

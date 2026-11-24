@@ -1,3 +1,4 @@
+import { CAMBIO_DE_SESION, usuarioActual } from "./session";
 import type {
   DataState,
   EquipamientoAmbiente,
@@ -20,28 +21,29 @@ import { FECHA_REFERENCIA } from "./config";
 
 const API_BASE = "/api";
 
-function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("residencia_token") || localStorage.getItem("residencia_token");
-}
+class SesionVencidaError extends Error {}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T | null> {
-  const token = getToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers as Record<string, string> | undefined),
-  };
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
+  headers.set("X-Residencia-Request", "browser");
+  if (usuarioActual.idUsuario && path !== "/estado") {
+    headers.set("X-Residencia-Account", usuarioActual.idUsuario);
+  }
 
   const res = await fetch(`${API_BASE}${path}`, {
-    headers,
-    credentials: "include",
     ...options,
+    headers,
+    credentials: "same-origin",
+    cache: "no-store",
   });
   if (!res.ok) {
     const err = await res.json().catch(() => null);
     const mensaje = err?.message || err?.error || `HTTP ${res.status}: ${res.statusText}`;
-    console.warn(`[API] Error en ${path}:`, mensaje);
+    if (res.status === 401) {
+      if (path !== "/estado") window.dispatchEvent(new Event(CAMBIO_DE_SESION));
+      throw new SesionVencidaError(mensaje);
+    }
     throw new Error(mensaje);
   }
   const json = await res.json();
@@ -51,25 +53,32 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T | 
 /**
  * Obtiene el estado completo consolidado desde la base de datos PostgreSQL.
  */
-export async function getEstadoCompleto(): Promise<DataState | null> {
-  return request<DataState>("/estado");
+export async function getEstadoCompleto(signal: AbortSignal) {
+  try {
+    return await request<DataState & { idUsuarioSesion: string }>("/estado", { signal });
+  } catch (error) {
+    if (error instanceof SesionVencidaError) return null;
+    throw error;
+  }
 }
 
 export async function apiCrearAlumno(input: NuevoAlumnoInput): Promise<string | null> {
+  const { correo, ...datos } = input;
   const res = await request<{ idAlumno: number | string }>("/alumnos", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...datos, correoContacto: correo || undefined }),
   });
   return res ? String(res.idAlumno) : null;
 }
 
-export async function apiCrearAccesoAlumno(idAlumno: string, correo: string): Promise<boolean> {
+export async function apiCrearAccesoAlumno(idAlumno: string, correo: string) {
   const idNumerico = idAlumno.replace(/\D/g, "");
-  const res = await request(`/alumnos/${idNumerico}/acceso`, {
+  const res = await request<{ idUsuario: number; claveGenerada: string }>(`/alumnos/${idNumerico}/acceso`, {
     method: "POST",
     body: JSON.stringify({ correo }),
   });
-  return res !== null;
+  if (!res?.claveGenerada) throw new Error("La API no devolvió la contraseña inicial.");
+  return res;
 }
 
 export async function apiActualizarAlumno(idAlumno: string, input: Partial<NuevoAlumnoInput>): Promise<void> {
@@ -303,12 +312,13 @@ export async function apiCrearAdministrador(input: {
   telefono?: string;
   contrasena?: string;
   gestionaAdministradores?: boolean;
-}): Promise<string | null> {
-  const res = await request<{ idUsuario: number | string }>("/administracion/administradores", {
+}) {
+  const res = await request<{ idUsuario: number; claveGenerada: string }>("/administracion/administradores", {
     method: "POST",
     body: JSON.stringify(input),
   });
-  return res ? String(res.idUsuario) : null;
+  if (!res?.claveGenerada) throw new Error("La API no devolvió la contraseña inicial.");
+  return res;
 }
 
 export async function apiActualizarAdministrador(id: string, input: {

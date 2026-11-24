@@ -1,16 +1,12 @@
 import { DataLoadingScreen, DataErrorScreen, ErrorGuardadoBanner } from "../Components/layout/data-loading-screen";
 import { aplicarAsignacionHabitacion, editarContrato, editarHabitacion, esFechaISO, validarAltaAlumno, validarAltaHabitacion, validarAltaContrato } from "./gestiones";
-import { cargarDatosGuardados, DATOS_KEY } from "./persistence";
 import { estadoAcceso } from "./administracion";
-import { sincronizarUsuario } from "./session";
+import { CAMBIO_DE_SESION, sincronizarUsuario, usuarioActual } from "./session";
 import type { Usuario } from "./types";
 import { prepararReclamo, actualizarReclamo } from "./reclamos";
 import type { NuevoReclamoInput, EstadoReclamo } from "./types";
 import { validarParametros, arancelesMulta } from "./parametros";
 import type { Parametros } from "./parametros";
-import { claveInicial, hashClave } from "./credenciales";
-import { restaurarSesion } from "./session";
-import { usuarioActual } from "./session";
 import { cambiarEstadoCuenta, crearCuentaAlumno, puedeGestionarAdministradores, registrarCambios, validarCorreoCuenta } from "./administracion";
 import { createContext, useContext, useMemo, useState, useEffect } from "react";
 import type { ReactNode } from "react";
@@ -142,10 +138,10 @@ export interface DataContextValue extends DataState {
   guardarOpcionCatalogo: (catalogo: CatalogoAlumno, opcion: Omit<OpcionCatalogo, "id"> & { id?: string }) => void;
   guardarParametros: (valores: Parametros) => void;
   ajustarImporteContrato: (id: string, monto: number) => void;
-  crearAdministrador: (input: { nombre: string; apellido: string; documento: string; correo: string; telefono: string; gestionaAdministradores: boolean }) => string;
+  crearAdministrador: (input: { nombre: string; apellido: string; documento: string; correo: string; telefono: string; gestionaAdministradores: boolean }) => Promise<{ idUsuario: string; claveGenerada: string }>;
   actualizarAdministrador: (id: string, input: { nombre: string; apellido: string; correo: string; telefono: string }) => void;
   cambiarClave: (actual: string, nueva: string) => Promise<void>;
-  crearAccesoAlumno: (idAlumno: string, correo: string) => void;
+  crearAccesoAlumno: (idAlumno: string, correo: string) => Promise<string>;
   suspenderCuenta: (id: string, suspender: boolean) => void;
   generarFactura: (idContrato: string, periodo: string, reemplazo?: ReemplazoFacturaInput) => string;
   cancelarFactura: (idFactura: string, motivo: string) => void;
@@ -188,12 +184,11 @@ export interface DataContextValue extends DataState {
 const DataContext = createContext<DataContextValue | null>(null);
 
 /**
- * Estado compartido del prototipo, persistido en este navegador.
- * El backend deberá reemplazar esta persistencia y validar cada operación.
+ * Estado compartido en memoria, cargado desde la API con una sesión validada.
  */
 export function DataProvider({ children }: { children: ReactNode }) {
   const [state, setStateBase] = useState<DataState>(() => createInitialData());
-  const [sesionId, setSesionId] = useState<string | null>(() => restaurarSesion());
+  const [sesionId, setSesionId] = useState<string | null>(null);
   const [errorCarga, setErrorCarga] = useState("");
   const [errorGuardado, setErrorGuardado] = useState(false);
 
@@ -211,112 +206,50 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const [listo, setListo] = useState(false);
   useEffect(() => {
-    let cancelado = false;
+    const controller = new AbortController();
 
-    async function sincronizarConBaseDeDatos() {
-      const sesionActualId = restaurarSesion();
-
-      // 1. Carga inmediata desde almacenamiento local si existe
+    async function cargarSesion() {
       try {
-        const guardado = localStorage.getItem(DATOS_KEY);
-        if (guardado) {
-          const datosLocales = cargarDatosGuardados(guardado);
-          const cuenta = sesionActualId
-            ? datosLocales.usuarios.find(
-                (u) =>
-                  u.idUsuario === sesionActualId ||
-                  (usuarioActual.correo && u.correo?.toLowerCase() === usuarioActual.correo.toLowerCase())
-              )
-            : null;
-
-          if (!cancelado) {
-            setStateBase(datosLocales);
-            if (cuenta && cuenta.estado === "activo") {
-              sincronizarUsuario(cuenta);
-              setSesionId(cuenta.idUsuario);
-              setListo(true);
-            } else if (!sesionActualId) {
-              setListo(true);
-            }
-          }
+        const datos = await getEstadoCompleto(controller.signal);
+        if (controller.signal.aborted) return;
+        if (datos) {
+          const { idUsuarioSesion, ...estado } = datos;
+          const cuenta = estado.usuarios.find((u) => u.idUsuario === idUsuarioSesion && u.estado === "activo");
+          if (!cuenta) throw new Error("La API no devolvió la cuenta de esta sesión.");
+          sincronizarUsuario(cuenta);
+          setStateBase(estado);
+          setSesionId(cuenta.idUsuario);
+        } else {
+          sincronizarUsuario(null);
         }
-      } catch (err) {
-        console.warn("No se pudieron cargar datos locales:", err);
-      }
-
-      // 2. Sincronización en segundo plano con PostgreSQL
-      try {
-        const datosBD = await getEstadoCompleto();
-        if (datosBD && !cancelado) {
-          setStateBase(datosBD);
-          const id = restaurarSesion();
-          const cuenta = datosBD.usuarios.find(
-            (u) =>
-              u.idUsuario === id ||
-              (usuarioActual.correo && u.correo?.toLowerCase() === usuarioActual.correo.toLowerCase())
-          );
-          if (cuenta && cuenta.estado === "activo") {
-            sincronizarUsuario(cuenta);
-            setSesionId(cuenta.idUsuario);
-          } else if (id && usuarioActual.idUsuario && usuarioActual.estado === "activo") {
-            setSesionId(id);
-          }
-          setListo(true);
-          try {
-            localStorage.setItem(DATOS_KEY, JSON.stringify(datosBD));
-          } catch {}
-          return;
-        }
-      } catch (err) {
-        console.warn("No se pudo sincronizar directamente con la base de datos, usando respaldo:", err);
-      }
-
-      try {
-        const guardado = localStorage.getItem(DATOS_KEY);
-        if (guardado) {
-          const datos = cargarDatosGuardados(guardado);
-          const id = restaurarSesion();
-          const cuenta = datos.usuarios.find(
-            (u) =>
-              u.idUsuario === id ||
-              (usuarioActual.correo && u.correo?.toLowerCase() === usuarioActual.correo.toLowerCase())
-          );
-          if (cuenta && cuenta.estado === "activo") {
-            sincronizarUsuario(cuenta);
-            setSesionId(cuenta.idUsuario);
-          }
-          if (!cancelado) {
-            setStateBase(datos);
-            setListo(true);
-          }
-        } else if (!cancelado) {
-          setListo(true);
-        }
+        setListo(true);
       } catch {
-        if (!cancelado) {
-          setErrorCarga("No se pudieron cargar los datos de la residencia.");
+        if (!controller.signal.aborted) {
+          setErrorCarga("No pudimos verificar tu sesión o cargar los datos de la residencia.");
         }
       }
     }
 
-    sincronizarConBaseDeDatos();
+    void cargarSesion();
 
-    function recibir(event: StorageEvent) {
-      if (event.key !== DATOS_KEY) return;
-      try { setStateBase(cargarDatosGuardados(event.newValue)); }
-      catch { setListo(false); setErrorCarga("Los datos se modificaron en otra pestaña y no se pudieron leer. Conservamos la información original."); }
+    function invalidarSesion() {
+      controller.abort();
+      sincronizarUsuario(null);
+      setStateBase(createInitialData());
+      setSesionId(null);
+      setErrorCarga("");
+      setListo(true);
     }
-    window.addEventListener("storage", recibir);
+
+    const canal = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(CAMBIO_DE_SESION);
+    canal?.addEventListener("message", invalidarSesion);
+    window.addEventListener(CAMBIO_DE_SESION, invalidarSesion);
     return () => {
-      cancelado = true;
-      window.removeEventListener("storage", recibir);
+      controller.abort();
+      canal?.close();
+      window.removeEventListener(CAMBIO_DE_SESION, invalidarSesion);
     };
   }, []);
-  useEffect(() => {
-    if (!listo) return;
-    try { localStorage.setItem(DATOS_KEY, JSON.stringify(state)); setErrorGuardado(false); }
-    catch { setErrorGuardado(true); }
-  }, [state, listo]);
   const value = useMemo<DataContextValue>(() => {
     const alumnoPorId = new Map(
       state.alumnos.map((alumno) => [alumno.idAlumno, alumno]),
@@ -336,26 +269,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     return {
       ...state,
-      usuarioAutenticado: (() => {
-        const idBuscado = sesionId ?? restaurarSesion();
-        if (!idBuscado) return null;
-        const u = state.usuarios.find(
-          (user) =>
-            user.idUsuario === idBuscado ||
-            (usuarioActual.correo && user.correo?.toLowerCase() === usuarioActual.correo.toLowerCase())
-        );
-        if (u && u.estado === "activo") return u;
-        if (
-          usuarioActual &&
-          usuarioActual.idUsuario &&
-          (usuarioActual.idUsuario === idBuscado ||
-            (usuarioActual.correo && u?.correo && usuarioActual.correo.toLowerCase() === u.correo.toLowerCase())) &&
-          usuarioActual.estado === "activo"
-        ) {
-          return usuarioActual;
-        }
-        return null;
-      })(),
+      usuarioAutenticado: state.usuarios.find((u) => u.idUsuario === sesionId && u.estado === "activo") ?? null,
       crearReclamo(input) {
         const id = nuevoId("R");
         const fecha = new Date().toISOString();
@@ -393,29 +307,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
         persistir(apiActualizarContrato(id, { montoMensual: monto }), "ajustarImporteContrato");
       },
       async cambiarClave(actual, nueva) {
-        const u = state.usuarios.find((u) => u.idUsuario === usuarioActual.idUsuario);
-        if (!u) throw new Error("La cuenta no existe.");
-        const esperado = u.passwordHash ?? await hashClave(claveInicial(u.apellido ?? "", u.documento ?? ""));
-        if (await hashClave(actual) !== esperado) throw new Error("La contraseña actual no es correcta.");
-        if (nueva.length < 8) throw new Error("La nueva contraseña debe tener al menos 8 caracteres.");
         if (nueva === actual) throw new Error("Elegí una contraseña diferente a la actual.");
-        const passwordHash = await hashClave(nueva);
-        setState((previo) => ({ ...previo, usuarios: previo.usuarios.map((item) => item.idUsuario === u.idUsuario ? { ...item, passwordHash } : item) }));
-        persistir(apiCambiarClave(actual, nueva), "cambiarClave");
+        await apiCambiarClave(actual, nueva);
       },
-      crearAdministrador(input) {
+      async crearAdministrador(input) {
         exigirAdministrador(state);
         if (!puedeGestionarAdministradores(state)) throw new Error("No tenés permiso para gestionar administradores.");
         if (!input.nombre.trim()) throw new Error("Ingresá el nombre completo.");
-        const clave = claveInicial(input.apellido, input.documento);
         validarCorreoCuenta(input.correo, state.usuarios);
-        const idUsuario = nuevoId("U");
-        setState((previo) => {
-          validarCorreoCuenta(input.correo, previo.usuarios);
-          return { ...previo, usuarios: [...previo.usuarios, { ...input, nombre: `${input.nombre.trim()} ${input.apellido.trim()}`, correo: input.correo.trim().toLowerCase(), idUsuario, rol: "administrador", estado: "activo", fechaAlta: FECHA_REFERENCIA }] };
-        });
-        persistir(apiCrearAdministrador({ ...input, contrasena: clave }), "crearAdministrador");
-        return idUsuario;
+        const cuenta = await apiCrearAdministrador(input);
+        const idUsuario = String(cuenta.idUsuario);
+        setState((previo) => ({
+          ...previo,
+          usuarios: [...previo.usuarios, {
+            ...input, nombre: input.nombre.trim(), apellido: input.apellido.trim(),
+            correo: input.correo.trim().toLowerCase(), idUsuario, rol: "administrador",
+            estado: "activo", fechaAlta: FECHA_REFERENCIA,
+          }],
+        }));
+        return { idUsuario, claveGenerada: cuenta.claveGenerada };
       },
       actualizarAdministrador(id, input) {
         exigirAdministrador(state);
@@ -425,12 +335,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setState((previo) => ({ ...previo, usuarios: previo.usuarios.map((u) => u.idUsuario === id && u.rol === "administrador" ? { ...u, nombre: `${input.nombre.trim()} ${input.apellido.trim()}`, apellido: input.apellido.trim(), correo: input.correo.trim().toLowerCase(), telefono: input.telefono.trim() } : u) }));
         persistir(apiActualizarAdministrador(id, input), "actualizarAdministrador");
       },
-      crearAccesoAlumno(idAlumno, correo) {
+      async crearAccesoAlumno(idAlumno, correo) {
         exigirAdministrador(state);
-        const id = nuevoId("U");
-        crearCuentaAlumno(state, idAlumno, correo, id);
-        setState((previo) => crearCuentaAlumno(previo, idAlumno, correo, id));
-        persistir(apiCrearAccesoAlumno(idAlumno, correo), "crearAccesoAlumno");
+        crearCuentaAlumno(state, idAlumno, correo, "");
+        const cuenta = await apiCrearAccesoAlumno(idAlumno, correo);
+        setState((previo) => crearCuentaAlumno(previo, idAlumno, correo, String(cuenta.idUsuario)));
+        return cuenta.claveGenerada;
       },
       suspenderCuenta(id, suspender) {
         exigirAdministrador(state);
@@ -854,7 +764,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [state, sesionId]);
 
   if (errorCarga) {
-    return <DataErrorScreen error={errorCarga} onErrorDismiss={setErrorCarga} />;
+    return <DataErrorScreen error={errorCarga} />;
   }
 
   if (!listo) {

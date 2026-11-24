@@ -17,8 +17,8 @@ const router = Router();
  */
 router.post(
   "/",
-  requireOwnershipOrAdmin((req) => req.body.idAlumno),
   validate({ body: createReclamoSchema }),
+  requireOwnershipOrAdmin((req) => req.body.idAlumno),
   reclamoController.create
 );
 
@@ -28,8 +28,8 @@ router.post(
  */
 router.get(
   "/",
-  requireOwnershipOrAdmin(),
   validate({ query: queryReclamoSchema }),
+  requireOwnershipOrAdmin(),
   reclamoController.getAll
 );
 

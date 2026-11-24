@@ -8,7 +8,7 @@ export const registrarCobroSchema = z
   .object({
     idFactura: idCoerce,
     monto: z.coerce
-      .number({ required_error: "El monto a cobrar es obligatorio" })
+      .number({ error: "El monto a cobrar es obligatorio" })
       .positive("El monto debe ser mayor a cero")
       .refine(
         (val) => {
@@ -18,7 +18,7 @@ export const registrarCobroSchema = z
         "El importe no puede tener más de dos decimales"
       ),
     fecha: z
-      .string({ required_error: "La fecha de cobro es obligatoria" })
+      .string({ error: "La fecha de cobro es obligatoria" })
       .trim()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (YYYY-MM-DD)"),
     medio: z.enum(["efectivo", "transferencia", "tarjeta"]),

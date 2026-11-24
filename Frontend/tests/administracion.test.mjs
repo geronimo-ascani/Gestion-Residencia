@@ -6,6 +6,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   return nextResolve(specifier, context);
 } });
 const { createInitialData } = await import("./fixtures/data.ts");
+const { sincronizarUsuario } = await import("../app/lib/session.ts");
 const { cambiarEstadoCuenta, crearCuentaAlumno, estadoAcceso, puedeGestionarAdministradores, registrarCambios, validarCorreoCuenta } = await import("../app/lib/administracion.ts");
 const { FECHA_REFERENCIA } = await import("../app/lib/config.ts");
 function escenario() {
@@ -39,8 +40,10 @@ test("vencimiento y baja impiden acceso; renovar no levanta una suspensión manu
   assert.equal(estadoAcceso({ ...u, estado: "pendiente" }, datos), "pendiente");
 });
 
-test("protege cuenta propia y gestión de administradores; restablecer habilita la cuenta", () => {
+test("protege cuenta propia y gestión de administradores; restablecer habilita la cuenta", (t) => {
   const { datos, alumno } = escenario();
+  sincronizarUsuario(datos.usuarios[0]);
+  t.after(() => sincronizarUsuario(null));
   assert.equal(puedeGestionarAdministradores(datos), true);
   assert.throws(() => cambiarEstadoCuenta(datos, "U1", true), /propia cuenta/);
   const administrador = { ...datos.usuarios[0], idUsuario: "U_OTRO", estado: "activo" };
@@ -54,8 +57,10 @@ test("protege cuenta propia y gestión de administradores; restablecer habilita 
   assert.equal(cambiarEstadoCuenta(suspendido, "UT", false).usuarios.at(-1).estado, "activo");
 });
 
-test("historial registra autor, entidad y valores anteriores; ignora operaciones sin cambios", () => {
+test("historial registra autor, entidad y valores anteriores; ignora operaciones sin cambios", (t) => {
   const { datos } = escenario();
+  sincronizarUsuario(datos.usuarios[0]);
+  t.after(() => sincronizarUsuario(null));
   assert.equal(registrarCambios(datos, datos, "2026-11-14T12:00:00Z", "AUD1"), datos);
   const despues = { ...datos, usuarios: datos.usuarios.map((u) => ({ ...u, nombre: "Ana Actualizada" })) };
   const auditado = registrarCambios(datos, despues, "2026-11-14T12:00:00Z", "AUD2");
@@ -82,20 +87,28 @@ test("hash de contraseña permite comparar sin almacenar el texto", async () => 
   assert.notEqual(await hashClave("Pérez123"), await hashClave("Perez123"));
 });
 
-test("login valida claves iniciales y personalizadas, y rechaza cuentas suspendidas", async () => {
-  const datos = createInitialData();
-  let guardado = JSON.stringify(datos);
-  globalThis.localStorage = { getItem: () => guardado };
-  globalThis.sessionStorage = { setItem: () => {} };
+test("el login depende del servidor y nunca lee credenciales locales", async (t) => {
+  const anterior = globalThis.localStorage;
+  let accesosLocales = 0;
+  globalThis.localStorage = { getItem: () => { accesosLocales++; } };
+  t.after(() => { globalThis.localStorage = anterior; });
   const { signInWithEmail } = await import("../app/lib/auth.ts");
-  assert.deepEqual(await signInWithEmail({ email: "ana@residencia.ar", password: "Pérez123" }), {});
-  assert.ok((await signInWithEmail({ email: "ana@residencia.ar", password: "incorrecta" })).error);
-  datos.usuarios[0].passwordHash = await hashClave("NuevaClave123");
-  guardado = JSON.stringify(datos);
-  assert.ok((await signInWithEmail({ email: "ana@residencia.ar", password: "Pérez123" })).error);
-  assert.deepEqual(await signInWithEmail({ email: "ana@residencia.ar", password: "NuevaClave123" }), {});
-  datos.usuarios[0].estado = "suspendido"; guardado = JSON.stringify(datos);
-  assert.ok((await signInWithEmail({ email: "ana@residencia.ar", password: "NuevaClave123" })).error);
+  const credenciales = { email: "admin@example.test", password: "credencial de prueba" };
+  const fetch = t.mock.method(globalThis, "fetch", async () => { throw new Error("Sin conexión"); });
+
+  assert.ok((await signInWithEmail(credenciales)).error);
+  assert.equal(accesosLocales, 0);
+
+  fetch.mock.mockImplementation(async () => Response.json({ message: "Cuenta deshabilitada" }, { status: 401 }));
+  assert.deepEqual(await signInWithEmail(credenciales), { error: "Cuenta deshabilitada" });
+  assert.equal(accesosLocales, 0);
+
+  fetch.mock.mockImplementation(async (path, options) => {
+    assert.equal(path, "/api/auth/login");
+    assert.equal(options.headers["X-Residencia-Request"], "browser");
+    return Response.json({ data: { usuario: { rol: "ADMINISTRADOR" } } });
+  });
+  assert.deepEqual(await signInWithEmail(credenciales), { rol: "administrador" });
 });
 
 test("parámetros validan rangos y decimales, conservando los importes anteriores", async () => {

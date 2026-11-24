@@ -1,3 +1,4 @@
+import { useToast } from "../ui/toast";
 import { AvisosProvider } from "../avisos-alumno";
 import { StudentNotifications } from "./student-notifications";
 import { datosPortalAlumno } from "../../lib/portal-alumno";
@@ -22,9 +23,15 @@ function StudentShellContent() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  function cerrarSesion() {
-    finalizarSesion();
-    navigate("/login");
+  const { toast } = useToast();
+
+  async function cerrarSesion() {
+    try {
+      await finalizarSesion();
+      navigate("/login", { replace: true });
+    } catch {
+      toast({ title: "No pudimos cerrar la sesión", description: "Volvé a intentar." });
+    }
   }
 
   return (

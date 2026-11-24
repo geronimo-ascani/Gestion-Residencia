@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nuevaClaveSchema } from "./auth.schema.js";
 
 /**
  * Esquema para actualización de parámetros del sistema.
@@ -45,12 +46,14 @@ export const queryCambioAdministrativoSchema = z.object({
  * Esquema para creación de una notificación interna.
  */
 export const crearNotificacionSchema = z.object({
-  idUsuario: z.coerce.number().int().positive({ required_error: "El ID de usuario es obligatorio" }),
+  idUsuario: z.coerce.number().int().positive({ error: "El ID de usuario es obligatorio" }),
   claveEvento: z.string().trim().min(2, "La clave de evento es obligatoria"),
   tipo: z.enum(["info", "alerta", "vencimiento", "sancion"]).default("info"),
   titulo: z.string().trim().min(2, "El título es obligatorio").max(200),
   detalle: z.string().trim().min(2, "El detalle es obligatorio").max(1000),
-  destino: z.string().trim().optional().default(""),
+  destino: z.string().trim().max(300)
+    .refine((value) => value === "" || /^\/(?!\/)[a-zA-Z0-9][a-zA-Z0-9/_-]*$/.test(value), "Indicá una ruta interna válida.")
+    .default(""),
 });
 
 /**
@@ -85,7 +88,7 @@ export const crearAdministradorSchema = z.object({
   documento: z.string().trim().optional().nullable(),
   telefono: z.string().trim().optional().nullable(),
   correo: z.string().trim().email("Formato de correo inválido").toLowerCase(),
-  contrasena: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional(),
+  contrasena: nuevaClaveSchema.optional(),
   gestionaAdministradores: z.boolean().optional().default(false),
 });
 
@@ -104,7 +107,7 @@ export const updateAdministradorSchema = z.object({
  * Esquema para suspender o reactivar una cuenta de usuario.
  */
 export const cambiarEstadoCuentaSchema = z.object({
-  suspender: z.boolean({ required_error: "Debe indicar si desea suspender (true) o reactivar (false)" }),
+  suspender: z.boolean({ error: "Debe indicar si desea suspender (true) o reactivar (false)" }),
 });
 
 /**

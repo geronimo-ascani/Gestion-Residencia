@@ -27,8 +27,8 @@ router.post(
  */
 router.get(
   "/",
-  requireOwnershipOrAdmin(),
   validate({ query: queryPagoSchema }),
+  requireOwnershipOrAdmin(),
   pagoController.getAll
 );
 
