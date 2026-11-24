@@ -84,7 +84,8 @@ class ContratoController {
     try {
       const contratoActualizado = await contratoService.cambiarEstado(
         req.params.id,
-        req.body.estado
+        req.body.estado,
+        req.body
       );
       return successResponse(
         res,

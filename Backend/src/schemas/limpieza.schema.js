@@ -224,6 +224,16 @@ export const ambienteIdParamSchema = z.object({
 
 export const agregarEquipamientoSchema = equipamientoItemSchema;
 
+export const actualizarEquipamientoPorNombreSchema = z.object({
+  nombreAnterior: z.string().trim().min(1, "El nombre anterior es obligatorio"),
+  nombre: z.string().trim().min(1, "El nuevo nombre es obligatorio"),
+  cantidad: z.coerce.number().int().positive("La cantidad debe ser un entero positivo"),
+});
+
+export const eliminarEquipamientoPorNombreSchema = z.object({
+  nombre: z.string().trim().min(1, "El nombre del equipamiento es obligatorio"),
+});
+
 export const updateEquipamientoSchema = z
   .object({
     nombre: z.string().trim().min(1, "El nombre del equipamiento no puede estar vacío").optional(),

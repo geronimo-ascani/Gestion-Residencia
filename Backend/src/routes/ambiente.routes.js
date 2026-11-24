@@ -7,6 +7,8 @@ import {
   updateAmbienteSchema,
   ambienteIdParamSchema,
   agregarEquipamientoSchema,
+  actualizarEquipamientoPorNombreSchema,
+  eliminarEquipamientoPorNombreSchema,
   updateEquipamientoSchema,
   equipamientoIdParamSchema,
   queryAmbienteSchema,
@@ -88,6 +90,34 @@ router.post(
     body: agregarEquipamientoSchema,
   }),
   ambienteController.agregarEquipamiento
+);
+
+/**
+ * @route   PUT /api/ambientes/:id/equipamiento
+ * @desc    Actualizar equipamiento por nombre anterior (solo administradores)
+ */
+router.put(
+  "/:id/equipamiento",
+  requireAdmin,
+  validate({
+    params: ambienteIdParamSchema,
+    body: actualizarEquipamientoPorNombreSchema,
+  }),
+  ambienteController.actualizarEquipamientoPorNombre
+);
+
+/**
+ * @route   DELETE /api/ambientes/:id/equipamiento
+ * @desc    Eliminar equipamiento por nombre (solo administradores)
+ */
+router.delete(
+  "/:id/equipamiento",
+  requireAdmin,
+  validate({
+    params: ambienteIdParamSchema,
+    body: eliminarEquipamientoPorNombreSchema,
+  }),
+  ambienteController.deleteEquipamientoPorNombre
 );
 
 /**

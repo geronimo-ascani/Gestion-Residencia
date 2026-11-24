@@ -1138,6 +1138,60 @@ class LimpiezaService {
     });
   }
 
+  async actualizarEquipamientoPorNombre(idAmbiente, { nombreAnterior, nombre, cantidad }) {
+    const ambId = Number(idAmbiente);
+    const amb = await prisma.ambiente.findUnique({
+      where: { idAmbiente: ambId },
+      include: { equipamiento: true },
+    });
+
+    if (!amb) {
+      throw new NotFoundError(`No se encontró el ambiente con ID: ${idAmbiente}`);
+    }
+
+    const nombreNorm = normalizar(nombreAnterior.trim());
+    const existente = amb.equipamiento.find((e) => normalizar(e.nombre) === nombreNorm);
+
+    if (!existente) {
+      return await prisma.equipamientoAmbiente.create({
+        data: {
+          idAmbiente: ambId,
+          nombre: nombre.trim(),
+          cantidad: Number(cantidad),
+        },
+      });
+    }
+
+    return await prisma.equipamientoAmbiente.update({
+      where: { idEquipamiento: existente.idEquipamiento },
+      data: {
+        nombre: nombre.trim(),
+        cantidad: Number(cantidad),
+      },
+    });
+  }
+
+  async deleteEquipamientoPorNombre(idAmbiente, nombre) {
+    const ambId = Number(idAmbiente);
+    const amb = await prisma.ambiente.findUnique({
+      where: { idAmbiente: ambId },
+      include: { equipamiento: true },
+    });
+
+    if (!amb) {
+      throw new NotFoundError(`No se encontró el ambiente con ID: ${idAmbiente}`);
+    }
+
+    const nombreNorm = normalizar(nombre.trim());
+    const existente = amb.equipamiento.find((e) => normalizar(e.nombre) === nombreNorm);
+
+    if (!existente) return null;
+
+    return await prisma.equipamientoAmbiente.delete({
+      where: { idEquipamiento: existente.idEquipamiento },
+    });
+  }
+
   async updateEquipamiento(idAmbiente, idEquipamiento, { nombre, cantidad }) {
     const eqId = Number(idEquipamiento);
     const eq = await prisma.equipamientoAmbiente.findUnique({

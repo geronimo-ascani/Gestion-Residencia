@@ -57,14 +57,8 @@ export const cancelarFacturaSchema = z.object({
  * Esquema para emitir un reemplazo de una factura cancelada.
  */
 export const emitirReemplazoSchema = z.object({
-  idFacturaOrigen: z.coerce
-    .number({ required_error: "El ID de factura de origen es obligatorio" })
-    .int()
-    .positive(),
-  idContrato: z.coerce
-    .number({ required_error: "El ID de contrato es obligatorio" })
-    .int()
-    .positive(),
+  idFacturaOrigen: idCoerce,
+  idContrato: idCoerce,
   periodo: z
     .string({ required_error: "El período es obligatorio" })
     .trim()

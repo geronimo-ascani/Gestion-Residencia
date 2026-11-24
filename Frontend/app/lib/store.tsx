@@ -41,6 +41,7 @@ import {
   apiCancelarFactura,
   apiCrearAmbiente,
   apiAgregarEquipamientoAmbiente,
+  apiActualizarEquipamientoAmbiente,
   apiGuardarParametros,
   apiGuardarOpcionCatalogo,
   apiCrearGrupoLimpieza,
@@ -195,6 +196,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [sesionId, setSesionId] = useState<string | null>(() => restaurarSesion());
   const [errorCarga, setErrorCarga] = useState("");
   const [errorGuardado, setErrorGuardado] = useState(false);
+
+  function persistir(promesa: Promise<unknown>, accion: string) {
+    promesa.catch((err) => {
+      console.error(`[Persistencia] Error en ${accion}:`, err);
+      setErrorGuardado(true);
+    });
+  }
   function setState(actualizar: (previo: DataState) => DataState) {
     const fecha = new Date().toISOString();
     const id = nuevoId("AUD");
@@ -353,7 +361,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const fecha = new Date().toISOString();
         const reclamo = prepararReclamo(state, usuarioActual, input, id, fecha);
         setState((previo) => ({ ...previo, reclamos: [reclamo, ...previo.reclamos] }));
-        void apiCrearReclamo({ ...input, idAlumno: reclamo.idAlumno });
+        persistir(apiCrearReclamo({ ...input, idAlumno: reclamo.idAlumno }), "crearReclamo");
         return id;
       },
       responderReclamo(id, mensaje, estado) {
@@ -361,7 +369,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const fecha = new Date().toISOString();
         actualizarReclamo(state, usuarioActual, id, mensaje, estado, eventoId, fecha);
         setState((previo) => actualizarReclamo(previo, usuarioActual, id, mensaje, estado, eventoId, fecha));
-        void apiResponderReclamo(id, mensaje, estado);
+        persistir(apiResponderReclamo(id, mensaje, estado), "responderReclamo");
       },
       guardarOpcionCatalogo(catalogo, opcion) {
         exigirAdministrador(state);
@@ -369,20 +377,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const registro = { ...opcion, id: opcion.id ?? nuevoId("CAT") };
         actualizarCatalogo(state, catalogo, registro);
         setState((previo) => actualizarCatalogo(previo, catalogo, registro));
-        void apiGuardarOpcionCatalogo(catalogo, registro);
+        persistir(apiGuardarOpcionCatalogo(catalogo, registro), "guardarOpcionCatalogo");
       },
       guardarParametros(valores) {
         exigirAdministrador(state);
         if (usuarioActual.rol !== "administrador") throw new Error("No tenés permiso para modificar parámetros.");
         validarParametros(valores);
         setState((previo) => ({ ...previo, parametros: { ...valores } }));
-        void apiGuardarParametros(valores);
+        persistir(apiGuardarParametros(valores), "guardarParametros");
       },
       ajustarImporteContrato(id, monto) {
         exigirAdministrador(state);
         if (usuarioActual.rol !== "administrador" || !Number.isFinite(monto) || monto <= 0 || Math.abs(monto * 100 - Math.round(monto * 100)) > 0.00001) throw new Error("Ingresá un importe positivo con hasta dos decimales.");
         setState((previo) => ({ ...previo, contratos: previo.contratos.map((c) => c.idContrato === id ? { ...c, montoMensual: monto } : c) }));
-        void apiActualizarContrato(id, { montoMensual: monto });
+        persistir(apiActualizarContrato(id, { montoMensual: monto }), "ajustarImporteContrato");
       },
       async cambiarClave(actual, nueva) {
         const u = state.usuarios.find((u) => u.idUsuario === usuarioActual.idUsuario);
@@ -393,7 +401,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (nueva === actual) throw new Error("Elegí una contraseña diferente a la actual.");
         const passwordHash = await hashClave(nueva);
         setState((previo) => ({ ...previo, usuarios: previo.usuarios.map((item) => item.idUsuario === u.idUsuario ? { ...item, passwordHash } : item) }));
-        void apiCambiarClave(actual, nueva);
+        persistir(apiCambiarClave(actual, nueva), "cambiarClave");
       },
       crearAdministrador(input) {
         exigirAdministrador(state);
@@ -406,7 +414,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           validarCorreoCuenta(input.correo, previo.usuarios);
           return { ...previo, usuarios: [...previo.usuarios, { ...input, nombre: `${input.nombre.trim()} ${input.apellido.trim()}`, correo: input.correo.trim().toLowerCase(), idUsuario, rol: "administrador", estado: "activo", fechaAlta: FECHA_REFERENCIA }] };
         });
-        void apiCrearAdministrador({ ...input, contrasena: clave });
+        persistir(apiCrearAdministrador({ ...input, contrasena: clave }), "crearAdministrador");
         return idUsuario;
       },
       actualizarAdministrador(id, input) {
@@ -415,20 +423,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (!input.nombre.trim()) throw new Error("Ingresá el nombre completo.");
         validarCorreoCuenta(input.correo, state.usuarios, id);
         setState((previo) => ({ ...previo, usuarios: previo.usuarios.map((u) => u.idUsuario === id && u.rol === "administrador" ? { ...u, nombre: `${input.nombre.trim()} ${input.apellido.trim()}`, apellido: input.apellido.trim(), correo: input.correo.trim().toLowerCase(), telefono: input.telefono.trim() } : u) }));
-        void apiActualizarAdministrador(id, input);
+        persistir(apiActualizarAdministrador(id, input), "actualizarAdministrador");
       },
       crearAccesoAlumno(idAlumno, correo) {
         exigirAdministrador(state);
         const id = nuevoId("U");
         crearCuentaAlumno(state, idAlumno, correo, id);
         setState((previo) => crearCuentaAlumno(previo, idAlumno, correo, id));
-        void apiCrearAccesoAlumno(idAlumno, correo);
+        persistir(apiCrearAccesoAlumno(idAlumno, correo), "crearAccesoAlumno");
       },
       suspenderCuenta(id, suspender) {
         exigirAdministrador(state);
         cambiarEstadoCuenta(state, id, suspender);
         setState((previo) => cambiarEstadoCuenta(previo, id, suspender));
-        void apiSuspenderCuenta(id, suspender);
+        persistir(apiSuspenderCuenta(id, suspender), "suspenderCuenta");
       },
       alumnoPorId,
       habitacionPorId,
@@ -444,7 +452,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             (reemplazo && f.idFacturaOrigen === reemplazo.idFacturaOrigen))) return previo;
           return aplicarEmisionFactura(previo, prepararFactura(previo, idContrato, periodo, id, reemplazo));
         });
-        void apiGenerarFactura(idContrato, periodo, reemplazo);
+        persistir(apiGenerarFactura(idContrato, periodo, reemplazo), "generarFactura");
         return id;
       },
 
@@ -452,7 +460,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         exigirAdministrador(state);
         aplicarCancelacionFactura(state, idFactura, motivo);
         setState((previo) => aplicarCancelacionFactura(previo, idFactura, motivo));
-        void apiCancelarFactura(idFactura, motivo);
+        persistir(apiCancelarFactura(idFactura, motivo), "cancelarFactura");
       },
 
       registrarCobro(input) {
@@ -460,7 +468,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const id = nuevoId("P");
         aplicarCobro(state, input, id);
         setState((previo) => aplicarCobro(previo, input, id));
-        void apiRegistrarCobro(input);
+        persistir(apiRegistrarCobro(input), "registrarCobro");
         return id;
       },
 
@@ -479,7 +487,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           tareas: "",
         };
         setState((previo) => Object.keys(validarNuevoAmbiente(input, previo.ambientes)).length ? previo : { ...previo, ambientes: [...previo.ambientes, ambiente] });
-        void apiCrearAmbiente(input);
+        persistir(apiCrearAmbiente(input), "crearAmbiente");
         return idAmbiente;
       },
 
@@ -506,7 +514,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             };
           }),
         }));
-        void apiAgregarEquipamientoAmbiente(idAmbiente, equipo);
+        persistir(apiAgregarEquipamientoAmbiente(idAmbiente, equipo), "agregarEquipamientoAmbiente");
         return true;
       },
 
@@ -520,6 +528,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
         aplicar(state);
         setState(aplicar);
+        persistir(apiActualizarEquipamientoAmbiente(idAmbiente, nombreAnterior, equipo), "actualizarEquipamientoAmbiente");
       },
 
       registrarPagoMulta(idMulta) {
@@ -533,7 +542,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               : multa,
           ),
         }));
-        void apiRegistrarPagoMulta(idMulta);
+        persistir(apiRegistrarPagoMulta(idMulta), "registrarPagoMulta");
       },
 
       anularMulta(idMulta) {
@@ -547,7 +556,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               : multa,
           ),
         }));
-        void apiAnularMulta(idMulta);
+        persistir(apiAnularMulta(idMulta), "anularMulta");
       },
 
       emitirMulta({ idAlumnos, ...datos }) {
@@ -567,7 +576,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           estado: "pendiente", fechaPago: null,
         }));
         setState((previo) => ({ ...previo, multas: [...nuevas, ...previo.multas] }));
-        void apiEmitirMulta({ idAlumnos, ...datos });
+        persistir(apiEmitirMulta({ idAlumnos, ...datos }), "emitirMulta");
         return nuevas.map((m) => m.idMulta);
       },
 
@@ -597,7 +606,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
         aplicar(state);
         setState(aplicar);
-        void apiActualizarMulta({ idMulta, fechaVence, ...datos });
+        persistir(apiActualizarMulta({ idMulta, fechaVence, ...datos }), "actualizarMulta");
       },
 
       extenderPlazoMulta(idMulta, motivo) {
@@ -609,14 +618,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
           const fechaVence = extenderMes(multa.fechaVence);
           return conHistorialMulta(multa, { ...multa, fechaVence, periodoHasta: fechaVence.slice(0, 7) }, "prorroga", motivo.trim());
         }) }));
-        void apiProrrogarMulta(idMulta, motivo.trim());
+        persistir(apiProrrogarMulta(idMulta, motivo.trim()), "extenderPlazoMulta");
       },
 
       asignarHabitacion(idAlumno, idHabitacion) {
         exigirAdministrador(state);
         aplicarAsignacionHabitacion(state, idAlumno, idHabitacion);
         setState((previo) => aplicarAsignacionHabitacion(previo, idAlumno, idHabitacion));
-        void apiAsignarHabitacion(idAlumno, idHabitacion);
+        persistir(apiAsignarHabitacion(idAlumno, idHabitacion), "asignarHabitacion");
       },
 
       liberarHabitacion(idAlumno) {
@@ -631,7 +640,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ),
         }));
         if (asignacion?.idHabitacion) {
-          void apiLiberarHabitacion(idAlumno, asignacion.idHabitacion);
+          persistir(apiLiberarHabitacion(idAlumno, asignacion.idHabitacion), "liberarHabitacion");
         }
       },
 
@@ -643,7 +652,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ...previo,
           alumnos: [...previo.alumnos, { ...input, idAlumno, estado: "activo" }],
         }));
-        void apiCrearAlumno(input);
+        persistir(apiCrearAlumno(input), "crearAlumno");
         return idAlumno;
       },
 
@@ -659,21 +668,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ...previo,
           alumnos: previo.alumnos.map((alumno) => alumno.idAlumno === idAlumno ? { ...alumno, ...input } : alumno),
         }));
-        void apiActualizarAlumno(idAlumno, input);
+        persistir(apiActualizarAlumno(idAlumno, input), "actualizarAlumno");
       },
 
       actualizarHabitacion(idHabitacion, input) {
         exigirAdministrador(state);
         editarHabitacion(state, idHabitacion, input);
         setState((previo) => editarHabitacion(previo, idHabitacion, input));
-        void apiActualizarHabitacion(idHabitacion, input);
+        persistir(apiActualizarHabitacion(idHabitacion, input), "actualizarHabitacion");
       },
       crearHabitacion(input) {
         exigirAdministrador(state);
         validarAltaHabitacion(state, input);
         const idHabitacion = nuevoId("H");
         setState((previo) => ({ ...previo, habitaciones: [...previo.habitaciones, { ...input, idHabitacion }] }));
-        void apiCrearHabitacion(input);
+        persistir(apiCrearHabitacion(input), "crearHabitacion");
         return idHabitacion;
       },
 
@@ -688,7 +697,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             ...tarea, nombre: input.nombre.trim(), tareas: input.tareas.map((actividad) => actividad.trim()),
           } : tarea) };
         });
-        void apiActualizarTareaLimpieza(numero, input);
+        persistir(apiActualizarTareaLimpieza(numero, input), "actualizarTareaLimpieza");
       },
 
       crearTareaLimpieza(input) {
@@ -705,7 +714,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             tareas: input.tareas.map((actividad) => actividad.trim()),
           }] };
         });
-        void apiCrearTareaLimpieza(input);
+        persistir(apiCrearTareaLimpieza(input), "crearTareaLimpieza");
       },
 
       crearGrupoLimpieza(input) {
@@ -719,7 +728,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             idGrupoLimpieza, nombreDelGrupo: input.nombreDelGrupo.trim(), tareaInicial: input.tareaInicial,
           }] }, idGrupoLimpieza, input.idAlumnos);
         });
-        void apiCrearGrupoLimpieza(input);
+        persistir(apiCrearGrupoLimpieza(input), "crearGrupoLimpieza");
         return idGrupoLimpieza;
       },
 
@@ -735,7 +744,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               : grupo,
           ),
         }));
-        void apiActualizarGrupoLimpieza(idGrupoLimpieza, nombreDelGrupo);
+        persistir(apiActualizarGrupoLimpieza(idGrupoLimpieza, nombreDelGrupo), "actualizarGrupoLimpieza");
       },
 
       eliminarGrupoLimpieza(idGrupoLimpieza) {
@@ -752,13 +761,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
             (asignacion) => asignacion.idGrupoLimpieza !== idGrupoLimpieza,
           ),
         }));
-        void apiEliminarGrupoLimpieza(idGrupoLimpieza);
+        persistir(apiEliminarGrupoLimpieza(idGrupoLimpieza), "eliminarGrupoLimpieza");
       },
 
       guardarAlumnosGrupo(idGrupoLimpieza, idAlumnos) {
         exigirAdministrador(state);
         setState((previo) => actualizarIntegrantesLimpieza(previo, idGrupoLimpieza, idAlumnos));
-        void apiGuardarAlumnosGrupo(idGrupoLimpieza, idAlumnos);
+        persistir(apiGuardarAlumnosGrupo(idGrupoLimpieza, idAlumnos), "guardarAlumnosGrupo");
       },
 
       asignarAmbienteGrupo(idGrupoLimpieza, idAmbiente, fechaDesde) {
@@ -792,7 +801,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             ],
           };
         });
-        void apiAsignarAmbienteGrupo(idGrupoLimpieza, idAmbiente, fechaDesde);
+        persistir(apiAsignarAmbienteGrupo(idGrupoLimpieza, idAmbiente, fechaDesde), "asignarAmbienteGrupo");
         return true;
       },
 
@@ -810,7 +819,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               : asignacion,
           ),
         }));
-        void apiLiberarAmbienteGrupo(idGrupoLimpieza, idAmbiente, FECHA_REFERENCIA);
+        persistir(apiLiberarAmbienteGrupo(idGrupoLimpieza, idAmbiente, FECHA_REFERENCIA), "liberarAmbienteGrupo");
       },
 
       cancelarContrato(idContrato, fecha, motivo) {
@@ -824,14 +833,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
             asignaciones: previo.asignaciones.map((a) => a.idAlumno === contrato.idAlumno && a.fechaDesde <= contrato.fechaHasta && (!a.fechaHasta || a.fechaHasta > fecha) ? { ...a, fechaHasta: a.fechaDesde > fecha ? a.fechaDesde : fecha } : a),
           };
         });
-        void apiCancelarContrato(idContrato, fecha, motivo);
+        persistir(apiCancelarContrato(idContrato, fecha, motivo), "cancelarContrato");
       },
 
       actualizarContrato(idContrato, input) {
         exigirAdministrador(state);
         editarContrato(state, idContrato, input);
         setState((previo) => editarContrato(previo, idContrato, input));
-        void apiActualizarContrato(idContrato, input);
+        persistir(apiActualizarContrato(idContrato, input), "actualizarContrato");
       },
 
       crearContrato(input) {
@@ -839,7 +848,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         validarAltaContrato(state, input);
         const idContrato = nuevoId("C");
         setState((previo) => ({ ...previo, contratos: [...previo.contratos, { ...input, idContrato }] }));
-        void apiCrearContrato(input);
+        persistir(apiCrearContrato(input), "crearContrato");
       },
     };
   }, [state, sesionId]);

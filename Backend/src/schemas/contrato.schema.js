@@ -115,6 +115,8 @@ export const cambiarEstadoContratoSchema = z.object({
       message: `El estado debe ser uno de: ${ESTADOS_CONTRATO.join(", ")}`,
     }),
   }),
+  fechaCancelacion: z.coerce.date().optional().nullable(),
+  motivoCancelacion: z.string().trim().max(500).optional().nullable(),
 });
 
 /**

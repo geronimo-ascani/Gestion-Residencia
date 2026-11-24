@@ -260,7 +260,7 @@ class ContratoService {
   /**
    * Cambia el estado de un Contrato (ej. dar de baja o rescindir antes de tiempo).
    */
-  async cambiarEstado(id, nuevoEstado) {
+  async cambiarEstado(id, nuevoEstado, extraData = {}) {
     const contrato = await prisma.contrato.findUnique({
       where: { idContrato: id },
     });
@@ -286,9 +286,19 @@ class ContratoService {
       }
     }
 
+    const dataToUpdate = {
+      estado: nuevoEstado,
+    };
+    if (extraData.fechaCancelacion !== undefined) {
+      dataToUpdate.fechaCancelacion = extraData.fechaCancelacion ? new Date(extraData.fechaCancelacion) : null;
+    }
+    if (extraData.motivoCancelacion !== undefined) {
+      dataToUpdate.motivoCancelacion = extraData.motivoCancelacion;
+    }
+
     return await prisma.contrato.update({
       where: { idContrato: id },
-      data: { estado: nuevoEstado },
+      data: dataToUpdate,
       include: {
         alumno: {
           select: {

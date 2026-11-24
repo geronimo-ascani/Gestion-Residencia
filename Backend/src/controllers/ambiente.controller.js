@@ -114,6 +114,46 @@ class AmbienteController {
   };
 
   /**
+   * PUT /api/ambientes/:id/equipamiento
+   */
+  actualizarEquipamientoPorNombre = async (req, res, next) => {
+    try {
+      const equipo = await limpiezaService.actualizarEquipamientoPorNombre(
+        req.params.id,
+        req.body
+      );
+      return successResponse(
+        res,
+        equipo,
+        "Equipamiento actualizado con éxito",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * DELETE /api/ambientes/:id/equipamiento
+   */
+  deleteEquipamientoPorNombre = async (req, res, next) => {
+    try {
+      const eliminado = await limpiezaService.deleteEquipamientoPorNombre(
+        req.params.id,
+        req.body.nombre
+      );
+      return successResponse(
+        res,
+        eliminado,
+        "Equipamiento eliminado con éxito del ambiente",
+        200
+      );
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
    * PUT /api/ambientes/:id/equipamiento/:idEquipamiento
    */
   updateEquipamiento = async (req, res, next) => {

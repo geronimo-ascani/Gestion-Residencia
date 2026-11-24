@@ -6,9 +6,11 @@ import { z } from "zod";
  */
 export const idCoerce = z.preprocess((val) => {
   if (typeof val === "string") {
-    const cleaned = val.replace(/^[A-Za-z]+_?/, "");
-    const num = Number(cleaned);
-    return isNaN(num) ? val : num;
+    const digits = val.replace(/\D/g, "");
+    if (digits.length > 0) {
+      return Number(digits);
+    }
+    return val;
   }
   return val;
 }, z.coerce.number({ invalid_type_error: "El ID debe ser un número entero válido" }).int().positive("El ID debe ser un número positivo"));

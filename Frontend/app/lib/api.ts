@@ -26,30 +26,26 @@ function getToken(): string | null {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T | null> {
-  try {
-    const token = getToken();
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers as Record<string, string> | undefined),
-    };
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers as Record<string, string> | undefined),
+  };
 
-    const res = await fetch(`${API_BASE}${path}`, {
-      headers,
-      credentials: "include",
-      ...options,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      console.warn(`[API] Error en ${path}:`, err?.message || res.statusText);
-      return null;
-    }
-    const json = await res.json();
-    return (json.data ?? json) as T;
-  } catch (error) {
-    console.warn(`[API] Excepción al llamar a ${path}:`, error);
-    return null;
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers,
+    credentials: "include",
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    const mensaje = err?.message || err?.error || `HTTP ${res.status}: ${res.statusText}`;
+    console.warn(`[API] Error en ${path}:`, mensaje);
+    throw new Error(mensaje);
   }
+  const json = await res.json();
+  return (json.data ?? json) as T;
 }
 
 /**
@@ -123,32 +119,51 @@ export async function apiCrearContrato(input: NuevoContratoInput): Promise<strin
 }
 
 export async function apiEmitirMulta(input: NuevaMultaInput): Promise<string[] | null> {
+  const alumnosIds = (input.idAlumnos || []).map((a) => {
+    const num = a.replace(/\D/g, "");
+    return num ? Number(num) : a;
+  });
   const res = await request<unknown>("/multas", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      ...input,
+      idAlumnos: alumnosIds,
+    }),
   });
   return res ? [String(res)] : null;
 }
 
 export async function apiRegistrarCobro(input: RegistrarCobroInput): Promise<string | null> {
+  const fId = input.idFactura.replace(/\D/g, "");
+  const payload = {
+    ...input,
+    idFactura: fId ? Number(fId) : input.idFactura,
+  };
   const res = await request<{ idPago: number | string }>("/cobros", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify(payload),
   });
   return res ? String(res.idPago) : null;
 }
 
 export async function apiGenerarFactura(idContrato: string, periodo: string, reemplazo?: ReemplazoFacturaInput): Promise<string | null> {
+  const cId = idContrato.replace(/\D/g, "");
   if (reemplazo) {
+    const fId = reemplazo.idFacturaOrigen.replace(/\D/g, "");
     const res = await request<{ idFactura: number | string }>("/facturas/reemplazo", {
       method: "POST",
-      body: JSON.stringify({ idContrato, periodo, ...reemplazo }),
+      body: JSON.stringify({
+        ...reemplazo,
+        idFacturaOrigen: fId ? Number(fId) : reemplazo.idFacturaOrigen,
+        idContrato: cId ? Number(cId) : idContrato,
+        periodo,
+      }),
     });
     return res ? String(res.idFactura) : null;
   }
   const res = await request<{ idFactura: number | string }>("/facturas", {
     method: "POST",
-    body: JSON.stringify({ idContrato, periodo }),
+    body: JSON.stringify({ idContrato: cId ? Number(cId) : idContrato, periodo }),
   });
   return res ? String(res.idFactura) : null;
 }
@@ -170,9 +185,34 @@ export async function apiCrearAmbiente(input: NuevoAmbienteInput): Promise<strin
 }
 
 export async function apiAgregarEquipamientoAmbiente(idAmbiente: string, equipo: EquipamientoAmbiente): Promise<boolean> {
-  const res = await request(`/ambientes/${idAmbiente}/equipamiento`, {
+  const aId = idAmbiente.replace(/\D/g, "");
+  const res = await request(`/ambientes/${aId || idAmbiente}/equipamiento`, {
     method: "POST",
     body: JSON.stringify(equipo),
+  });
+  return res !== null;
+}
+
+export async function apiActualizarEquipamientoAmbiente(
+  idAmbiente: string,
+  nombreAnterior: string,
+  equipo?: EquipamientoAmbiente
+): Promise<boolean> {
+  const aId = idAmbiente.replace(/\D/g, "");
+  if (!equipo) {
+    const res = await request(`/ambientes/${aId || idAmbiente}/equipamiento`, {
+      method: "DELETE",
+      body: JSON.stringify({ nombre: nombreAnterior }),
+    });
+    return res !== null;
+  }
+  const res = await request(`/ambientes/${aId || idAmbiente}/equipamiento`, {
+    method: "PUT",
+    body: JSON.stringify({
+      nombreAnterior,
+      nombre: equipo.nombre,
+      cantidad: equipo.cantidad,
+    }),
   });
   return res !== null;
 }
@@ -227,7 +267,7 @@ export async function apiGuardarAlumnosGrupo(idGrupoLimpieza: string, idAlumnos:
     const num = a.replace(/\D/g, "");
     return num ? Number(num) : a;
   });
-  await request(`/grupos-limpieza/${gId || idGrupoLimpieza}/integrantes`, {
+  await request(`/grupos-limpieza/${gId || idGrupoLimpieza}/alumnos`, {
     method: "PUT",
     body: JSON.stringify({ idAlumnos: alumnosIds }),
   });

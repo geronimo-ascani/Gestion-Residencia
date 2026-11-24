@@ -154,10 +154,21 @@ router.delete(
 
 /**
  * @route   PUT /api/grupos-limpieza/:id/alumnos
+ * @route   PUT /api/grupos-limpieza/:id/integrantes
  * @desc    Reemplazar integrantes del grupo (solo administradores)
  */
 router.put(
   "/:id/alumnos",
+  requireAdmin,
+  validate({
+    params: grupoIdParamSchema,
+    body: guardarIntegrantesSchema,
+  }),
+  grupoLimpiezaController.guardarIntegrantes
+);
+
+router.put(
+  "/:id/integrantes",
   requireAdmin,
   validate({
     params: grupoIdParamSchema,
