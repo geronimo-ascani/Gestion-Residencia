@@ -419,7 +419,7 @@ Todas las reglas de fechas y estados se calculan contra `FECHA_REFERENCIA`
 
 ### Reglas del store y sincronización con API
 
-- **Persistencia real en PostgreSQL (Supabase):** Al montar, `DataProvider` consulta `GET /api/estado` a través de `lib/api.ts` e hidrata el estado global en memoria. Si el navegador pierde conexión, cuenta con respaldo en `localStorage`.
+- **Persistencia real en PostgreSQL (Supabase):** La ruta privada valida la sesión con el backend antes de renderizar. `DataProvider` consulta `GET /api/estado` con esa sesión y conserva los datos operativos en memoria.
 - **Mutaciones bidireccionales y optimistas:** Las acciones actualizan el estado local de React para respuesta inmediata en la UI y disparan en segundo plano la petición correspondiente a la API REST (`apiCrearAlumno`, `apiEmitirMulta`, `apiGenerarFactura`, `apiCrearReclamo`, etc.).
 - Todas las mutaciones de estado local son inmutables usando `setState` funcional.
 - Las referencias cruzadas (`alumnoPorId`, `habitacionPorId`, `grupoPorId`, `ambientePorId`) se recalculan con `useMemo` para evitar recorridas lineales repetidas.
@@ -629,10 +629,8 @@ comportamiento deseado; corregirlos al tocar las áreas involucradas.
 7. **Capacidad validada solo en UI.** El store no rechaza asignaciones que
    excedan `capacidadMaxima`; la validación debería vivir también en la acción.
 8. **Limpieza implementada.** Cuatro grupos con rotación semanal y asignación flexible de integrantes.
-9. **Auth sin backend.** `lib/auth.ts` apunta a `/api/auth/*`; no hay servidor.
-   Las rutas del panel no están protegidas.
-10. **Sin persistencia.** Recargar reinicia todos los cambios. Es esperado en el
-    prototipo, pero no confundirlo con un bug.
+9. **Autenticación.** Express valida la sesión en PostgreSQL y controla el acceso por rol y titularidad. El navegador usa una cookie HttpOnly.
+10. **Persistencia.** La API guarda los datos operativos en PostgreSQL.
 11. **`Habitacion.descripcion`** sigue en el modelo aunque no se muestra en el
     listado; se usa en ficha y diálogo de asignación.
 12. **`estadoContrato` y `contratoVigente`** usan criterios de borde distintos

@@ -26,7 +26,7 @@ Asegurate de contar con el archivo `Backend/.env` con la cadena de conexión a l
 PORT=3000
 NODE_ENV=development
 DATABASE_URL="postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres"
-JWT_SECRET="residencia_estudiantil_jwt_secret_key"
+CORS_ORIGIN="http://localhost:5173"
 ```
 
 ### 3. Cargar datos iniciales (Seed)
@@ -41,7 +41,16 @@ Desde la raíz del repositorio podés levantar ambos servidores en simultáneo:
 npm run dev
 ```
 * **Frontend:** [http://localhost:5173](http://localhost:5173) (con proxy automático para `/api` hacia el backend).
-* **Backend API:** [http://localhost:3000/api](http://localhost:3000/api) (Health check: `/api/health`, Bootstrap de estado: `/api/estado`).
+* **Backend API:** [http://localhost:3000/api](http://localhost:3000/api) (health check público en `/api/health` y carga inicial autenticada en `/api/estado`).
+
+## Seguridad en producción
+
+- Publicá frontend y `/api` bajo el mismo origen HTTPS. Configurá `RESIDENCIA_API_ORIGIN` en el servidor del frontend con la URL del backend y reenviá `Cookie` y `Set-Cookie` a través del proxy. Desplegá ambos servicios juntos.
+- Configurá `NODE_ENV=production` y generá un `JWT_SECRET` aleatorio de al menos 32 caracteres. Dejá `CORS_ORIGIN` vacío para servir un solo origen. Si hay consumidores desde otros orígenes, enumerá los orígenes HTTPS exactos. Ajustá `TRUST_PROXY_HOPS` a la topología real si hay proxies de confianza. El límite de intentos de autenticación se aplica por IP e instancia.
+- En Supabase, aplicá [proteger-data-api.sql](Backend/prisma/proteger-data-api.sql) después de crear el esquema. El rol de conexión directa de Prisma necesita permisos sobre las tablas y sus secuencias. Esta aplicación usa Prisma. Si otras integraciones tampoco usan REST o GraphQL de Supabase, [desactivá la Data API](https://supabase.com/docs/guides/api/securing-your-api#disable-the-data-api).
+- Excluí las cuentas y cargas de demostración de la base de producción. Rotá claves iniciales antiguas derivadas de datos personales y el secreto JWT del despliegue anterior. El registro público queda deshabilitado en producción. La recuperación por correo requiere configurar un proveedor de correo.
+- Comprobá en el despliegue con cuentas de prueba que la navegación distingue ambos roles, que el cierre invalida la sesión y que la API devuelve `401` sin sesión. Revisá los registros de acceso disponibles si el endpoint anterior operó con datos reales.
+
 
 ---
 
@@ -80,7 +89,7 @@ Los alumnos autenticados acceden exclusivamente al portal `/estudiante`. Sus con
 
 * `npm run dev`: Inicia Frontend y Backend simultáneamente en paralelo.
 * `npm run dev:frontend`: Inicia únicamente el servidor Vite del Frontend.
-* `npm run dev:backend`: Inicia únicamente la API Express del Backend con nodemon.
+* `npm run dev:backend`: Inicia únicamente la API Express del backend con el modo de observación de Node.
 * `npm run build`: Ejecuta el build de producción del Frontend (cliente y servidor SSR).
 * `npm run typecheck`: Ejecuta `react-router typegen && tsc` para validar tipos en Frontend.
 * `npm run seed`: Puebla la base de datos PostgreSQL con datos base.
