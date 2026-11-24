@@ -54,7 +54,9 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
     localidad: alumno?.localidad ?? "",
     provincia: alumno?.provincia ?? "",
     codigoPostal: alumno?.codigoPostal ?? "",
+    institucion: alumno?.institucion ?? "UTN · Facultad Regional Trenque Lauquen",
     carrera: alumno?.carrera ?? "",
+    anioCursado: alumno?.anioCursado ?? "",
     cantidadMateriasCursadas: alumno?.cantidadMateriasCursadas?.toString() ?? "",
     legajo: alumno?.legajo ?? "",
     observaciones: alumno?.observaciones ?? "",
@@ -134,9 +136,11 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
         codigoPostal: datosIngreso.codigoPostal,
       },
       academica: {
+        institucion: datosIngreso.institucion.trim() || undefined,
         carrera: datosIngreso.carrera,
+        anioCursado: datosIngreso.anioCursado.trim() || undefined,
         cantidadMateriasCursadas: materias,
-        legajo: datosIngreso.legajo,
+        legajo: datosIngreso.legajo.trim() || undefined,
       },
       emergencia: {
         contactosEmergencia: contactos.map(({ nombre, vinculo, telefono }) => ({
@@ -278,15 +282,45 @@ export function AlumnoForm({ alumno, modulo }: AlumnoFormProps) {
         </div></section>
         ) : null}
         {mostrar("academica") ? (
-          <section className="rounded-xl border border-slate-300 bg-white shadow-sm p-6 dark:border-slate-800 dark:bg-slate-900"><h2 className="text-lg font-semibold text-brand-900">Información académica</h2><p className="mt-1 mb-6 border-b border-slate-200 pb-4 text-sm text-slate-600">Estudiante de la Facultad Regional Trenque Lauquen.</p><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <SelectField id={`${idBase}-carrera`} label="Carrera" required={!alumno} value={datosIngreso.carrera ?? ""} onChange={(event) => setDatosIngreso((previo) => ({ ...previo, carrera: event.target.value }))}>
-            <option value="" disabled={!alumno}>Seleccionar</option>
-            {alumno?.carrera && !carrerasActivas.includes(alumno.carrera) ? <option value={alumno.carrera}>{alumno.carrera}</option> : null}
-            {carrerasActivas.map((carrera) => <option key={carrera} value={carrera}>{carrera}</option>)}
-          </SelectField>
-          <TextField id={`${idBase}-cantidadMateriasCursadas`} label="Cantidad de materias cursadas" type="number" min={0} step={1} required={!alumno} value={datosIngreso.cantidadMateriasCursadas ?? ""} onChange={(event) => setDatosIngreso((previo) => ({ ...previo, cantidadMateriasCursadas: event.target.value }))} />
-          <TextField id={`${idBase}-legajo`} label="Legajo estudiantil" type="text" value={datosIngreso.legajo ?? ""} onChange={(event) => setDatosIngreso((previo) => ({ ...previo, legajo: event.target.value }))} />
-        </div></section>
+          <section className="rounded-xl border border-slate-300 bg-white shadow-sm p-6 dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="text-lg font-semibold text-brand-900">Información académica</h2>
+            <p className="mt-1 mb-6 border-b border-slate-200 pb-4 text-sm text-slate-600">Institución educativa, carrera y situación académica del alumno.</p>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <TextField
+                id={`${idBase}-institucion`}
+                label="Institución educativa"
+                type="text"
+                placeholder="Ej: UTN · Facultad Regional Trenque Lauquen"
+                value={datosIngreso.institucion ?? ""}
+                onChange={(event) => setDatosIngreso((previo) => ({ ...previo, institucion: event.target.value }))}
+              />
+              <SelectField id={`${idBase}-carrera`} label="Carrera" required={!alumno} value={datosIngreso.carrera ?? ""} onChange={(event) => setDatosIngreso((previo) => ({ ...previo, carrera: event.target.value }))}>
+                <option value="" disabled={!alumno}>Seleccionar</option>
+                {alumno?.carrera && !carrerasActivas.includes(alumno.carrera) ? <option value={alumno.carrera}>{alumno.carrera}</option> : null}
+                {carrerasActivas.map((carrera) => <option key={carrera} value={carrera}>{carrera}</option>)}
+              </SelectField>
+              <SelectField
+                id={`${idBase}-anioCursado`}
+                label="Año de cursado"
+                value={datosIngreso.anioCursado ?? ""}
+                onChange={(event) => setDatosIngreso((previo) => ({ ...previo, anioCursado: event.target.value }))}
+              >
+                <option value="">Seleccionar año</option>
+                {datosIngreso.anioCursado && !["1° año", "2° año", "3° año", "4° año", "5° año", "6° año", "Finalizado"].includes(datosIngreso.anioCursado) ? (
+                  <option value={datosIngreso.anioCursado}>{datosIngreso.anioCursado}</option>
+                ) : null}
+                <option value="1° año">1° año</option>
+                <option value="2° año">2° año</option>
+                <option value="3° año">3° año</option>
+                <option value="4° año">4° año</option>
+                <option value="5° año">5° año</option>
+                <option value="6° año">6° año</option>
+                <option value="Finalizado">Finalizado / Tesis</option>
+              </SelectField>
+              <TextField id={`${idBase}-cantidadMateriasCursadas`} label="Cantidad de materias cursadas" type="number" min={0} step={1} required={!alumno} value={datosIngreso.cantidadMateriasCursadas ?? ""} onChange={(event) => setDatosIngreso((previo) => ({ ...previo, cantidadMateriasCursadas: event.target.value }))} />
+              <TextField id={`${idBase}-legajo`} label="Legajo estudiantil" type="text" value={datosIngreso.legajo ?? ""} onChange={(event) => setDatosIngreso((previo) => ({ ...previo, legajo: event.target.value }))} />
+            </div>
+          </section>
         ) : null}
         {mostrar("emergencia") ? (
           <section className="rounded-xl border border-slate-300 bg-white shadow-sm p-6 dark:border-slate-800 dark:bg-slate-900">

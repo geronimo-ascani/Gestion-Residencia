@@ -206,7 +206,9 @@ export default function AlumnoDetalle() {
           </AlumnoFichaModulo>
           <AlumnoFichaModulo modulo="academica" search={search}>
             <DatosModulo campos={[
+              ["Institución educativa", alumno.institucion],
               ["Carrera", alumno.carrera],
+              ["Año de cursado", alumno.anioCursado],
               ["Cantidad de materias cursadas", alumno.cantidadMateriasCursadas],
               ["Legajo estudiantil", alumno.legajo],
             ]} />
